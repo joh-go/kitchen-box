@@ -1,0 +1,80 @@
+@startuml recipe database
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  * id : uuid <<PK>>
+  --
+  username : text <<UNIQUE>>
+  email : text <<UNIQUE>>
+  password_hash : text
+  created_at : timestamptz
+}
+
+entity "categories" as categories {
+  * id : uuid <<PK>>
+  --
+  name : text
+  slug : text
+  description : text
+  parent_id : uuid <<FK categories.id>>
+  position : integer
+  created_at : timestamptz
+  --
+  Unique(parent_id, slug)
+}
+
+entity "recipes" as recipes {
+  * id : uuid <<PK>>
+  --
+  title : text
+  slug : text
+  short_description : text
+  ingredients : jsonb
+  steps : jsonb
+  prep_minutes : integer
+  cook_minutes : integer
+  servings : integer
+  notes : text
+  author_id : uuid <<FK users.id>>
+  is_public : boolean
+  created_at : timestamptz
+  updated_at : timestamptz
+  search_vector : tsvector
+}
+
+entity "recipe_categories" as recipe_categories {
+  * recipe_id : uuid <<PK,FK recipes.id>>
+  * category_id : uuid <<PK,FK categories.id>>
+}
+
+entity "images" as images {
+  * id : uuid <<PK>>
+  --
+  recipe_id : uuid <<FK recipes.id>>
+  url : text
+  alt : text
+  is_primary : boolean
+  uploaded_at : timestamptz
+}
+
+entity "recipe_versions" as recipe_versions {
+  * id : uuid <<PK>>
+  --
+  recipe_id : uuid <<FK recipes.id>>
+  payload : jsonb
+  created_at : timestamptz
+  author_id : uuid <<FK users.id>>
+}
+
+' Beziehungen
+users ||--o{ recipes : "authors"
+users ||--o{ recipe_versions : "authors"
+
+categories ||--o{ categories : "parent_of"
+recipes ||--o{ images : "has"
+recipes ||--o{ recipe_versions : "has"
+recipes ||--o{ recipe_categories : "assigned_to"
+categories ||--o{ recipe_categories : "contains"
+
+@enduml
