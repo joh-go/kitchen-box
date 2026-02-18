@@ -94,3 +94,31 @@ pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), Str
         Err("server error".into())
     }
 }
+
+// --- Users API ---
+pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
+    let resp = Request::get(&format!("{}/api/users", BASE))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    resp.json::<Vec<shared_types::User>>()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+pub async fn create_user(user: &shared_types::User) -> Result<(), String> {
+    let body = serde_json::to_string(user).map_err(|e| e.to_string())?;
+    let resp = Request::post(&format!("{}/api/users", BASE))
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err("server error".into())
+    }
+}
