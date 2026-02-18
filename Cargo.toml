@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "backend",
+    "frontend",
+]
+
+# Optional: set workspace-wide metadata or profiles here
