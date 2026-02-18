@@ -3,22 +3,37 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub on_navigate: Callback<crate::Page>,
+    #[prop_or(Callback::from(|_: yew::MouseEvent| ()))]
+    pub on_mobile_close: Callback<yew::MouseEvent>,
 }
 
 #[function_component(Sidebar)]
 pub fn sidebar(props: &Props) -> Html {
     let on_nav = props.on_navigate.clone();
+    let on_mobile_close = props.on_mobile_close.clone();
     let to_home = {
         let on_nav = on_nav.clone();
-        Callback::from(move |_| on_nav.emit(crate::Page::Home))
+        let on_mobile_close = on_mobile_close.clone();
+        Callback::from(move |e: yew::MouseEvent| {
+            on_nav.emit(crate::Page::Home);
+            on_mobile_close.emit(e);
+        })
     };
     let to_add = {
         let on_nav = on_nav.clone();
-        Callback::from(move |_| on_nav.emit(crate::Page::Add))
+        let on_mobile_close = on_mobile_close.clone();
+        Callback::from(move |e: yew::MouseEvent| {
+            on_nav.emit(crate::Page::Add);
+            on_mobile_close.emit(e);
+        })
     };
     let to_users = {
         let on_nav = on_nav.clone();
-        Callback::from(move |_| on_nav.emit(crate::Page::Users))
+        let on_mobile_close = on_mobile_close.clone();
+        Callback::from(move |e: yew::MouseEvent| {
+            on_nav.emit(crate::Page::Users);
+            on_mobile_close.emit(e);
+        })
     };
 
     html! {
