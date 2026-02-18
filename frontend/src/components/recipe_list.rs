@@ -84,18 +84,27 @@ pub fn recipe_list(props: &Props) -> Html {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
                     html!{
-                        <li class="bg-white dark:bg-gray-800 shadow rounded p-4">
+                        <li class="bg-white dark:bg-gray-800 shadow rounded p-4 transform hover:-translate-y-1 hover:shadow-lg transition">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <div class="font-semibold text-lg text-gray-900 dark:text-gray-100">{ &r.title }</div>
                                     <div class="text-sm text-gray-600 dark:text-gray-300">{ r.short_description.clone().unwrap_or_default() }</div>
                                 </div>
-                                <div class="text-sm text-gray-500">{ r.prep_minutes.map(|m| format!("{}m", m)).unwrap_or_default() }</div>
+                                <div class="text-sm text-gray-500 flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 7h2v5H9V7zM9 13h2v2H9v-2z"/></svg>
+                                    { r.prep_minutes.map(|m| format!("{}m", m)).unwrap_or_default() }
+                                </div>
                             </div>
 
                             <div class="mt-3 flex gap-2">
-                                <button class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-1 rounded" onclick={props.on_edit.reform(move |_| r_clone.clone())}>{"Edit"}</button>
-                                <button class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onclick={on_delete.reform(move |_| id)}>{"Delete"}</button>
+                                <button class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-2 rounded flex items-center justify-center gap-2" onclick={props.on_edit.reform(move |_| r_clone.clone())}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 010 2.828l-9.193 9.193-3.536.707.707-3.536L14.586 2.586a2 2 0 012.828 0z"/></svg>
+                                    {"Edit"}
+                                </button>
+                                <button class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded flex items-center justify-center gap-2" onclick={on_delete.reform(move |_| id)}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 6a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd"/></svg>
+                                    {"Delete"}
+                                </button>
                             </div>
                         </li>
                     }

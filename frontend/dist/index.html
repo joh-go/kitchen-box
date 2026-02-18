@@ -19,16 +19,55 @@
       -ms-text-size-adjust: 100%;
       text-size-adjust: 100%;
     }
+
+    /* Use Inter for better typography */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+
+      /* Small animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-fade-in {
+        animation: fadeInUp 280ms ease both;
+      }
+
+      .spinner {
+        border: 3px solid rgba(0, 0, 0, 0.1);
+        border-left-color: rgba(0, 0, 0, 0.6);
+        border-radius: 9999px;
+        width: 36px;
+        height: 36px;
+        animation: spin 900ms linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    }
   </style>
-<link rel="modulepreload" href="/frontend-5687d88b6a67034e.js" crossorigin="anonymous" integrity="sha384-cay0r8SvkDwEBIOhyA5lboW2d5DdwuhkNviWq0AYt0E/G5NRle7wjZs0cz7Liht6"><link rel="preload" href="/frontend-5687d88b6a67034e_bg.wasm" crossorigin="anonymous" integrity="sha384-izZInOIYhQ2WK6VkFWXVAxlyjqQsYmQMs/CVkEphz7vou2YpRZ/g4hk1J7ZUI2+m" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/frontend-55ea38497352c248.js" crossorigin="anonymous" integrity="sha384-cay0r8SvkDwEBIOhyA5lboW2d5DdwuhkNviWq0AYt0E/G5NRle7wjZs0cz7Liht6"><link rel="preload" href="/frontend-55ea38497352c248_bg.wasm" crossorigin="anonymous" integrity="sha384-OFQuU7InlL9NaIpuveM/YEWRzjvQfdQrxoua9M+DiuzS9u6k8uhLl1WiGydL0ebY" as="fetch" type="application/wasm"></head>
 
 <body>
   <div id="app"></div>
   <!-- Trunk injects the correct module loader; remove manual pkg import to avoid 404/mime issues -->
 
 <script type="module">
-import init, * as bindings from '/frontend-5687d88b6a67034e.js';
-const wasm = await init({ module_or_path: '/frontend-5687d88b6a67034e_bg.wasm' });
+import init, * as bindings from '/frontend-55ea38497352c248.js';
+const wasm = await init({ module_or_path: '/frontend-55ea38497352c248_bg.wasm' });
 
 
 window.wasmBindings = bindings;
