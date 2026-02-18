@@ -1,15 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Yew + Tailwind</title>
+  <title>Recipe Book - Your Personal Cookbook</title>
+  <meta name="description" content="A modern recipe management app for your personal cookbook" />
+  <meta name="theme-color" content="#10b981" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>" />
   <script>
     // Use class-based dark mode so toggling the `dark` class works
     window.tailwind = window.tailwind || {};
     window.tailwind.config = window.tailwind.config || {};
     window.tailwind.config.darkMode = 'class';
+    // Custom Tailwind config for friendly colors
+    window.tailwind.config.theme = window.tailwind.config.theme || {};
+    window.tailwind.config.theme.extend = {
+      colors: {
+        primary: {
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+        },
+        accent: {
+          50: '#fef7ed',
+          100: '#fed7aa',
+          200: '#fdba74',
+          300: '#fb923c',
+          400: '#f97316',
+          500: '#ea580c',
+          600: '#dc2626',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+        }
+      }
+    };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -21,42 +54,171 @@
     }
 
     /* Use Inter for better typography */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
     body {
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    }
 
-      /* Small animations */
-      @keyframes fadeInUp {
-        from {
-          opacity: 0;
-          transform: translateY(8px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+    /* Custom animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
       }
-
-      .animate-fade-in {
-        animation: fadeInUp 280ms ease both;
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
+    }
 
-      .spinner {
-        border: 3px solid rgba(0, 0, 0, 0.1);
-        border-left-color: rgba(0, 0, 0, 0.6);
-        border-radius: 9999px;
-        width: 36px;
-        height: 36px;
-        animation: spin 900ms linear infinite;
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
       }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
 
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
       }
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeInUp 400ms ease-out;
+    }
+
+    .animate-slide-in {
+      animation: slideIn 300ms ease-out;
+    }
+
+    .animate-pulse-slow {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Dark mode scrollbar */
+    .dark ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+
+    /* Mobile-friendly focus styles */
+    @media (hover: hover) {
+      .hover-lift:hover {
+        transform: translateY(-2px);
+        transition: transform 200ms ease;
+      }
+    }
+
+    /* Touch-friendly tap targets */
+    @media (max-width: 768px) {
+      .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }
+
+    /* Loading spinner */
+    .spinner {
+      border: 3px solid rgba(16, 185, 129, 0.2);
+      border-left-color: #10b981;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      animation: spin 900ms linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Glass morphism effect */
+    .glass {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .dark .glass {
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Mobile menu animation */
+    .mobile-menu-enter {
+      animation: slideIn 300ms ease-out;
+    }
+
+    /* Card hover effects */
+    .card-hover {
+      transition: all 200ms ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    /* Button styles */
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      transition: all 200ms ease;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      transition: all 200ms ease;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
     }
   </style>
 </head>

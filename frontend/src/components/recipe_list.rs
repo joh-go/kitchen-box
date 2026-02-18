@@ -56,24 +56,60 @@ pub fn recipe_list(props: &Props) -> Html {
     };
 
     html! {
-        <div>
-            <h2 class="text-2xl font-bold mb-2">{ "Recipes" }</h2>
-            {
-                if let Some(e) = &*error {
-                    html!{ <p class="text-red-500">{ e }</p> }
-                } else { html!{} }
-            }
-            // search is rendered in header; keep a small hint here for mobile
-            <div class="mb-3 block lg:hidden">
-                <input
-                    placeholder="Search recipes"
-                    value={search.clone()}
-                    readonly=true
-                    class="border px-2 py-1 w-full mb-2 bg-gray-100"
-                />
+        <div class="space-y-6">
+            // Header Section
+            <div class="animate-fade-in">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
+                            {"Your Recipes"}
+                        </h1>
+                        <p class="text-slate-500 dark:text-slate-400 mt-1">
+                            { format!("{} delicious recipes", (*recipes).len()) }
+                        </p>
+                    </div>
+                    
+                    // Mobile Search Input
+                    <div class="block lg:hidden">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="Search recipes..."
+                                value={search.clone()}
+                                readonly=true
+                                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            // Error State
+            {
+                if let Some(e) = &*error {
+                    html!{
+                        <div class="glass rounded-xl p-6 border border-red-200 dark:border-red-800 animate-fade-in">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-red-800 dark:text-red-200">{"Error loading recipes"}</h3>
+                                    <p class="text-sm text-red-600 dark:text-red-400 mt-1">{ e }</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                } else { html!{} }
+            }
+
+            // Recipe Grid
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 { for (*recipes).iter().filter(|r| {
                     if search.is_empty() { true }
                     else {
@@ -84,32 +120,102 @@ pub fn recipe_list(props: &Props) -> Html {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
                     html!{
-                        <li class="bg-white dark:bg-gray-800 shadow rounded p-4 transform hover:-translate-y-1 hover:shadow-lg transition">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <div class="font-semibold text-lg text-gray-900 dark:text-gray-100">{ &r.title }</div>
-                                    <div class="text-sm text-gray-600 dark:text-gray-300">{ r.short_description.clone().unwrap_or_default() }</div>
+                        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in">
+                            // Recipe Header
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
+                                        { &r.title }
+                                    </h3>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">
+                                        { r.short_description.clone().unwrap_or_default() }
+                                    </p>
                                 </div>
-                                <div class="text-sm text-gray-500 flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 7h2v5H9V7zM9 13h2v2H9v-2z"/></svg>
-                                    { r.prep_minutes.map(|m| format!("{}m", m)).unwrap_or_default() }
-                                </div>
+                                
+                                // Prep Time Badge
+                                if let Some(prep_time) = r.prep_minutes {
+                                    <div class="ml-4 flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-sm font-medium">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        { format!("{}m", prep_time) }
+                                    </div>
+                                }
                             </div>
 
-                            <div class="mt-3 flex gap-2">
-                                <button class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-2 rounded flex items-center justify-center gap-2" onclick={props.on_edit.reform(move |_| r_clone.clone())}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 010 2.828l-9.193 9.193-3.536.707.707-3.536L14.586 2.586a2 2 0 012.828 0z"/></svg>
+                            // Recipe Categories (if available)
+                            // Note: Categories not available in Recipe struct yet
+                            // { if !r.categories.is_empty() {
+                            //     html!{
+                            //         <div class="flex flex-wrap gap-2 mb-4">
+                            //             { for r.categories.iter().take(3).map(|cat| {
+                            //                 html!{
+                            //                     <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
+                            //                         { &cat.name }
+                            //                     </span>
+                            //                 }
+                            //             })}
+                            //             { if r.categories.len() > 3 {
+                            //                 html!{
+                            //                     <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
+                            //                         { format!("+{}", r.categories.len() - 3) }
+                            //                     </span>
+                            //                 }
+                            //             }}
+                            //         </div>
+                            //     }
+                            // } else { html!{} } }
+
+                            // Action Buttons
+                            <div class="flex gap-3">
+                                <button 
+                                    class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
+                                    onclick={props.on_edit.reform(move |_| r_clone.clone())}
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
                                     {"Edit"}
                                 </button>
-                                <button class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded flex items-center justify-center gap-2" onclick={on_delete.reform(move |_| id)}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H3a1 1 0 000 2h14a1 1 0 100-2h-2V3a1 1 0 00-1-1H6zm2 6a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd"/></svg>
+                                <button 
+                                    class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
+                                    onclick={on_delete.reform(move |_| id)}
+                                >
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
                                     {"Delete"}
                                 </button>
                             </div>
-                        </li>
+                        </div>
                     }
                 }) }
-            </ul>
+            </div>
+
+            // Empty State
+            { if (*recipes).is_empty() && error.is_none() {
+                html!{
+                    <div class="text-center py-12 animate-fade-in">
+                        <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
+                            {"No recipes yet"}
+                        </h3>
+                        <p class="text-slate-500 dark:text-slate-400 mb-6">
+                            {"Start building your recipe collection by adding your first recipe."}
+                        </p>
+                        <button class="btn-primary text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            {"Add Your First Recipe"}
+                        </button>
+                    </div>
+                }
+            } else { html!{} } }
         </div>
     }
 }
