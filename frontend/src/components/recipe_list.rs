@@ -7,13 +7,15 @@ use yew::prelude::*;
 pub struct Props {
     pub on_edit: Callback<Recipe>,
     pub refresh: i32,
+    pub search: String,
 }
 
 #[function_component(RecipeList)]
 pub fn recipe_list(props: &Props) -> Html {
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
-    let search = use_state(|| String::new());
+    // use search passed from parent for centralized header search
+    let search = props.search.clone();
 
     // accept refresh as external prop if passed in (backwards compatible)
     // We'll try to read a field named `refresh` via `js_sys` props are typed, so update Props accordingly in parent.
@@ -22,20 +24,17 @@ pub fn recipe_list(props: &Props) -> Html {
         let recipes = recipes.clone();
         let error = error.clone();
         let refresh_dep = props.refresh;
-        use_effect_with(
-            refresh_dep,
-            move |_refresh| {
-                let recipes = recipes.clone();
-                let error = error.clone();
-                spawn_local(async move {
-                    match api::get_recipes().await {
-                        Ok(list) => recipes.set(list),
-                        Err(e) => error.set(Some(e)),
-                    }
-                });
-                || ()
-            },
-        );
+        use_effect_with(refresh_dep, move |_refresh| {
+            let recipes = recipes.clone();
+            let error = error.clone();
+            spawn_local(async move {
+                match api::get_recipes().await {
+                    Ok(list) => recipes.set(list),
+                    Err(e) => error.set(Some(e)),
+                }
+            });
+            || ()
+        });
     }
 
     let on_delete = {
@@ -56,8 +55,6 @@ pub fn recipe_list(props: &Props) -> Html {
         })
     };
 
-    let search_input = search.clone();
-
     html! {
         <div>
             <h2 class="text-2xl font-bold mb-2">{ "Recipes" }</h2>
@@ -66,19 +63,17 @@ pub fn recipe_list(props: &Props) -> Html {
                     html!{ <p class="text-red-500">{ e }</p> }
                 } else { html!{} }
             }
-            <div class="mb-3">
+            // search is rendered in header; keep a small hint here for mobile
+            <div class="mb-3 block lg:hidden">
                 <input
                     placeholder="Search recipes"
-                    value={(*search).clone()}
-                    oninput={Callback::from(move |e: InputEvent| {
-                        let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
-                        search_input.set(input.value());
-                    })}
-                    class="border px-2 py-1 w-full mb-2"
+                    value={search.clone()}
+                    readonly=true
+                    class="border px-2 py-1 w-full mb-2 bg-gray-100"
                 />
             </div>
 
-            <ul>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 { for (*recipes).iter().filter(|r| {
                     if search.is_empty() { true }
                     else {
@@ -89,11 +84,19 @@ pub fn recipe_list(props: &Props) -> Html {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
                     html!{
-                        <li class="mb-2">
-                            <div class="font-semibold">{ &r.title }</div>
-                            <div class="text-sm text-gray-600">{ r.short_description.clone().unwrap_or_default() }</div>
-                            <button class="mr-2 bg-yellow-400 px-2 py-1" onclick={props.on_edit.reform(move |_| r_clone.clone())}>{"Edit"}</button>
-                            <button class="bg-red-500 text-white px-2 py-1" onclick={on_delete.reform(move |_| id)}>{"Delete"}</button>
+                        <li class="bg-white dark:bg-gray-800 shadow rounded p-4">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-semibold text-lg text-gray-900 dark:text-gray-100">{ &r.title }</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-300">{ r.short_description.clone().unwrap_or_default() }</div>
+                                </div>
+                                <div class="text-sm text-gray-500">{ r.prep_minutes.map(|m| format!("{}m", m)).unwrap_or_default() }</div>
+                            </div>
+
+                            <div class="mt-3 flex gap-2">
+                                <button class="flex-1 bg-yellow-400 hover:bg-yellow-500 text-black px-3 py-1 rounded" onclick={props.on_edit.reform(move |_| r_clone.clone())}>{"Edit"}</button>
+                                <button class="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded" onclick={on_delete.reform(move |_| id)}>{"Delete"}</button>
+                            </div>
                         </li>
                     }
                 }) }

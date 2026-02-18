@@ -5,7 +5,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Yew + Tailwind</title>
+  <script>
+    // Use class-based dark mode so toggling the `dark` class works
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = window.tailwind.config || {};
+    window.tailwind.config.darkMode = 'class';
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Ensure correct text-size-adjust value for mobile browsers */
+    html {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+  </style>
 </head>
 
 <body>

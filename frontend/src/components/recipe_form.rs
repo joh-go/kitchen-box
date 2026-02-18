@@ -127,6 +127,8 @@ pub fn recipe_form(props: &Props) -> Html {
         })
     };
 
+    let on_saved_prop = props.on_saved.clone();
+
     // load categories once
     {
         let categories = categories.clone();
@@ -148,27 +150,32 @@ pub fn recipe_form(props: &Props) -> Html {
 
     html! {
         <form onsubmit={onsubmit} class="mb-4">
-            <div>
-                <input
-                    placeholder="Title"
-                    value={(*title).clone()}
-                    oninput={Callback::from(move |e: InputEvent| {
-                        let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
-                        title.set(input.value());
-                    })}
-                    class="border px-2 py-1 mr-2"
-                />
-                <input
-                    placeholder="Short description"
-                    value={(*short).clone()}
-                    oninput={Callback::from(move |e: InputEvent| {
-                        let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
-                        short.set(input.value());
-                    })}
-                    class="border px-2 py-1 mr-2"
-                />
-                <button type="submit" class="bg-green-500 text-white px-3 py-1">{ "Save" }</button>
-            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
+                    <div class="md:col-span-2">
+                        <input
+                            placeholder="Title"
+                            value={(*title).clone()}
+                            oninput={Callback::from(move |e: InputEvent| {
+                                let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                                title.set(input.value());
+                            })}
+                            class="w-full border rounded px-3 py-2"
+                        />
+                        <input
+                            placeholder="Short description"
+                            value={(*short).clone()}
+                            oninput={Callback::from(move |e: InputEvent| {
+                                let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                                short.set(input.value());
+                            })}
+                            class="w-full border rounded px-3 py-2 mt-2"
+                        />
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">{ "Save" }</button>
+                        <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-gray-200 hover:bg-gray-300 text-black px-4 py-2 rounded">{ "Cancel" }</button>
+                    </div>
+                </div>
 
             <div class="mt-3">
                 <label class="block text-sm font-medium">{ "Ingredients (one per line)" }</label>
@@ -178,7 +185,7 @@ pub fn recipe_form(props: &Props) -> Html {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         ingredients_text.set(input.value());
                     })}
-                    class="w-full border rounded px-2 py-1 mt-1 mb-2"
+                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
                     rows={4}
                 />
             </div>
@@ -191,7 +198,7 @@ pub fn recipe_form(props: &Props) -> Html {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         steps_text.set(input.value());
                     })}
-                    class="w-full border rounded px-2 py-1 mt-1 mb-2"
+                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
                     rows={4}
                 />
             </div>
