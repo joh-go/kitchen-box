@@ -2,9 +2,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Category {
-    pub id: i32,
+pub struct User {
+    pub id: Option<i32>,
     pub name: String,
+    pub email: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Category {
+    pub id: Option<i32>,
+    pub name: String,
+    pub slug: Option<String>,
+    pub description: Option<String>,
+    pub parent_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

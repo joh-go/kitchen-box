@@ -1,6 +1,6 @@
 use crate::api;
-use crate::models::Recipe;
 use serde_json::json;
+use shared_types::Recipe;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::SubmitEvent;
@@ -31,7 +31,7 @@ pub fn recipe_form(props: &Props) -> Html {
 
     let ingredients_text = use_state(|| String::new());
     let steps_text = use_state(|| String::new());
-    let categories = use_state(|| Vec::<crate::models::Category>::new());
+    let categories = use_state(|| Vec::<shared_types::Category>::new());
     let selected_category = use_state(|| None as Option<i32>);
 
     let onsubmit = {
@@ -178,7 +178,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     class="border rounded px-2 py-1 mt-1"
                 >
                     <option value="">{ "— none —" }</option>
-                    { for (*categories).iter().map(|c| html!{ <option value={c.id.to_string()}>{ &c.name }</option> }) }
+                    { for (*categories).iter().map(|c| html!{ <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> }) }
                 </select>
             </div>
         </form>

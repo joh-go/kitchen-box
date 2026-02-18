@@ -2,6 +2,7 @@
 members = [
     "backend",
     "frontend",
+    "shared-types",
 ]
 
 # Optional: set workspace-wide metadata or profiles here

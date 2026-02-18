@@ -1,10 +1,9 @@
 use yew::prelude::*;
 mod api;
 mod components;
-mod models;
 
 use components::{recipe_form::RecipeForm, recipe_list::RecipeList};
-use models::Recipe;
+use shared_types::Recipe;
 
 #[function_component(App)]
 fn app() -> Html {

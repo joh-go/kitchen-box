@@ -1,5 +1,5 @@
 use crate::api;
-use crate::models::Recipe;
+use shared_types::Recipe;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 

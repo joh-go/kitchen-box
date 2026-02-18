@@ -1,7 +1,7 @@
-use crate::models::{Category, Recipe};
 use gloo::net::http::Request;
-use serde_json::Value as JsonValue;
 use serde_json::json;
+use serde_json::Value as JsonValue;
+use shared_types::{Category, Recipe};
 
 const BASE: &str = "http://127.0.0.1:8000";
 
