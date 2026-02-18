@@ -8,6 +8,7 @@ use shared_types::Recipe;
 #[function_component(App)]
 fn app() -> Html {
     let editing = use_state(|| None as Option<Recipe>);
+    let refresh = use_state(|| 0i32);
 
     let on_edit = Callback::from({
         let editing = editing.clone();
@@ -18,8 +19,10 @@ fn app() -> Html {
 
     let on_saved = Callback::from({
         let editing = editing.clone();
+        let refresh = refresh.clone();
         move |_| {
             editing.set(None);
+            refresh.set(*refresh + 1);
         }
     });
 
@@ -31,7 +34,7 @@ fn app() -> Html {
 
             <div>
                 <RecipeForm on_saved={on_saved.clone()} editing={(*editing).clone()} />
-                <RecipeList on_edit={on_edit.clone()} />
+                <RecipeList on_edit={on_edit.clone()} refresh={*refresh} />
             </div>
         </div>
     }

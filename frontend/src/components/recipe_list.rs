@@ -6,33 +6,36 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub on_edit: Callback<Recipe>,
+    pub refresh: i32,
 }
 
 #[function_component(RecipeList)]
 pub fn recipe_list(props: &Props) -> Html {
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
+    let search = use_state(|| String::new());
+
+    // accept refresh as external prop if passed in (backwards compatible)
+    // We'll try to read a field named `refresh` via `js_sys` props are typed, so update Props accordingly in parent.
 
     {
         let recipes = recipes.clone();
         let error = error.clone();
-        let loaded = use_state(|| false);
-
-        use_effect(move || {
-            let recipes = recipes.clone();
-            let error = error.clone();
-            let loaded = loaded.clone();
-            if !*loaded {
+        let refresh_dep = props.refresh;
+        use_effect_with(
+            refresh_dep,
+            move |_refresh| {
+                let recipes = recipes.clone();
+                let error = error.clone();
                 spawn_local(async move {
                     match api::get_recipes().await {
                         Ok(list) => recipes.set(list),
                         Err(e) => error.set(Some(e)),
                     }
-                    loaded.set(true);
                 });
-            }
-            || ()
-        });
+                || ()
+            },
+        );
     }
 
     let on_delete = {
@@ -53,6 +56,8 @@ pub fn recipe_list(props: &Props) -> Html {
         })
     };
 
+    let search_input = search.clone();
+
     html! {
         <div>
             <h2 class="text-2xl font-bold mb-2">{ "Recipes" }</h2>
@@ -61,8 +66,26 @@ pub fn recipe_list(props: &Props) -> Html {
                     html!{ <p class="text-red-500">{ e }</p> }
                 } else { html!{} }
             }
+            <div class="mb-3">
+                <input
+                    placeholder="Search recipes"
+                    value={(*search).clone()}
+                    oninput={Callback::from(move |e: InputEvent| {
+                        let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                        search_input.set(input.value());
+                    })}
+                    class="border px-2 py-1 w-full mb-2"
+                />
+            </div>
+
             <ul>
-                { for (*recipes).iter().map(|r| {
+                { for (*recipes).iter().filter(|r| {
+                    if search.is_empty() { true }
+                    else {
+                        let q = search.to_lowercase();
+                        r.title.to_lowercase().contains(&q) || r.short_description.clone().unwrap_or_default().to_lowercase().contains(&q)
+                    }
+                }).map(|r| {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
                     html!{

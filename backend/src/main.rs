@@ -59,6 +59,7 @@ async fn rocket() -> _ {
                 recipes::add_recipe,
                 recipes::get_recipes,
                 recipes::get_recipe,
+                recipes::update_recipe,
                 recipes::delete_recipe,
                 recipes::assign_category
             ],

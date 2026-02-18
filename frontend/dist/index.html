@@ -1,21 +1,20 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Yew + Tailwind</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="modulepreload" href="/frontend-6a0e1c3f7dc7349a.js" crossorigin="anonymous" integrity="sha384-ImM6rGylgsIslIBvfRXVeCprWB/lez4qFwtXBfYcGqWSU7CT1pBaYHO2yqwPxNxx"><link rel="preload" href="/frontend-6a0e1c3f7dc7349a_bg.wasm" crossorigin="anonymous" integrity="sha384-uDvU5+hUuGH+DRs/nLAsYSZPsdPWhUFwOoWo0EBnrcn4V8YPx9Qt3fnRrFjZfydI" as="fetch" type="application/wasm"></head>
-  <body>
-    <div id="app"></div>
-    <script type="module">
-      import init from './pkg/frontend.js';
-      init();
-    </script>
-  
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Yew + Tailwind</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+<link rel="modulepreload" href="/frontend-e6c8192629eaa7cc.js" crossorigin="anonymous" integrity="sha384-Js474eh4MSJ1VoxP1YJ1l3AJ8zMZCqKoZ8IBtnj1+LUDjnZYHrT54iZktiYJDHld"><link rel="preload" href="/frontend-e6c8192629eaa7cc_bg.wasm" crossorigin="anonymous" integrity="sha384-ARVoAqbBZZU/ur45KXMMCby9kvF3+RDg5Q0M4kORrhbqsN4j2aL33X2EaBUSyMmB" as="fetch" type="application/wasm"></head>
+
+<body>
+  <div id="app"></div>
+  <!-- Trunk injects the correct module loader; remove manual pkg import to avoid 404/mime issues -->
+
 <script type="module">
-import init, * as bindings from '/frontend-6a0e1c3f7dc7349a.js';
-const wasm = await init({ module_or_path: '/frontend-6a0e1c3f7dc7349a_bg.wasm' });
+import init, * as bindings from '/frontend-e6c8192629eaa7cc.js';
+const wasm = await init({ module_or_path: '/frontend-e6c8192629eaa7cc_bg.wasm' });
 
 
 window.wasmBindings = bindings;
@@ -153,4 +152,5 @@ dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
 
 })()
 </script></body>
+
 </html>

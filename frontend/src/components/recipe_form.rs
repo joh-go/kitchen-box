@@ -28,9 +28,31 @@ pub fn recipe_form(props: &Props) -> Html {
             .and_then(|r| r.short_description.clone())
             .unwrap_or_default()
     });
+    let ingredients_text = use_state(|| {
+        if let Some(r) = &props.editing {
+            if let Some(arr) = r.ingredients.as_array() {
+                return arr
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or(&v.to_string()).to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n");
+            }
+        }
+        String::new()
+    });
 
-    let ingredients_text = use_state(|| String::new());
-    let steps_text = use_state(|| String::new());
+    let steps_text = use_state(|| {
+        if let Some(r) = &props.editing {
+            if let Some(arr) = r.steps.as_array() {
+                return arr
+                    .iter()
+                    .map(|v| v.as_str().unwrap_or(&v.to_string()).to_string())
+                    .collect::<Vec<String>>()
+                    .join("\n");
+            }
+        }
+        String::new()
+    });
     let categories = use_state(|| Vec::<shared_types::Category>::new());
     let selected_category = use_state(|| None as Option<i32>);
 
@@ -83,9 +105,23 @@ pub fn recipe_form(props: &Props) -> Html {
                     is_public: Some(true),
                 };
 
-                let _ = api::create_recipe(&recipe).await;
-                // Category assignment not yet applied server-side on create.
-                let _ = &selected_category;
+                // Create or update
+                let res = if let Some(id) = recipe.id {
+                    api::update_recipe(id, &recipe).await.map_err(|e| e)
+                } else {
+                    api::create_recipe(&recipe).await.map(|r| r).map_err(|e| e)
+                };
+
+                if let Ok(created) = res {
+                    // use returned recipe (with id)
+                    let rid = created.id;
+                    if let Some(cid) = *selected_category {
+                        if let Some(rid) = rid {
+                            let _ = api::assign_category(rid, cid).await;
+                        }
+                    }
+                }
+
                 on_saved.emit(());
             });
         })

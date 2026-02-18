@@ -34,7 +34,7 @@ pub async fn get_recipe(id: i32) -> Result<Recipe, String> {
     resp.json::<Recipe>().await.map_err(|e| e.to_string())
 }
 
-pub async fn create_recipe(recipe: &Recipe) -> Result<(), String> {
+pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
     let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
     let resp = Request::post(&format!("{}/api/recipes", BASE))
         .header("Content-Type", "application/json")
@@ -44,7 +44,23 @@ pub async fn create_recipe(recipe: &Recipe) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
     if resp.ok() {
-        Ok(())
+        resp.json::<Recipe>().await.map_err(|e| e.to_string())
+    } else {
+        Err("server error".into())
+    }
+}
+
+pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
+    let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
+    let resp = Request::put(&format!("{}/api/recipes/{}", BASE, id))
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        resp.json::<Recipe>().await.map_err(|e| e.to_string())
     } else {
         Err("server error".into())
     }
