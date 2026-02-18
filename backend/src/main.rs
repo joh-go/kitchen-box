@@ -6,7 +6,9 @@ mod handlers;
 mod models;
 
 use handlers::{categories, recipes, users};
-use rocket_cors::{AllowedOrigins, CorsOptions};
+use rocket::http::Method;
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
+use std::collections::HashSet;
 use tokio_postgres::NoTls;
 
 #[launch]
@@ -28,8 +30,18 @@ async fn rocket() -> _ {
         .await
         .expect("Failed to initialize database tables");
 
+    let mut methods = HashSet::new();
+    methods.insert(Method::Get.into());
+    methods.insert(Method::Post.into());
+    methods.insert(Method::Put.into());
+    methods.insert(Method::Delete.into());
+    methods.insert(Method::Options.into());
+
     let cors = CorsOptions::default()
         .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(methods)
+        .allowed_headers(AllowedHeaders::some(&["Content-Type", "Authorization"]))
+        .allow_credentials(true)
         .to_cors()
         .expect("Error while building CORS");
 
