@@ -14,6 +14,8 @@ pub struct Props {
 pub fn recipe_list(props: &Props) -> Html {
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
+    let is_logged_in = api::is_logged_in();
+    let current_user_id = api::get_current_user_id();
     // use search passed from parent for centralized header search
     let search = props.search.clone();
 
@@ -119,8 +121,17 @@ pub fn recipe_list(props: &Props) -> Html {
                 }).map(|r| {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
+                    
+                    // Check if recipe is owned by current user
+                    let is_owned = if is_logged_in {
+                        r.author_id.is_some() && 
+                        current_user_id.map(|uid| uid == r.author_id.unwrap_or_default()).unwrap_or(false)
+                    } else {
+                        false
+                    };
+                    
                     html!{
-                        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in">
+                        <div class={format!("glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in{}", if is_owned { " ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900" } else { "" })}>
                             // Recipe Header
                             <div class="flex items-start justify-between mb-4">
                                 <div class="flex-1">
@@ -131,6 +142,24 @@ pub fn recipe_list(props: &Props) -> Html {
                                         { r.short_description.clone().unwrap_or_default() }
                                     </p>
                                 </div>
+                                
+                                // Owner Badge
+                                {
+                                    if is_owned {
+                                        html! {
+                                            <div class="flex items-center gap-2">
+                                                <div class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                                    </svg>
+                                                    <span class="font-semibold">{"Owner"}</span>
+                                                </div>
+                                            </div>
+                                        }
+                                    } else {
+                                        html! {}
+                                    }
+                                }
                                 
                                 // Prep Time Badge
                                 if let Some(prep_time) = r.prep_minutes {
@@ -166,27 +195,33 @@ pub fn recipe_list(props: &Props) -> Html {
                             //     }
                             // } else { html!{} } }
 
-                            // Action Buttons
-                            <div class="flex gap-3">
-                                <button 
-                                    class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
-                                    onclick={props.on_edit.reform(move |_| r_clone.clone())}
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                    {"Edit"}
-                                </button>
-                                <button 
-                                    class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
-                                    onclick={on_delete.reform(move |_| id)}
-                                >
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                    </svg>
-                                    {"Delete"}
-                                </button>
-                            </div>
+                            // Action Buttons - Only show for owned recipes
+                            {if is_owned {
+                                html! {
+                                    <div class="flex gap-3">
+                                        <button 
+                                            class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
+                                            onclick={props.on_edit.reform(move |_| r_clone.clone())}
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                            {"Edit"}
+                                        </button>
+                                        <button 
+                                            class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
+                                            onclick={on_delete.reform(move |_| id)}
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                            {"Delete"}
+                                        </button>
+                                    </div>
+                                }
+                            } else {
+                                html! {}
+                            }}
                         </div>
                     }
                 }) }

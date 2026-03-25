@@ -1,7 +1,8 @@
 use rocket::serde::json::Json;
 use rocket::{State, response::status::Custom, http::Status};
 use tokio_postgres::Client;
-use crate::auth::{authenticate_user, generate_token, LoginRequest, LoginResponse};
+use crate::auth::{authenticate_user, generate_token, LoginRequest, LoginResponse, UserInfo};
+use serde_json::json;
 
 #[post("/api/auth/login", data = "<login>")]
 pub async fn login(
@@ -10,16 +11,21 @@ pub async fn login(
 ) -> Result<Json<LoginResponse>, Custom<String>> {
     match authenticate_user(conn, &login.email, &login.password).await {
         Ok(Some(user)) => {
-            match generate_token(user.id) {
-                Ok(token) => Ok(Json(LoginResponse {
-                    token,
-                    user,
-                })),
-                Err(e) => Err(Custom(Status::InternalServerError, format!("Failed to generate token: {}", e))),
-            }
+            // Generate JWT token
+            let token = generate_token(user.id).map_err(|e| Custom(Status::InternalServerError, e))?;
+            
+            // Return token and user info
+            Ok(Json(LoginResponse {
+                token,
+                user: UserInfo {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                },
+            }))
         }
         Ok(None) => Err(Custom(Status::Unauthorized, "Invalid email or password".to_string())),
-        Err(e) => Err(Custom(Status::InternalServerError, format!("Database error: {}", e))),
+        Err(e) => Err(Custom(Status::InternalServerError, e)),
     }
 }
 

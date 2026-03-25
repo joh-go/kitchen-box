@@ -78,6 +78,38 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
     Ok(Json(recipes))
 }
 
+#[get("/api/my-recipes")]
+pub async fn get_my_recipes(conn: &State<Client>, auth_user: AuthenticatedUser) -> Result<Json<Vec<Recipe>>, Custom<String>> {
+    let rows = conn
+        .query("SELECT id, title, slug, short_description, ingredients, steps, prep_minutes, cook_minutes, servings, notes, author_id, is_public FROM recipes WHERE author_id = $1 ORDER BY created_at DESC", &[&auth_user.user_id]).await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    let mut recipes = Vec::new();
+    for row in rows.iter() {
+        let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
+        let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
+        let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+        let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+
+        recipes.push(Recipe {
+            id: Some(row.get(0)),
+            title: row.get(1),
+            slug: row.get(2),
+            short_description: row.get(3),
+            ingredients,
+            steps,
+            prep_minutes: row.get(6),
+            cook_minutes: row.get(7),
+            servings: row.get(8),
+            notes: row.get(9),
+            author_id: row.get(10),
+            is_public: row.get(11),
+        });
+    }
+
+    Ok(Json(recipes))
+}
+
 #[get("/api/recipes/<id>")]
 pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, Custom<String>> {
     let row = conn

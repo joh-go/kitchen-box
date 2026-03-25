@@ -27,6 +27,18 @@ pub fn is_logged_in() -> bool {
     false
 }
 
+// Helper function to get current user's ID from localStorage
+pub fn get_current_user_id() -> Option<i32> {
+    if let Some(window) = window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            if let Ok(Some(id_str)) = storage.get_item("user_id") {
+                return id_str.parse::<i32>().ok();
+            }
+        }
+    }
+    None
+}
+
 // Helper function to get current user's name
 pub fn get_current_user_name() -> Option<String> {
     if let Some(window) = window() {
@@ -53,6 +65,17 @@ pub fn logout() {
 
 pub async fn get_recipes() -> Result<Vec<Recipe>, String> {
     let resp = Request::get(&format!("{}/api/recipes", BASE))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    resp.json::<Vec<Recipe>>().await.map_err(|e| e.to_string())
+}
+
+pub async fn get_my_recipes() -> Result<Vec<Recipe>, String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let resp = Request::get(&format!("{}/api/my-recipes", BASE))
+        .header("Authorization", &auth_header)
         .send()
         .await
         .map_err(|e| e.to_string())?;

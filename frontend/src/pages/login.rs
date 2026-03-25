@@ -46,20 +46,52 @@ pub fn login() -> Html {
 
                 match api::login(&email, &password).await {
                     Ok(response) => {
-                        // Extract the actual JWT token from the response
-                        if let Some(token) = response.get("token").and_then(|t| t.as_str()) {
-                            // Store token in localStorage
-                            if let Some(window) = web_sys::window() {
-                                if let Ok(Some(storage)) = window.local_storage() {
-                                    let _ = storage.set_item("auth_token", token);
-                                    let _ = storage.set_item("user_email", &email);
+                        // Extract user info from the response
+                        if let Some(user) = response.get("user").and_then(|u| u.as_object()) {
+                            if let Some(id) = user.get("id").and_then(|i| i.as_u64()) {
+                                if let Some(email) = user.get("email").and_then(|e| e.as_str()) {
+                                    // Store user info in localStorage
+                                    if let Some(window) = web_sys::window() {
+                                        if let Ok(Some(storage)) = window.local_storage() {
+                                            let _ = storage.set_item("user_id", &id.to_string());
+                                            let _ = storage.set_item("user_email", email);
+                                        }
+                                    }
+                                    
+                                    // Extract the actual JWT token from the response
+                                    if let Some(token) = response.get("token").and_then(|t| t.as_str()) {
+                                        // Store token in localStorage
+                                        if let Some(window) = web_sys::window() {
+                                            if let Ok(Some(storage)) = window.local_storage() {
+                                                let _ = storage.set_item("auth_token", token);
+                                            }
+                                        }
+                                        web_sys::window().unwrap().location().set_href("/").unwrap();
+                                    } else {
+                                        state.set(LoginState {
+                                            loading: false,
+                                            error: Some("Failed to get authentication token".to_string()),
+                                            ..state.deref().clone()
+                                        });
+                                    }
+                                } else {
+                                    state.set(LoginState {
+                                        loading: false,
+                                        error: Some("Failed to get user info".to_string()),
+                                        ..state.deref().clone()
+                                    });
                                 }
+                            } else {
+                                state.set(LoginState {
+                                    loading: false,
+                                    error: Some("Failed to get user ID".to_string()),
+                                    ..state.deref().clone()
+                                });
                             }
-                            web_sys::window().unwrap().location().set_href("/").unwrap();
                         } else {
                             state.set(LoginState {
                                 loading: false,
-                                error: Some("Failed to get authentication token".to_string()),
+                                error: Some("Failed to get user info".to_string()),
                                 ..state.deref().clone()
                             });
                         }
