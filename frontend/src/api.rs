@@ -17,6 +17,40 @@ fn get_auth_header() -> Option<String> {
     None
 }
 
+// Helper function to check if user is logged in
+pub fn is_logged_in() -> bool {
+    if let Some(window) = window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            return storage.get_item("auth_token").is_ok_and(|t| t.is_some());
+        }
+    }
+    false
+}
+
+// Helper function to get current user's name
+pub fn get_current_user_name() -> Option<String> {
+    if let Some(window) = window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            if let Ok(Some(email)) = storage.get_item("user_email") {
+                return Some(email);
+            }
+        }
+    }
+    None
+}
+
+// Logout function
+pub fn logout() {
+    if let Some(window) = window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            let _ = storage.remove_item("auth_token");
+            let _ = storage.remove_item("user_email");
+            // Redirect to home page
+            let _ = window.location().set_href("/");
+        }
+    }
+}
+
 pub async fn get_recipes() -> Result<Vec<Recipe>, String> {
     let resp = Request::get(&format!("{}/api/recipes", BASE))
         .send()
