@@ -16,7 +16,8 @@ pub async fn init_tables(client: &Client) -> Result<(), Custom<String>> {
         "CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
-            email TEXT NOT NULL
+            email TEXT NOT NULL,
+            password TEXT NOT NULL
         )",
         &[]
     ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;

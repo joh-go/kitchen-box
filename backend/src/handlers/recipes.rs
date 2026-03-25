@@ -1,5 +1,6 @@
 use crate::db::execute_query;
 use crate::models::Recipe;
+use crate::auth::AuthenticatedUser;
 use postgres_types::Json as PgJson;
 use rocket::serde::json::Json;
 use rocket::{http::Status, response::status::Custom, State};
@@ -9,6 +10,7 @@ use tokio_postgres::Client;
 #[post("/api/recipes", data = "<recipe>")]
 pub async fn add_recipe(
     conn: &State<Client>,
+    auth_user: AuthenticatedUser,
     recipe: Json<Recipe>,
 ) -> Result<Json<Recipe>, Custom<String>> {
     let ingredients_val = PgJson(recipe.ingredients.clone());
@@ -19,7 +21,7 @@ pub async fn add_recipe(
     let row = conn
         .query_one(
             "INSERT INTO recipes (title, slug, short_description, ingredients, steps, prep_minutes, cook_minutes, servings, notes, author_id, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, title, slug, short_description, ingredients, steps, prep_minutes, cook_minutes, servings, notes, author_id, is_public",
-            &[&recipe.title, &slug_val, &recipe.short_description, &ingredients_val, &steps_val, &recipe.prep_minutes, &recipe.cook_minutes, &recipe.servings, &recipe.notes, &recipe.author_id, &recipe.is_public],
+            &[&recipe.title, &slug_val, &recipe.short_description, &ingredients_val, &steps_val, &recipe.prep_minutes, &recipe.cook_minutes, &recipe.servings, &recipe.notes, &auth_user.user_id, &recipe.is_public],
         ).await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
@@ -104,7 +106,23 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
 }
 
 #[delete("/api/recipes/<id>")]
-pub async fn delete_recipe(conn: &State<Client>, id: i32) -> Result<Status, Custom<String>> {
+pub async fn delete_recipe(
+    conn: &State<Client>,
+    auth_user: AuthenticatedUser,
+    id: i32,
+) -> Result<Status, Custom<String>> {
+    // Check if user owns this recipe
+    let recipe_row = conn
+        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&id])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    
+    let author_id: i32 = recipe_row.get(0);
+    
+    if author_id != auth_user.user_id {
+        return Err(Custom(Status::Forbidden, "You can only delete your own recipes".to_string()));
+    }
+    
     execute_query(conn, "DELETE FROM recipes WHERE id = $1", &[&id]).await?;
     Ok(Status::NoContent)
 }
@@ -112,9 +130,21 @@ pub async fn delete_recipe(conn: &State<Client>, id: i32) -> Result<Status, Cust
 #[put("/api/recipes/<id>", data = "<recipe>")]
 pub async fn update_recipe(
     conn: &State<Client>,
+    auth_user: AuthenticatedUser,
     id: i32,
     recipe: Json<Recipe>,
 ) -> Result<Json<Recipe>, Custom<String>> {
+    // Check if user owns this recipe
+    let recipe_row = conn
+        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&id])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    
+    let author_id: i32 = recipe_row.get(0);
+    
+    if author_id != auth_user.user_id {
+        return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
+    }
     let ingredients_val = PgJson(recipe.ingredients.clone());
     let steps_val = PgJson(recipe.steps.clone());
 

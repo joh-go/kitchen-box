@@ -3,16 +3,22 @@ use rocket::{State, response::status::Custom, http::Status};
 use tokio_postgres::Client;
 use crate::models::User;
 use crate::db::execute_query;
+use bcrypt::{hash, DEFAULT_COST};
 
 #[post("/api/users", data = "<user>")]
 pub async fn add_user(
     conn: &State<Client>,
     user: Json<User>
 ) -> Result<Json<Vec<User>>, Custom<String>> {
+    // Hash the password before storing
+    let password = user.password.as_ref().ok_or_else(|| Custom(Status::BadRequest, "Password is required".to_string()))?;
+    let hashed_password = hash(password, DEFAULT_COST)
+        .map_err(|e| Custom(Status::InternalServerError, format!("Failed to hash password: {}", e)))?;
+    
     execute_query(
         conn,
-        "INSERT INTO users (name, email) VALUES ($1, $2)",
-        &[&user.name, &user.email]
+        "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
+        &[&user.name, &user.email, &hashed_password]
     ).await?;
     get_users(conn).await
 }
@@ -27,7 +33,7 @@ pub async fn get_users_from_db(client: &Client) -> Result<Vec<User>, Custom<Stri
         .query("SELECT id, name, email FROM users", &[]).await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
         .iter()
-        .map(|row| User { id: Some(row.get(0)), name: row.get(1), email: row.get(2) })
+        .map(|row| User { id: Some(row.get(0)), name: row.get(1), email: row.get(2), password: None })
         .collect::<Vec<User>>();
 
     Ok(users)
