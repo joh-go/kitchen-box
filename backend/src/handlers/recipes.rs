@@ -134,26 +134,63 @@ pub async fn update_recipe(
     id: i32,
     recipe: Json<Recipe>,
 ) -> Result<Json<Recipe>, Custom<String>> {
+    println!("DEBUG: Starting update_recipe for id: {}", id);
+    
     // Check if user owns this recipe
     let recipe_row = conn
         .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&id])
         .await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        .map_err(|e| {
+            println!("DEBUG: Error checking ownership: {}", e);
+            Custom(Status::InternalServerError, e.to_string())
+        })?;
     
     let author_id: i32 = recipe_row.get(0);
+    println!("DEBUG: Recipe author_id: {}, auth_user_id: {}", author_id, auth_user.user_id);
     
     if author_id != auth_user.user_id {
         return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
     }
+    
     let ingredients_val = PgJson(recipe.ingredients.clone());
     let steps_val = PgJson(recipe.steps.clone());
 
-    conn.execute(
-        "UPDATE recipes SET title=$1, slug=$2, short_description=$3, ingredients=$4, steps=$5, prep_minutes=$6, cook_minutes=$7, servings=$8, notes=$9, author_id=$10, is_public=$11, updated_at = now() WHERE id=$12",
-        &[&recipe.title, &recipe.slug, &recipe.short_description, &ingredients_val, &steps_val, &recipe.prep_minutes, &recipe.cook_minutes, &recipe.servings, &recipe.notes, &recipe.author_id, &recipe.is_public, &id]
-    ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    // Handle optional fields properly
+    let slug_val: &str = recipe.slug.as_deref().unwrap_or("");
+    let short_desc_val: &str = recipe.short_description.as_deref().unwrap_or("");
+    let prep_val: Option<i32> = recipe.prep_minutes;
+    let cook_val: Option<i32> = recipe.cook_minutes;
+    let servings_val: Option<i32> = recipe.servings;
+    let notes_val: &str = recipe.notes.as_deref().unwrap_or("");
+    let is_public_val: bool = recipe.is_public.unwrap_or(true);
 
-    get_recipe(conn, id).await
+    println!("DEBUG: About to execute full UPDATE query");
+    let result = conn.execute(
+        "UPDATE recipes SET title=$1, slug=$2, short_description=$3, ingredients=$4, steps=$5, prep_minutes=$6, cook_minutes=$7, servings=$8, notes=$9, is_public=$10, updated_at = now() WHERE id=$11",
+        &[&recipe.title, &slug_val, &short_desc_val, &ingredients_val, &steps_val, &prep_val, &cook_val, &servings_val, &notes_val, &is_public_val, &id]
+    ).await;
+    
+    match result {
+        Ok(rows_affected) => {
+            println!("DEBUG: UPDATE successful, rows affected: {}", rows_affected);
+        }
+        Err(e) => {
+            println!("DEBUG: UPDATE failed: {}", e);
+            return Err(Custom(Status::InternalServerError, format!("Update failed: {}", e)));
+        }
+    }
+
+    println!("DEBUG: About to call get_recipe");
+    match get_recipe(conn, id).await {
+        Ok(recipe) => {
+            println!("DEBUG: get_recipe successful");
+            Ok(recipe)
+        }
+        Err(e) => {
+            println!("DEBUG: get_recipe failed: {:?}", e);
+            Err(Custom(Status::InternalServerError, format!("Get recipe failed: {:?}", e)))
+        }
+    }
 }
 
 #[post("/api/recipes/<rid>/categories/<cid>")]

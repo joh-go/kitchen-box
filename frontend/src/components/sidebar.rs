@@ -27,11 +27,19 @@ pub fn sidebar(props: &Props) -> Html {
             on_mobile_close.emit(e);
         })
     };
-    let to_users = {
+    let to_login = {
         let on_nav = on_nav.clone();
         let on_mobile_close = on_mobile_close.clone();
         Callback::from(move |e: yew::MouseEvent| {
-            on_nav.emit(crate::Page::Users);
+            on_nav.emit(crate::Page::Login);
+            on_mobile_close.emit(e);
+        })
+    };
+    let to_register = {
+        let on_nav = on_nav.clone();
+        let on_mobile_close = on_mobile_close.clone();
+        Callback::from(move |e: yew::MouseEvent| {
+            on_nav.emit(crate::Page::Register);
             on_mobile_close.emit(e);
         })
     };
@@ -90,24 +98,38 @@ pub fn sidebar(props: &Props) -> Html {
                         </svg>
                     </button>
 
-                    // Users
-                    <button 
-                        onclick={to_users} 
-                        class="w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift"
-                    >
-                        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Users"}</span>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Manage users"}</p>
-                        </div>
-                        <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
+                    // Auth Links
+                    <div class="space-y-2">
+                        <button 
+                            onclick={to_login} 
+                            class="w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift"
+                        >
+                            <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4a4 4 0 0112-4.354a6 6 0 112.354 0 018-1.18l4-4 4a4 4 0 0112-4.354 0-6.47a6 6 0 00-9.542 4.438 0 018-1.18z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">{"Login"}</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Sign in to your account"}</p>
+                            </div>
+                        </button>
+
+                        <button 
+                            onclick={to_register} 
+                            class="w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift"
+                        >
+                            <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                                <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4a4 4 0 0112-4.354a6 6 0 112.354 0 018-1.18l4-4 4a4 4 0 0112-4.354 0-6.47a6 6 0 00-9.542 4.438 0 018-1.18z"></path>
+                                </svg>
+                            </div>
+                            <div class="flex-1">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">{"Register"}</span>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Create new account"}</p>
+                            </div>
+                        </button>
+                    </div>
                 </nav>
 
                 // Divider

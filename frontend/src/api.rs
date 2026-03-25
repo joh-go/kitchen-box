@@ -1,9 +1,21 @@
-use gloo::net::http::Request;
+use gloo::net::http::{Request, Method};
 use serde_json::json;
-use serde_json::Value as JsonValue;
-use shared_types::{Category, Recipe};
+use shared_types::{Category, Recipe, User};
+use web_sys::window;
 
 const BASE: &str = "http://127.0.0.1:8000";
+
+// Helper function to get auth token from localStorage
+fn get_auth_header() -> Option<String> {
+    if let Some(window) = window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            if let Ok(Some(token)) = storage.get_item("auth_token") {
+                return Some(format!("Bearer {}", token));
+            }
+        }
+    }
+    None
+}
 
 pub async fn get_recipes() -> Result<Vec<Recipe>, String> {
     let resp = Request::get(&format!("{}/api/recipes", BASE))
@@ -36,9 +48,16 @@ pub async fn get_recipe(id: i32) -> Result<Recipe, String> {
 
 pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
     let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
-    let resp = Request::post(&format!("{}/api/recipes", BASE))
+    let mut request = Request::post(&format!("{}/api/recipes", BASE))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(body);
+    
+    // Add Authorization header if token exists
+    if let Some(auth_header) = get_auth_header() {
+        request = request.header("Authorization", &auth_header);
+    }
+    
+    let resp = request
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -46,15 +65,22 @@ pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
     if resp.ok() {
         resp.json::<Recipe>().await.map_err(|e| e.to_string())
     } else {
-        Err("server error".into())
+        Err(format!("Server error: {}", resp.status()))
     }
 }
 
 pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
     let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
-    let resp = Request::put(&format!("{}/api/recipes/{}", BASE, id))
+    let mut request = Request::put(&format!("{}/api/recipes/{}", BASE, id))
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(body);
+    
+    // Add Authorization header if token exists
+    if let Some(auth_header) = get_auth_header() {
+        request = request.header("Authorization", &auth_header);
+    }
+    
+    let resp = request
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -62,12 +88,19 @@ pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
     if resp.ok() {
         resp.json::<Recipe>().await.map_err(|e| e.to_string())
     } else {
-        Err("server error".into())
+        Err(format!("Server error: {}", resp.status()))
     }
 }
 
 pub async fn delete_recipe(id: i32) -> Result<(), String> {
-    let resp = Request::delete(&format!("{}/api/recipes/{}", BASE, id))
+    let mut request = Request::delete(&format!("{}/api/recipes/{}", BASE, id));
+    
+    // Add Authorization header if token exists
+    if let Some(auth_header) = get_auth_header() {
+        request = request.header("Authorization", &auth_header);
+    }
+    
+    let resp = request
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -75,7 +108,7 @@ pub async fn delete_recipe(id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err("server error".into())
+        Err(format!("Server error: {}", resp.status()))
     }
 }
 
@@ -107,18 +140,45 @@ pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
         .map_err(|e| e.to_string())
 }
 
-pub async fn create_user(user: &shared_types::User) -> Result<(), String> {
-    let body = serde_json::to_string(user).map_err(|e| e.to_string())?;
-    let resp = Request::post(&format!("{}/api/users", BASE))
+pub async fn login(email: &str, password: &str) -> Result<serde_json::Value, String> {
+    let request = Request::new(&format!("{}/api/auth/login", BASE))
+        .method(Method::POST)
         .header("Content-Type", "application/json")
-        .body(body)
+        .body(json!({
+            "email": email,
+            "password": password
+        }).to_string());
+
+    let resp = request
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Network error: {}", e))?;
 
-    if resp.ok() {
-        Ok(())
+    if resp.status() == 200 {
+        resp.json()
+            .await
+            .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
-        Err("server error".into())
+        Err(format!("Login failed: {}", resp.status()))
+    }
+}
+
+pub async fn create_user(user: &User) -> Result<serde_json::Value, String> {
+    let request = Request::new(&format!("{}/api/users", BASE))
+        .method(Method::POST)
+        .header("Content-Type", "application/json")
+        .body(json!(user).to_string());
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status() == 200 {
+        resp.json()
+            .await
+            .map_err(|e| format!("JSON parsing error: {}", e))
+    } else {
+        Err(format!("User creation failed: {}", resp.status()))
     }
 }

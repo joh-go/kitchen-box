@@ -8,6 +8,8 @@ use components::sidebar::Sidebar;
 #[derive(Clone, PartialEq)]
 pub enum Page {
     Home,
+    Login,
+    Register,
     Add,
     Edit(i32),
     Users,
@@ -26,6 +28,12 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
             };
 
             html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} refresh={0} search={String::new()} /> }
+        }
+        Page::Login => {
+            html! { <crate::pages::login::LoginPage /> }
+        }
+        Page::Register => {
+            html! { <crate::pages::register::RegisterPage /> }
         }
         Page::Add => {
             html! { <crate::components::recipe_form::RecipeForm on_saved={Callback::from(move |_| navigate.emit(Page::Home))} editing={None} /> }

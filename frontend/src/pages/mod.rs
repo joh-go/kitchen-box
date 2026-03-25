@@ -1,9 +1,11 @@
 pub mod home;
-pub mod add;
+pub mod login;
+pub mod register;
 pub mod edit;
 pub mod users;
 
 pub use home::*;
-pub use add::*;
+pub use login::*;
+pub use register::*;
 pub use edit::*;
 pub use users::*;
