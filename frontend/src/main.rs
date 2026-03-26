@@ -46,7 +46,15 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
         Page::Add => {
             html! { <crate::components::recipe_form::RecipeForm on_saved={Callback::from(move |_| navigate.emit(Page::Home))} editing={None} /> }
         }
-        Page::Edit(id) => html! { <crate::pages::edit::EditRecipe id={*id} /> },
+        Page::Edit(id) => {
+            let on_saved = {
+                let navigate = navigate.clone();
+                Callback::from(move |id: i32| {
+                    navigate.emit(Page::View(id));
+                })
+            };
+            html! { <crate::pages::edit::EditRecipe id={*id} on_saved={on_saved} /> }
+        }
         Page::Users => html! { <crate::pages::users::UsersPage /> },
         Page::Settings => html! { <crate::pages::settings::SettingsPage /> },
         Page::View(id) => {

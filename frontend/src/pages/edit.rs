@@ -7,6 +7,7 @@ use crate::components::recipe_form::RecipeForm;
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub id: i32,
+    pub on_saved: Callback<i32>,
 }
 
 #[function_component(EditRecipe)]
@@ -31,10 +32,18 @@ pub fn edit_recipe(props: &Props) -> Html {
         });
     }
 
+    let on_saved = {
+        let on_saved = props.on_saved.clone();
+        let id = props.id;
+        Callback::from(move |_| {
+            on_saved.emit(id);
+        })
+    };
+
     html!{
         <div>
             { if let Some(r) = &*recipe {
-                html!{ <RecipeForm on_saved={Callback::from(|_|{})} editing={Some(r.clone())} /> }
+                html!{ <RecipeForm on_saved={on_saved} editing={Some(r.clone())} /> }
             } else if let Some(e) = &*error {
                 html!{ <p class="text-red-500">{ e }</p> }
             } else {
