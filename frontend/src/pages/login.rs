@@ -55,6 +55,10 @@ pub fn login() -> Html {
                                         if let Ok(Some(storage)) = window.local_storage() {
                                             let _ = storage.set_item("user_id", &id.to_string());
                                             let _ = storage.set_item("user_email", email);
+                                            // Store user name if available
+                                            if let Some(name) = user.get("name").and_then(|n| n.as_str()) {
+                                                let _ = storage.set_item("user_name", name);
+                                            }
                                         }
                                     }
                                     

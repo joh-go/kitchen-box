@@ -43,8 +43,8 @@ pub fn get_current_user_id() -> Option<i32> {
 pub fn get_current_user_name() -> Option<String> {
     if let Some(window) = window() {
         if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(email)) = storage.get_item("user_email") {
-                return Some(email);
+            if let Ok(Some(name)) = storage.get_item("user_name") {
+                return Some(name);
             }
         }
     }
@@ -57,6 +57,8 @@ pub fn logout() {
         if let Ok(Some(storage)) = window.local_storage() {
             let _ = storage.remove_item("auth_token");
             let _ = storage.remove_item("user_email");
+            let _ = storage.remove_item("user_name");
+            let _ = storage.remove_item("user_id");
             // Redirect to home page
             let _ = window.location().set_href("/");
         }
