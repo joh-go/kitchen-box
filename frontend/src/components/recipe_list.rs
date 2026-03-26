@@ -133,7 +133,7 @@ pub fn recipe_list(props: &Props) -> Html {
                     
                     html!{
                         <div 
-                            class={format!("glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer{}", if is_owned { " ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900" } else { "" })}
+                            class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900"
                             onclick={props.on_view.reform(move |_| id)}
                         >
                             // Recipe Header
@@ -146,24 +146,6 @@ pub fn recipe_list(props: &Props) -> Html {
                                         { r.short_description.clone().unwrap_or_default() }
                                     </p>
                                 </div>
-                                
-                                // Owner Badge
-                                {
-                                    if is_owned {
-                                        html! {
-                                            <div class="flex items-center gap-2">
-                                                <div class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-medium flex items-center gap-1">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                                    </svg>
-                                                    <span class="font-semibold">{"Owner"}</span>
-                                                </div>
-                                            </div>
-                                        }
-                                    } else {
-                                        html! {}
-                                    }
-                                }
                                 
                                 // Prep Time Badge
                                 if let Some(prep_time) = r.prep_minutes {
@@ -223,22 +205,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                         </button>
                                     </div>
                                 }
-                            } else {
-                                html! {
-                                    <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
-                                        <button 
-                                            class="flex-1 touch-target bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
-                                            onclick={props.on_view.reform(move |_| id)}
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                            </svg>
-                                            {"View"}
-                                        </button>
-                                    </div>
-                                }
-                            }}
+                            } else { html!{} }}
                         </div>
                     }
                 }) }
