@@ -53,6 +53,34 @@ pub fn recipe_form(props: &Props) -> Html {
         }
         String::new()
     });
+    let prep_minutes = use_state(|| {
+        props
+            .editing
+            .as_ref()
+            .and_then(|r| r.prep_minutes)
+            .unwrap_or_default()
+    });
+    let cook_minutes = use_state(|| {
+        props
+            .editing
+            .as_ref()
+            .and_then(|r| r.cook_minutes)
+            .unwrap_or_default()
+    });
+    let servings = use_state(|| {
+        props
+            .editing
+            .as_ref()
+            .and_then(|r| r.servings)
+            .unwrap_or_default()
+    });
+    let notes = use_state(|| {
+        props
+            .editing
+            .as_ref()
+            .and_then(|r| r.notes.clone())
+            .unwrap_or_default()
+    });
     let categories = use_state(|| Vec::<shared_types::Category>::new());
     let selected_category = use_state(|| None as Option<i32>);
 
@@ -61,6 +89,10 @@ pub fn recipe_form(props: &Props) -> Html {
         let short = short.clone();
         let ingredients_text = ingredients_text.clone();
         let steps_text = steps_text.clone();
+        let prep_minutes = prep_minutes.clone();
+        let cook_minutes = cook_minutes.clone();
+        let servings = servings.clone();
+        let notes = notes.clone();
         let selected_category = selected_category.clone();
         let on_saved = props.on_saved.clone();
         let editing = props.editing.clone();
@@ -70,6 +102,10 @@ pub fn recipe_form(props: &Props) -> Html {
             let short = short.clone();
             let ingredients_text = ingredients_text.clone();
             let steps_text = steps_text.clone();
+            let prep_minutes = prep_minutes.clone();
+            let cook_minutes = cook_minutes.clone();
+            let servings = servings.clone();
+            let notes = notes.clone();
             let selected_category = selected_category.clone();
             let on_saved = on_saved.clone();
             let editing = editing.clone();
@@ -97,10 +133,10 @@ pub fn recipe_form(props: &Props) -> Html {
                     },
                     ingredients: json!(ingredients_lines),
                     steps: json!(steps_lines),
-                    prep_minutes: None,
-                    cook_minutes: None,
-                    servings: None,
-                    notes: None,
+                    prep_minutes: if *prep_minutes > 0 { Some(*prep_minutes) } else { None },
+                    cook_minutes: if *cook_minutes > 0 { Some(*cook_minutes) } else { None },
+                    servings: if *servings > 0 { Some(*servings) } else { None },
+                    notes: if notes.is_empty() { None } else { Some((*notes).clone()) },
                     author_id: None,
                     is_public: Some(true),
                 };
@@ -200,6 +236,58 @@ pub fn recipe_form(props: &Props) -> Html {
                     })}
                     class="w-full border rounded px-3 py-2 mt-1 mb-2"
                     rows={4}
+                />
+            </div>
+
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm font-medium">{ "Prep Time (minutes)" }</label>
+                    <input
+                        type="number"
+                        value={(*prep_minutes).to_string()}
+                        oninput={Callback::from(move |e: InputEvent| {
+                            let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                            prep_minutes.set(input.value().parse::<i32>().unwrap_or(0));
+                        })}
+                        class="w-full border rounded px-3 py-2 mt-1"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">{ "Cook Time (minutes)" }</label>
+                    <input
+                        type="number"
+                        value={(*cook_minutes).to_string()}
+                        oninput={Callback::from(move |e: InputEvent| {
+                            let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                            cook_minutes.set(input.value().parse::<i32>().unwrap_or(0));
+                        })}
+                        class="w-full border rounded px-3 py-2 mt-1"
+                    />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">{ "Servings" }</label>
+                    <input
+                        type="number"
+                        value={(*servings).to_string()}
+                        oninput={Callback::from(move |e: InputEvent| {
+                            let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                            servings.set(input.value().parse::<i32>().unwrap_or(0));
+                        })}
+                        class="w-full border rounded px-3 py-2 mt-1"
+                    />
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="block text-sm font-medium">{ "Notes" }</label>
+                <textarea
+                    value={(*notes).clone()}
+                    oninput={Callback::from(move |e: InputEvent| {
+                        let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
+                        notes.set(input.value());
+                    })}
+                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
+                    rows={3}
                 />
             </div>
 
