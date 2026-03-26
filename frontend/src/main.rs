@@ -14,6 +14,7 @@ pub enum Page {
     Edit(i32),
     Users,
     Settings,
+    View(i32),
 }
 
 fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
@@ -27,8 +28,14 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
                     }
                 })
             };
+            let on_view = {
+                let navigate = navigate.clone();
+                Callback::from(move |id: i32| {
+                    navigate.emit(Page::View(id));
+                })
+            };
 
-            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} refresh={0} search={String::new()} /> }
+            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} refresh={0} search={String::new()} /> }
         }
         Page::Login => {
             html! { <crate::pages::login::LoginPage /> }
@@ -42,6 +49,21 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
         Page::Edit(id) => html! { <crate::pages::edit::EditRecipe id={*id} /> },
         Page::Users => html! { <crate::pages::users::UsersPage /> },
         Page::Settings => html! { <crate::pages::settings::SettingsPage /> },
+        Page::View(id) => {
+            let on_edit = {
+                let navigate = navigate.clone();
+                Callback::from(move |id: i32| {
+                    navigate.emit(Page::Edit(id));
+                })
+            };
+            let on_back = {
+                let navigate = navigate.clone();
+                Callback::from(move |_| {
+                    navigate.emit(Page::Home);
+                })
+            };
+            html! { <crate::pages::view::ViewRecipe id={*id} on_edit={on_edit} on_back={on_back} /> }
+        }
     }
 }
 

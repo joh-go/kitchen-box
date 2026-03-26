@@ -6,6 +6,7 @@ use yew::prelude::*;
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub on_edit: Callback<Recipe>,
+    pub on_view: Callback<i32>,
     pub refresh: i32,
     pub search: String,
 }
@@ -131,7 +132,10 @@ pub fn recipe_list(props: &Props) -> Html {
                     };
                     
                     html!{
-                        <div class={format!("glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in{}", if is_owned { " ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900" } else { "" })}>
+                        <div 
+                            class={format!("glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer{}", if is_owned { " ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900" } else { "" })}
+                            onclick={props.on_view.reform(move |_| id)}
+                        >
                             // Recipe Header
                             <div class="flex items-start justify-between mb-4">
                                 <div class="flex-1">
@@ -198,7 +202,7 @@ pub fn recipe_list(props: &Props) -> Html {
                             // Action Buttons - Only show for owned recipes
                             {if is_owned {
                                 html! {
-                                    <div class="flex gap-3">
+                                    <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
                                         <button 
                                             class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
                                             onclick={props.on_edit.reform(move |_| r_clone.clone())}
@@ -220,7 +224,20 @@ pub fn recipe_list(props: &Props) -> Html {
                                     </div>
                                 }
                             } else {
-                                html! {}
+                                html! {
+                                    <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
+                                        <button 
+                                            class="flex-1 touch-target bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
+                                            onclick={props.on_view.reform(move |_| id)}
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                            {"View"}
+                                        </button>
+                                    </div>
+                                }
                             }}
                         </div>
                     }
