@@ -6,7 +6,7 @@ mod db;
 mod handlers;
 mod models;
 
-use handlers::{auth::login, auth::logout, auth::get_current_user, categories, recipes, users};
+use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users};
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::collections::HashSet;
@@ -54,6 +54,7 @@ async fn rocket() -> _ {
                 login,
                 logout,
                 get_current_user,
+                update_current_user,
                 users::add_user,
                 users::get_users,
                 users::update_user,

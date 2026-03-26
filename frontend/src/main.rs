@@ -13,6 +13,7 @@ pub enum Page {
     Add,
     Edit(i32),
     Users,
+    Settings,
 }
 
 fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
@@ -40,6 +41,7 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
         }
         Page::Edit(id) => html! { <crate::pages::edit::EditRecipe id={*id} /> },
         Page::Users => html! { <crate::pages::users::UsersPage /> },
+        Page::Settings => html! { <crate::pages::settings::SettingsPage /> },
     }
 }
 

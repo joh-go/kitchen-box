@@ -241,3 +241,54 @@ pub async fn create_user(user: &User) -> Result<serde_json::Value, String> {
         Err(format!("User creation failed: {}", resp.status()))
     }
 }
+
+pub async fn update_profile(name: &str, email: &str, current_password: &str, new_password: &str) -> Result<(), String> {
+    let mut body = json!({
+        "name": name,
+        "email": email
+    });
+    
+    if !current_password.is_empty() && !new_password.is_empty() {
+        body["current_password"] = json!(current_password);
+        body["new_password"] = json!(new_password);
+    }
+
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let request = Request::new(&format!("{}/api/auth/me", BASE))
+        .method(Method::PUT)
+        .header("Content-Type", "application/json")
+        .header("Authorization", &auth_header)
+        .body(body.to_string());
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status() == 200 {
+        Ok(())
+    } else {
+        let error_text = resp.text().await.unwrap_or_else(|_| "Update failed".to_string());
+        Err(format!("Profile update failed: {}", error_text))
+    }
+}
+
+pub async fn get_current_user() -> Result<serde_json::Value, String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let request = Request::new(&format!("{}/api/auth/me", BASE))
+        .header("Content-Type", "application/json")
+        .header("Authorization", &auth_header);
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status() == 200 {
+        resp.json()
+            .await
+            .map_err(|e| format!("JSON parsing error: {}", e))
+    } else {
+        Err(format!("Failed to get user: {}", resp.status()))
+    }
+}
