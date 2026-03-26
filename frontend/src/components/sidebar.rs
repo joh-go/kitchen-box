@@ -1,4 +1,5 @@
 use yew::prelude::*;
+use wasm_bindgen_futures::spawn_local;
 use crate::api;
 
 #[derive(Properties, PartialEq)]
@@ -16,6 +17,20 @@ pub fn sidebar(props: &Props) -> Html {
     // Check authentication state
     let is_logged_in = api::is_logged_in();
     let user_name = api::get_current_user_name();
+    
+    // Fetch recipe count
+    let recipe_count = use_state(|| 0i32);
+    {
+        let recipe_count = recipe_count.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                if let Ok(recipes) = api::get_recipes().await {
+                    recipe_count.set(recipes.len() as i32);
+                }
+            });
+            || ()
+        });
+    }
     
     let to_home = {
         let on_nav = on_nav.clone();
@@ -240,14 +255,10 @@ pub fn sidebar(props: &Props) -> Html {
                 // Quick Stats
                 <div class="space-y-4">
                     <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Quick Stats"}</h3>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center">
-                            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{"12"}</div>
+                    <div class="flex justify-center">
+                        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center w-32">
+                            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{*recipe_count}</div>
                             <div class="text-xs text-emerald-700 dark:text-emerald-300">{"Recipes"}</div>
-                        </div>
-                        <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 text-center">
-                            <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">{"3"}</div>
-                            <div class="text-xs text-orange-700 dark:text-orange-300">{"Categories"}</div>
                         </div>
                     </div>
                 </div>
