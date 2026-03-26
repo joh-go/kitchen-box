@@ -166,19 +166,15 @@ pub async fn update_recipe(
     id: i32,
     recipe: Json<Recipe>,
 ) -> Result<Json<Recipe>, Custom<String>> {
-    println!("DEBUG: Starting update_recipe for id: {}", id);
-    
     // Check if user owns this recipe
     let recipe_row = conn
         .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&id])
         .await
         .map_err(|e| {
-            println!("DEBUG: Error checking ownership: {}", e);
             Custom(Status::InternalServerError, e.to_string())
         })?;
     
     let author_id: i32 = recipe_row.get(0);
-    println!("DEBUG: Recipe author_id: {}, auth_user_id: {}", author_id, auth_user.user_id);
     
     if author_id != auth_user.user_id {
         return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
@@ -196,30 +192,24 @@ pub async fn update_recipe(
     let notes_val: &str = recipe.notes.as_deref().unwrap_or("");
     let is_public_val: bool = recipe.is_public.unwrap_or(true);
 
-    println!("DEBUG: About to execute full UPDATE query");
     let result = conn.execute(
         "UPDATE recipes SET title=$1, slug=$2, short_description=$3, ingredients=$4, steps=$5, prep_minutes=$6, cook_minutes=$7, servings=$8, notes=$9, is_public=$10, updated_at = now() WHERE id=$11",
         &[&recipe.title, &slug_val, &short_desc_val, &ingredients_val, &steps_val, &prep_val, &cook_val, &servings_val, &notes_val, &is_public_val, &id]
     ).await;
     
     match result {
-        Ok(rows_affected) => {
-            println!("DEBUG: UPDATE successful, rows affected: {}", rows_affected);
+        Ok(_) => {
         }
         Err(e) => {
-            println!("DEBUG: UPDATE failed: {}", e);
             return Err(Custom(Status::InternalServerError, format!("Update failed: {}", e)));
         }
     }
 
-    println!("DEBUG: About to call get_recipe");
     match get_recipe(conn, id).await {
         Ok(recipe) => {
-            println!("DEBUG: get_recipe successful");
             Ok(recipe)
         }
         Err(e) => {
-            println!("DEBUG: get_recipe failed: {:?}", e);
             Err(Custom(Status::InternalServerError, format!("Get recipe failed: {:?}", e)))
         }
     }
