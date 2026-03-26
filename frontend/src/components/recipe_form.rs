@@ -83,6 +83,7 @@ pub fn recipe_form(props: &Props) -> Html {
     });
     let categories = use_state(|| Vec::<shared_types::Category>::new());
     let selected_category = use_state(|| None as Option<i32>);
+    let new_category_name = use_state(|| String::new());
 
     let onsubmit = {
         let title = title.clone();
@@ -126,7 +127,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     id: editing.as_ref().and_then(|r| r.id),
                     title: (*title).clone(),
                     slug: None,
-                    short_description: if short.is_empty() {
+                    short_description: if (*short).is_empty() {
                         None
                     } else {
                         Some((*short).clone())
@@ -136,7 +137,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     prep_minutes: if *prep_minutes > 0 { Some(*prep_minutes) } else { None },
                     cook_minutes: if *cook_minutes > 0 { Some(*cook_minutes) } else { None },
                     servings: if *servings > 0 { Some(*servings) } else { None },
-                    notes: if notes.is_empty() { None } else { Some((*notes).clone()) },
+                    notes: if (*notes).is_empty() { None } else { Some((*notes).clone()) },
                     author_id: None,
                     is_public: Some(true),
                 };
@@ -293,24 +294,69 @@ pub fn recipe_form(props: &Props) -> Html {
 
             <div class="mt-3">
                 <label class="block text-sm font-medium">{ "Category (optional)" }</label>
-                <select
-                    onchange={Callback::from(move |e: Event| {
-                        let v = e.target()
-                            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                            .and_then(|el| el.get_attribute("value"))
-                            .unwrap_or_default();
+                <div class="flex gap-2 mt-1">
+                    <select
+                        onchange={Callback::from({
+                            let selected_category = selected_category.clone();
+                            move |e: Event| {
+                                let v = e.target()
+                                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                                    .and_then(|el| el.get_attribute("value"))
+                                    .unwrap_or_default();
 
-                        if v.is_empty() {
-                            selected_category.set(None);
-                        } else {
-                            selected_category.set(v.parse::<i32>().ok());
-                        }
-                    })}
-                    class="border rounded px-2 py-1 mt-1"
-                >
-                    <option value="">{ "— none —" }</option>
-                    { for (*categories).iter().map(|c| html!{ <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> }) }
-                </select>
+                                if v.is_empty() {
+                                    selected_category.set(None);
+                                } else {
+                                    selected_category.set(v.parse::<i32>().ok());
+                                }
+                            }
+                        })}
+                        class="border rounded px-2 py-1 flex-1"
+                    >
+                        <option value="">{ "— none —" }</option>
+                        { for (*categories).iter().map(|c| html!{ <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> }) }
+                    </select>
+                </div>
+                <div class="flex gap-2 mt-2">
+                    <input
+                        type="text"
+                        placeholder="New category name"
+                        value={(*new_category_name).clone()}
+                        oninput={Callback::from({
+                            let new_category_name = new_category_name.clone();
+                            move |e: InputEvent| {
+                                let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+                                new_category_name.set(input.value());
+                            }
+                        })}
+                        class="border rounded px-2 py-1 flex-1 text-sm"
+                    />
+                    <button
+                        type="button"
+                        onclick={Callback::from(move |_| {
+                            let name = (*new_category_name).clone();
+                            if !name.trim().is_empty() {
+                                let categories = categories.clone();
+                                let new_category_name_clone = new_category_name.clone();
+                                let selected_category_clone = selected_category.clone();
+                                spawn_local(async move {
+                                    if let Ok(created) = api::create_category(&name).await {
+                                        if let Some(id) = created.get("id").and_then(|v| v.as_i64()) {
+                                            selected_category_clone.set(Some(id as i32));
+                                        }
+                                        new_category_name_clone.set(String::new());
+                                        if let Ok(list) = api::get_categories().await {
+                                            categories.set(list);
+                                        }
+                                    }
+                                });
+                            }
+                        })}
+                        class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                    >
+                        { "+ Add" }
+                    </button>
+                </div>
             </div>
         </form>
     }

@@ -96,6 +96,28 @@ pub async fn get_categories() -> Result<Vec<Category>, String> {
         .map_err(|e| e.to_string())
 }
 
+pub async fn create_category(name: &str) -> Result<serde_json::Value, String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let request = Request::new(&format!("{}/api/categories", BASE))
+        .method(Method::POST)
+        .header("Content-Type", "application/json")
+        .header("Authorization", &auth_header)
+        .body(json!({"name": name}).to_string());
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if resp.status() == 200 {
+        resp.json()
+            .await
+            .map_err(|e| format!("JSON parsing error: {}", e))
+    } else {
+        Err(format!("Category creation failed: {}", resp.status()))
+    }
+}
+
 pub async fn get_recipe(id: i32) -> Result<Recipe, String> {
     let resp = Request::get(&format!("{}/api/recipes/{}", BASE, id))
         .send()

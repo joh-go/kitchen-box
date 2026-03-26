@@ -9,10 +9,25 @@ pub async fn add_category(
     conn: &State<Client>,
     category: Json<Category>
 ) -> Result<Json<Vec<Category>>, Custom<String>> {
+    let slug = category.slug.clone().unwrap_or_else(|| {
+        category.name.to_lowercase()
+            .chars()
+            .map(|c| match c {
+                'a'..='z' | '0'..='9' => c,
+                ' ' => '-',
+                _ => '-',
+            })
+            .collect::<String>()
+            .split('-')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<&str>>()
+            .join("-")
+    });
+    
     execute_query(
         conn,
         "INSERT INTO categories (name, slug, description, parent_id) VALUES ($1, $2, $3, $4)",
-        &[&category.name, &category.slug, &category.description, &category.parent_id]
+        &[&category.name, &slug, &category.description, &category.parent_id]
     ).await?;
     get_categories(conn).await
 }
