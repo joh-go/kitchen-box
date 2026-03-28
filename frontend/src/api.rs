@@ -194,10 +194,11 @@ pub async fn delete_recipe(id: i32) -> Result<(), String> {
 }
 
 pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), String> {
-    let resp = Request::post(&format!(
-        "{}/api/recipes/{}/categories/{}",
-        BASE, recipe_id, category_id
-    ))
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let url = format!("{}/api/recipes/{}/categories/{}", BASE, recipe_id, category_id);
+    
+    let resp = Request::post(&url)
+    .header("Authorization", &auth_header)
     .send()
     .await
     .map_err(|e| e.to_string())?;
@@ -205,7 +206,7 @@ pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), Str
     if resp.ok() {
         Ok(())
     } else {
-        Err("server error".into())
+        Err(format!("Server error: {}", resp.status()))
     }
 }
 

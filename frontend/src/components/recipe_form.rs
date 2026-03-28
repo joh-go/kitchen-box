@@ -3,7 +3,7 @@ use serde_json::json;
 use shared_types::Recipe;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::SubmitEvent;
+use web_sys::{SubmitEvent, HtmlSelectElement};
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
@@ -301,8 +301,8 @@ pub fn recipe_form(props: &Props) -> Html {
                             let selected_category = selected_category.clone();
                             move |e: Event| {
                                 let v = e.target()
-                                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                                    .and_then(|el| el.get_attribute("value"))
+                                    .and_then(|t| t.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                                    .map(|el: HtmlSelectElement| el.value())
                                     .unwrap_or_default();
 
                                 if v.is_empty() {

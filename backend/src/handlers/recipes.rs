@@ -247,9 +247,24 @@ pub async fn update_recipe(
 #[post("/api/recipes/<rid>/categories/<cid>")]
 pub async fn assign_category(
     conn: &State<Client>,
+    auth_user: AuthenticatedUser,
     rid: i32,
     cid: i32,
 ) -> Result<Status, Custom<String>> {
+    // Check if user owns this recipe
+    let recipe_row = conn
+        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&rid])
+        .await
+        .map_err(|e| {
+            Custom(Status::InternalServerError, e.to_string())
+        })?;
+    
+    let author_id: i32 = recipe_row.get(0);
+    
+    if author_id != auth_user.user_id {
+        return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
+    }
+    
     execute_query(conn, "INSERT INTO recipe_categories (recipe_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", &[&rid, &cid]).await?;
     Ok(Status::Created)
 }
