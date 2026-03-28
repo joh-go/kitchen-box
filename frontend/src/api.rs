@@ -210,6 +210,23 @@ pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), Str
     }
 }
 
+pub async fn clear_categories(recipe_id: i32) -> Result<(), String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let url = format!("{}/api/recipes/{}/categories", BASE, recipe_id);
+    
+    let resp = Request::delete(&url)
+    .header("Authorization", &auth_header)
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("Server error: {}", resp.status()))
+    }
+}
+
 // --- Users API ---
 pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
     let resp = Request::get(&format!("{}/api/users", BASE))

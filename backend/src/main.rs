@@ -67,7 +67,8 @@ async fn rocket() -> _ {
                 recipes::get_recipe,
                 recipes::update_recipe,
                 recipes::delete_recipe,
-                recipes::assign_category
+                recipes::assign_category,
+                recipes::clear_categories
             ],
         )
         .attach(cors)

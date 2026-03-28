@@ -82,7 +82,12 @@ pub fn recipe_form(props: &Props) -> Html {
             .unwrap_or_default()
     });
     let categories = use_state(|| Vec::<shared_types::Category>::new());
-    let selected_category = use_state(|| None as Option<i32>);
+    let selected_category = use_state(|| {
+        props.editing
+            .as_ref()
+            .and_then(|r| r.categories.first())
+            .and_then(|c| c.id)
+    });
     let new_category_name = use_state(|| String::new());
 
     let onsubmit = {
@@ -154,8 +159,14 @@ pub fn recipe_form(props: &Props) -> Html {
                     // use returned recipe (with id)
                     let rid = created.id;
                     if let Some(cid) = *selected_category {
+                        // Assign the new category
                         if let Some(rid) = rid {
                             let _ = api::assign_category(rid, cid).await;
+                        }
+                    } else {
+                        // Clear all categories if none selected
+                        if let Some(rid) = rid {
+                            let _ = api::clear_categories(rid).await;
                         }
                     }
                 }
@@ -314,8 +325,13 @@ pub fn recipe_form(props: &Props) -> Html {
                         })}
                         class="border rounded px-2 py-1 flex-1"
                     >
-                        <option value="">{ "— none —" }</option>
-                        { for (*categories).iter().map(|c| html!{ <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> }) }
+                        <option value="" selected={selected_category.is_none()}>{ "— none —" }</option>
+                        { for (*categories).iter().map(|c| {
+                            let is_selected = c.id == *selected_category;
+                            html!{ 
+                                <option value={c.id.map(|id| id.to_string()).unwrap_or_default()} selected={is_selected}>{ &c.name }</option> 
+                            }
+                        }) }
                     </select>
                 </div>
                 <div class="flex gap-2 mt-2">

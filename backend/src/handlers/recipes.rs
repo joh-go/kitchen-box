@@ -141,13 +141,38 @@ pub async fn get_my_recipes(conn: &State<Client>, auth_user: AuthenticatedUser) 
 #[get("/api/recipes/<id>")]
 pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, Custom<String>> {
     let row = conn
-        .query_one("SELECT id, title, slug, short_description, ingredients, steps, prep_minutes, cook_minutes, servings, notes, author_id, is_public FROM recipes WHERE id = $1", &[&id]).await
+        .query_one("
+            SELECT r.id, r.title, r.slug, r.short_description, r.ingredients, r.steps, 
+                   r.prep_minutes, r.cook_minutes, r.servings, r.notes, r.author_id, r.is_public,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', c.id,
+                               'name', c.name,
+                               'slug', c.slug,
+                               'description', c.description,
+                               'parent_id', c.parent_id
+                           )
+                       ) FILTER (WHERE c.id IS NOT NULL), 
+                       '[]'::json
+                   ) as categories
+            FROM recipes r
+            LEFT JOIN recipe_categories rc ON r.id = rc.recipe_id
+            LEFT JOIN categories c ON rc.category_id = c.id
+            WHERE r.id = $1
+            GROUP BY r.id, r.title, r.slug, r.short_description, r.ingredients, r.steps, 
+                     r.prep_minutes, r.cook_minutes, r.servings, r.notes, r.author_id, r.is_public
+        ", &[&id]).await
         .map_err(|e| Custom(Status::NotFound, e.to_string()))?;
 
     let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
     let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
     let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
     let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+    
+    let categories_json: JsonValue = row.get(12);
+    let categories: Vec<shared_types::Category> = serde_json::from_value(categories_json)
+        .unwrap_or_default();
 
     Ok(Json(Recipe {
         id: Some(row.get(0)),
@@ -162,7 +187,7 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
         notes: row.get(9),
         author_id: row.get(10),
         is_public: row.get(11),
-        categories: Vec::new(), // Temporarily empty
+        categories,
     }))
 }
 
@@ -265,6 +290,33 @@ pub async fn assign_category(
         return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
     }
     
-    execute_query(conn, "INSERT INTO recipe_categories (recipe_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", &[&rid, &cid]).await?;
+    // Remove all existing categories for this recipe, then assign the new one
+    execute_query(conn, "DELETE FROM recipe_categories WHERE recipe_id = $1", &[&rid]).await?;
+    execute_query(conn, "INSERT INTO recipe_categories (recipe_id, category_id) VALUES ($1, $2)", &[&rid, &cid]).await?;
     Ok(Status::Created)
+}
+
+#[delete("/api/recipes/<rid>/categories")]
+pub async fn clear_categories(
+    conn: &State<Client>,
+    auth_user: AuthenticatedUser,
+    rid: i32,
+) -> Result<Status, Custom<String>> {
+    // Check if user owns this recipe
+    let recipe_row = conn
+        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&rid])
+        .await
+        .map_err(|e| {
+            Custom(Status::InternalServerError, e.to_string())
+        })?;
+    
+    let author_id: i32 = recipe_row.get(0);
+    
+    if author_id != auth_user.user_id {
+        return Err(Custom(Status::Forbidden, "You can only edit your own recipes".to_string()));
+    }
+    
+    // Remove all categories for this recipe
+    execute_query(conn, "DELETE FROM recipe_categories WHERE recipe_id = $1", &[&rid]).await?;
+    Ok(Status::NoContent)
 }
