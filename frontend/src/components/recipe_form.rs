@@ -220,10 +220,6 @@ pub fn recipe_form(props: &Props) -> Html {
                             class="w-full border rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-700"
                         />
                     </div>
-                    <div class="flex gap-2">
-                        <button type="submit" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded shadow">{ "Save" }</button>
-                        <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-black px-4 py-2 rounded">{ "Cancel" }</button>
-                    </div>
                 </div>
 
             <div class="mt-3">
@@ -374,6 +370,11 @@ pub fn recipe_form(props: &Props) -> Html {
                         { "+ Add" }
                     </button>
                 </div>
+            </div>
+            
+            <div class="flex gap-2 mt-6">
+                <button type="submit" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded shadow">{ "Save" }</button>
+                <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-black px-4 py-2 rounded">{ "Cancel" }</button>
             </div>
         </form>
     }
