@@ -140,6 +140,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     notes: if (*notes).is_empty() { None } else { Some((*notes).clone()) },
                     author_id: None,
                     is_public: Some(true),
+                    categories: Vec::new(),
                 };
 
                 // Create or update

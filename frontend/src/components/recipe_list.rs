@@ -1,7 +1,9 @@
-use crate::api;
-use shared_types::Recipe;
-use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use yew::{platform::spawn_local, Callback, Properties};
+use web_sys::{Event, HtmlSelectElement};
+use wasm_bindgen::JsCast;
+use shared_types::{Recipe, Category};
+use crate::api;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -15,6 +17,8 @@ pub struct Props {
 pub fn recipe_list(props: &Props) -> Html {
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
+    let categories = use_state(|| Vec::<shared_types::Category>::new());
+    let selected_category = use_state(|| None as Option<i32>);
     let is_logged_in = api::is_logged_in();
     let current_user_id = api::get_current_user_id();
     // use search passed from parent for centralized header search
@@ -34,6 +38,20 @@ pub fn recipe_list(props: &Props) -> Html {
                 match api::get_recipes().await {
                     Ok(list) => recipes.set(list),
                     Err(e) => error.set(Some(e)),
+                }
+            });
+            || ()
+        });
+    }
+
+    // Load categories once
+    {
+        let categories = categories.clone();
+        use_effect_with((), move |_| {
+            let categories = categories.clone();
+            spawn_local(async move {
+                if let Ok(list) = api::get_categories().await {
+                    categories.set(list);
                 }
             });
             || ()
@@ -70,6 +88,36 @@ pub fn recipe_list(props: &Props) -> Html {
                         <p class="text-slate-500 dark:text-slate-400 mt-1">
                             { format!("{} delicious recipes", (*recipes).len()) }
                         </p>
+                    </div>
+                    
+                    // Category Filter
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Filter by category:"}</label>
+                        <select
+                            onchange={Callback::from({
+                                let selected_category = selected_category.clone();
+                                move |e: Event| {
+                                    let v: String = e.target()
+                                        .and_then(|t| t.dyn_into::<web_sys::HtmlSelectElement>().ok())
+                                        .map(|el: HtmlSelectElement| el.value())
+                                        .unwrap_or_default();
+
+                                    let new_selected = if v.is_empty() {
+                                        None
+                                    } else {
+                                        v.parse::<i32>().ok()
+                                    };
+                                    
+                                    selected_category.set(new_selected);
+                                }
+                            })}
+                            class="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        >
+                            <option value="" selected=true>{ "All Categories" }</option>
+                            { for (*categories).iter().map(|c| html!{ 
+                                <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> 
+                            }) }
+                        </select>
                     </div>
                     
                     // Mobile Search Input
@@ -114,11 +162,22 @@ pub fn recipe_list(props: &Props) -> Html {
             // Recipe Grid
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 { for (*recipes).iter().filter(|r| {
-                    if search.is_empty() { true }
-                    else {
+                    // Search filtering
+                    let search_match = if search.is_empty() { 
+                        true 
+                    } else {
                         let q = search.to_lowercase();
                         r.title.to_lowercase().contains(&q) || r.short_description.clone().unwrap_or_default().to_lowercase().contains(&q)
-                    }
+                    };
+                    
+                    // Category filtering
+                    let category_match = if let Some(selected_id) = *selected_category {
+                        r.categories.iter().any(|c| c.id == Some(selected_id))
+                    } else {
+                        true // No category filter selected
+                    };
+                    
+                    search_match && category_match
                 }).map(|r| {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
@@ -158,28 +217,29 @@ pub fn recipe_list(props: &Props) -> Html {
                                 }
                             </div>
 
-                            // Recipe Categories (if available)
-                            // Note: Categories not available in Recipe struct yet
-                            // { if !r.categories.is_empty() {
-                            //     html!{
-                            //         <div class="flex flex-wrap gap-2 mb-4">
-                            //             { for r.categories.iter().take(3).map(|cat| {
-                            //                 html!{
-                            //                     <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
-                            //                         { &cat.name }
-                            //                     </span>
-                            //                 }
-                            //             })}
-                            //             { if r.categories.len() > 3 {
-                            //                 html!{
-                            //                     <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
-                            //                         { format!("+{}", r.categories.len() - 3) }
-                            //                     </span>
-                            //                 }
-                            //             }}
-                            //         </div>
-                            //     }
-                            // } else { html!{} } }
+                            // Recipe Categories
+                            { if !r.categories.is_empty() {
+                                html!{
+                                    <div class="flex flex-wrap gap-2 mb-4">
+                                        { for r.categories.iter().take(3).map(|cat| {
+                                            html!{
+                                                <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
+                                                    { &cat.name }
+                                                </span>
+                                            }
+                                        })}
+                                        { if r.categories.len() > 3 {
+                                            html!{
+                                                <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
+                                                    { format!("+{}", r.categories.len() - 3) }
+                                                </span>
+                                            }
+                                        } else {
+                                            html!{}
+                                        }}
+                                    </div>
+                                }
+                            } else { html!{} } }
 
                             // Action Buttons - Only show for owned recipes
                             {if is_owned {

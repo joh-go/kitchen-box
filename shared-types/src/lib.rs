@@ -32,4 +32,5 @@ pub struct Recipe {
     pub notes: Option<String>,
     pub author_id: Option<i32>,
     pub is_public: Option<bool>,
+    pub categories: Vec<Category>,
 }

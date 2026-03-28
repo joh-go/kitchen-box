@@ -165,6 +165,16 @@ function __wbg_get_imports() {
             const ret = result;
             return ret;
         },
+        __wbg_instanceof_HtmlSelectElement_a1820832b22b0d1e: function(arg0) {
+            let result;
+            try {
+                result = arg0 instanceof HTMLSelectElement;
+            } catch (_) {
+                result = false;
+            }
+            const ret = result;
+            return ret;
+        },
         __wbg_instanceof_HtmlTextAreaElement_d17ace23f20e2338: function(arg0) {
             let result;
             try {
@@ -466,6 +476,13 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
+        __wbg_value_d402dce7dcb16251: function(arg0, arg1) {
+            const ret = arg1.value;
+            const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+        },
         __wbg_value_e506a07878790ca0: function(arg0, arg1) {
             const ret = arg1.value;
             const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -474,12 +491,12 @@ function __wbg_get_imports() {
             getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 736, function: Function { arguments: [Ref(NamedExternref("Event"))], shim_idx: 737, ret: Unit, inner_ret: Some(Unit) }, mutable: false }) -> Externref`.
-            const ret = makeClosure(arg0, arg1, wasm.wasm_bindgen_f7fbe3f24e3e6492___closure__destroy___dyn_for__a__core_5858575f5ab61d4b___ops__function__Fn____a_web_sys_4426375d5bf8c0f9___features__gen_Event__Event____Output_______, wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_4426375d5bf8c0f9___features__gen_Event__Event_____);
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 757, function: Function { arguments: [Ref(NamedExternref("Event"))], shim_idx: 758, ret: Unit, inner_ret: Some(Unit) }, mutable: false }) -> Externref`.
+            const ret = makeClosure(arg0, arg1, wasm.wasm_bindgen_f7fbe3f24e3e6492___closure__destroy___dyn_for__a__core_5858575f5ab61d4b___ops__function__Fn____a_web_sys_6abcd16a092a30c7___features__gen_Event__Event____Output_______, wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_6abcd16a092a30c7___features__gen_Event__Event_____);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 799, function: Function { arguments: [Externref], shim_idx: 800, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 816, function: Function { arguments: [Externref], shim_idx: 817, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen_f7fbe3f24e3e6492___closure__destroy___dyn_core_5858575f5ab61d4b___ops__function__FnMut__wasm_bindgen_f7fbe3f24e3e6492___JsValue____Output_______, wasm_bindgen_f7fbe3f24e3e6492___convert__closures_____invoke___wasm_bindgen_f7fbe3f24e3e6492___JsValue_____);
             return ret;
         },
@@ -509,8 +526,8 @@ function wasm_bindgen_f7fbe3f24e3e6492___convert__closures_____invoke___bool_(ar
     return ret !== 0;
 }
 
-function wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_4426375d5bf8c0f9___features__gen_Event__Event_____(arg0, arg1, arg2) {
-    wasm.wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_4426375d5bf8c0f9___features__gen_Event__Event_____(arg0, arg1, arg2);
+function wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_6abcd16a092a30c7___features__gen_Event__Event_____(arg0, arg1, arg2) {
+    wasm.wasm_bindgen_f7fbe3f24e3e6492___convert__closures________invoke___web_sys_6abcd16a092a30c7___features__gen_Event__Event_____(arg0, arg1, arg2);
 }
 
 function wasm_bindgen_f7fbe3f24e3e6492___convert__closures_____invoke___wasm_bindgen_f7fbe3f24e3e6492___JsValue_____(arg0, arg1, arg2) {
