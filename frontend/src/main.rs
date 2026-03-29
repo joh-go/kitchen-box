@@ -5,6 +5,7 @@ mod pages;
 mod theme;
 
 use components::sidebar::Sidebar;
+use components::theme_provider::ThemeToggle;
 use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone, PartialEq)]
@@ -134,14 +135,17 @@ fn app() -> Html {
                                     {"Menu"}
                                 </h2>
                             </div>
-                            <button 
-                                onclick={close_mobile_menu.clone()}
-                                class="touch-target p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-700 transition-colors"
-                            >
-                                <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
+                            <div class="flex items-center space-x-2">
+                                <ThemeToggle class={""} />
+                                <button 
+                                    onclick={close_mobile_menu.clone()}
+                                    class="touch-target p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
 
                         // Mobile Navigation
@@ -185,7 +189,8 @@ fn app() -> Html {
                         </button>
 
                         // Desktop Navigation
-                        <nav class="hidden lg:flex items-center space-x-4">
+                        <nav class="hidden lg:flex items-center space-x-6">
+                            <ThemeToggle class={""} />
                             <div class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                                 <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
                                 <span>{"Ready to cook"}</span>

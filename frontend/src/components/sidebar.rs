@@ -1,7 +1,6 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
-use crate::components::theme_provider::ThemeToggle;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -249,15 +248,6 @@ pub fn sidebar(props: &Props) -> Html {
                         }}
                     </div>
                 </nav>
-
-                // Divider
-                <div class="my-6 border-t border-slate-200 dark:border-slate-700"></div>
-
-                // Theme Toggle
-                <div class="space-y-4">
-                    <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Appearance"}</h3>
-                    <ThemeToggle class={Some("w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-emerald-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift".to_string())} />
-                </div>
 
                 // Divider
                 <div class="my-6 border-t border-slate-200 dark:border-slate-700"></div>
