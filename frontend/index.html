@@ -63,16 +63,25 @@
 
     /* Base dark mode styles */
     .dark {
-      background-color: #0f172a;
-      color: #f1f5f9;
+      background-color: #0f172a !important;
+      color: #f1f5f9 !important;
     }
 
     .dark body {
-      background-color: #0f172a;
-      color: #f1f5f9;
+      background-color: #0f172a !important;
+      color: #f1f5f9 !important;
     }
 
-    /* More visible dark mode styles */
+    html.dark {
+      background-color: #0f172a !important;
+    }
+
+    body.dark {
+      background-color: #0f172a !important;
+      color: #f1f5f9 !important;
+    }
+
+    /* Comprehensive dark mode styles */
     .dark .bg-white {
       background-color: #1e293b !important;
     }
@@ -81,6 +90,31 @@
       background-color: #1e293b !important;
     }
 
+    .dark .bg-gray-100 {
+      background-color: #334155 !important;
+    }
+
+    .dark .bg-emerald-50 {
+      background-color: #064e3b !important;
+    }
+
+    .dark .bg-orange-50 {
+      background-color: #7c2d12 !important;
+    }
+
+    .dark .from-emerald-50 {
+      background-color: #064e3b !important;
+    }
+
+    .dark .via-white {
+      background-color: #1e293b !important;
+    }
+
+    .dark .to-orange-50 {
+      background-color: #7c2d12 !important;
+    }
+
+    /* Text colors */
     .dark .text-gray-900 {
       color: #f1f5f9 !important;
     }
@@ -89,16 +123,133 @@
       color: #e2e8f0 !important;
     }
 
+    .dark .text-gray-700 {
+      color: #cbd5e1 !important;
+    }
+
     .dark .text-gray-600 {
       color: #94a3b8 !important;
     }
 
+    .dark .text-gray-500 {
+      color: #64748b !important;
+    }
+
+    .dark .text-gray-400 {
+      color: #475569 !important;
+    }
+
+    .dark .text-slate-900 {
+      color: #f1f5f9 !important;
+    }
+
+    .dark .text-slate-800 {
+      color: #e2e8f0 !important;
+    }
+
+    .dark .text-slate-700 {
+      color: #cbd5e1 !important;
+    }
+
+    .dark .text-slate-600 {
+      color: #94a3b8 !important;
+    }
+
+    .dark .text-slate-500 {
+      color: #64748b !important;
+    }
+
+    .dark .text-slate-400 {
+      color: #475569 !important;
+    }
+
+    /* Border colors */
     .dark .border-gray-200 {
       border-color: #334155 !important;
     }
 
     .dark .border-gray-300 {
       border-color: #475569 !important;
+    }
+
+    .dark .border-emerald-100 {
+      border-color: #064e3b !important;
+    }
+
+    .dark .border-slate-700 {
+      border-color: #334155 !important;
+    }
+
+    /* Glass effect */
+    .dark .glass {
+      background: rgba(30, 41, 59, 0.8) !important;
+      backdrop-filter: blur(12px) !important;
+      border: 1px solid rgba(51, 65, 85, 0.3) !important;
+    }
+
+    /* Gradient overrides */
+    .dark .bg-gradient-to-br {
+      background: #0f172a !important;
+    }
+
+    .dark .from-emerald-400 {
+      background-color: #10b981 !important;
+    }
+
+    .dark .to-emerald-600 {
+      background-color: #059669 !important;
+    }
+
+    .dark .from-emerald-600 {
+      background-color: #059669 !important;
+    }
+
+    .dark .to-emerald-800 {
+      background-color: #065f46 !important;
+    }
+
+    .dark .from-emerald-400 {
+      background-color: #10b981 !important;
+    }
+
+    .dark .dark\\:from-emerald-400 {
+      background-color: #10b981 !important;
+    }
+
+    .dark .dark\\:to-emerald-300 {
+      background-color: #6ee7b7 !important;
+    }
+
+    /* Input and form elements */
+    .dark input,
+    .dark textarea,
+    .dark select {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-color: #475569 !important;
+    }
+
+    .dark input:focus,
+    .dark textarea:focus,
+    .dark select:focus {
+      border-color: #10b981 !important;
+    }
+
+    /* Button hover states */
+    .dark button:hover {
+      background-color: #334155 !important;
+    }
+
+    .dark .hover\\:bg-emerald-100:hover {
+      background-color: #064e3b !important;
+    }
+
+    .dark .hover\\:bg-slate-700:hover {
+      background-color: #334155 !important;
+    }
+
+    .dark .hover\\:bg-slate-800:hover {
+      background-color: #1e293b !important;
     }
 
     /* Custom animations */
