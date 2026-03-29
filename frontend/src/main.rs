@@ -170,10 +170,10 @@ fn app() -> Html {
                             </div>
                             <div>
                                 <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
-                                    {"Recipe Book"}
+                                    {"Kitchenbox"}
                                 </h1>
                                 <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
-                                    {"Your personal cookbook"}
+                                    {"Your personal kitchen companion"}
                                 </p>
                             </div>
                         </div>
