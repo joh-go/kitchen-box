@@ -2,8 +2,10 @@ use yew::prelude::*;
 mod api;
 mod components;
 mod pages;
+mod theme;
 
 use components::sidebar::Sidebar;
+use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone, PartialEq)]
 pub enum Page {
@@ -265,5 +267,11 @@ fn app() -> Html {
 }
 
 fn main() {
+    // Initialize theme after a short delay to ensure DOM is ready
+    wasm_bindgen_futures::spawn_local(async move {
+        gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
+        crate::theme::init_theme();
+    });
+    
     yew::Renderer::<App>::new().render();
 }

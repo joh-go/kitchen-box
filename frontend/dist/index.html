@@ -61,6 +61,46 @@
       font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     }
 
+    /* Base dark mode styles */
+    .dark {
+      background-color: #0f172a;
+      color: #f1f5f9;
+    }
+
+    .dark body {
+      background-color: #0f172a;
+      color: #f1f5f9;
+    }
+
+    /* More visible dark mode styles */
+    .dark .bg-white {
+      background-color: #1e293b !important;
+    }
+
+    .dark .bg-gray-50 {
+      background-color: #1e293b !important;
+    }
+
+    .dark .text-gray-900 {
+      color: #f1f5f9 !important;
+    }
+
+    .dark .text-gray-800 {
+      color: #e2e8f0 !important;
+    }
+
+    .dark .text-gray-600 {
+      color: #94a3b8 !important;
+    }
+
+    .dark .border-gray-200 {
+      border-color: #334155 !important;
+    }
+
+    .dark .border-gray-300 {
+      border-color: #475569 !important;
+    }
+
     /* Custom animations */
     @keyframes fadeInUp {
       from {
@@ -221,15 +261,15 @@
       box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
     }
   </style>
-<link rel="modulepreload" href="/frontend-349a95d529d8158f.js" crossorigin="anonymous" integrity="sha384-r2sZ2iMPGVLuKp5JDLxpLb5H0NzqjjZt81pv5xC+XEDIEiHnrvoIk7RMSvh8jkBY"><link rel="preload" href="/frontend-349a95d529d8158f_bg.wasm" crossorigin="anonymous" integrity="sha384-duPji5hceYRXBFShTfaGZJvphoIHQWSXAfsiH8o7R44CPThG/n6tBcNooZe4tsVJ" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/frontend-cf83f0dad8133273.js" crossorigin="anonymous" integrity="sha384-1BXcpEplNwI7uz1F7xQv0R6/fQTRIkoJkXVvJbMfkSQ5zxJArbYhvESBFZBAndaT"><link rel="preload" href="/frontend-cf83f0dad8133273_bg.wasm" crossorigin="anonymous" integrity="sha384-AJnalcmsTU2vktrKRYFWWRvAQPhwj1ucxEP1BwyYOxT9jaxVvdZp8YS7vmn+bqrl" as="fetch" type="application/wasm"></head>
 
 <body>
   <div id="app"></div>
   <!-- Trunk injects the correct module loader; remove manual pkg import to avoid 404/mime issues -->
 
 <script type="module">
-import init, * as bindings from '/frontend-349a95d529d8158f.js';
-const wasm = await init({ module_or_path: '/frontend-349a95d529d8158f_bg.wasm' });
+import init, * as bindings from '/frontend-cf83f0dad8133273.js';
+const wasm = await init({ module_or_path: '/frontend-cf83f0dad8133273_bg.wasm' });
 
 
 window.wasmBindings = bindings;
