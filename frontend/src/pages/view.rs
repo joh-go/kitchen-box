@@ -158,16 +158,25 @@ pub fn view_recipe(props: &Props) -> Html {
                                 {"Ingredients"}
                             </h2>
                             <ul class="space-y-2">
-                                {if let Some(arr) = r.ingredients.as_array() {
-                                    arr.iter().filter_map(|ing| ing.as_str()).map(|ing_text| {
-                                        html! {
-                                            <li class="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                                                <span class="w-2 h-2 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></span>
-                                                <span>{ing_text}</span>
-                                            </li>
-                                        }
-                                    }).collect::<Html>()
-                                } else { html! {} }}
+                                {r.ingredients.iter().map(|ing| {
+                                    html! {
+                                        <li class="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                                            <span class="w-2 h-2 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></span>
+                                            <span>
+                                                {if ing.amount != 0.0 {
+                                                    html! { <span class="font-medium">{ing.amount.to_string()}</span> }
+                                                } else { html! {} }}
+                                                {" "}{if !ing.unit.is_empty() {
+                                                    html! { <span class="font-medium">{ing.unit.clone()}</span> }
+                                                } else { html! {} }}
+                                                {" "}{ing.name.clone()}
+                                                {if let Some(notes) = &ing.notes {
+                                                    html! { <span class="text-slate-500 dark:text-slate-400 italic">{" ("}{notes}{")"}</span> }
+                                                } else { html! {} }}
+                                            </span>
+                                        </li>
+                                    }
+                                }).collect::<Html>()}
                             </ul>
                         </div>
 

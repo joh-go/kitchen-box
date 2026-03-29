@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct User {
@@ -19,13 +18,21 @@ pub struct Category {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Ingredient {
+    pub name: String,
+    pub amount: f64,
+    pub unit: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Recipe {
     pub id: Option<i32>,
     pub title: String,
     pub slug: Option<String>,
     pub short_description: Option<String>,
-    pub ingredients: JsonValue,
-    pub steps: JsonValue,
+    pub ingredients: Vec<Ingredient>,
+    pub steps: serde_json::Value,
     pub prep_minutes: Option<i32>,
     pub cook_minutes: Option<i32>,
     pub servings: Option<i32>,

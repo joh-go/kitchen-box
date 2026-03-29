@@ -6,6 +6,7 @@ use rocket::serde::json::Json;
 use rocket::{http::Status, response::status::Custom, State};
 use serde_json::Value as JsonValue;
 use tokio_postgres::Client;
+use shared_types::Ingredient;
 
 #[post("/api/recipes", data = "<recipe>")]
 pub async fn add_recipe(
@@ -27,8 +28,9 @@ pub async fn add_recipe(
 
     let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
     let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
-    let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+    let ingredients_json: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
     let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+    let ingredients: Vec<Ingredient> = serde_json::from_value(ingredients_json).unwrap_or_default();
 
     Ok(Json(Recipe {
         id: Some(row.get(0)),
@@ -78,8 +80,9 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
     for row in rows.iter() {
         let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
         let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
-        let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+        let ingredients_json: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
         let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+        let ingredients: Vec<Ingredient> = serde_json::from_value(ingredients_json).unwrap_or_default();
         
         let categories_json: JsonValue = row.get(12);
         let categories: Vec<shared_types::Category> = serde_json::from_value(categories_json)
@@ -115,8 +118,9 @@ pub async fn get_my_recipes(conn: &State<Client>, auth_user: AuthenticatedUser) 
     for row in rows.iter() {
         let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
         let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
-        let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+        let ingredients_json: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
         let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+        let ingredients: Vec<Ingredient> = serde_json::from_value(ingredients_json).unwrap_or_default();
 
         recipes.push(Recipe {
             id: Some(row.get(0)),
@@ -167,8 +171,9 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
 
     let ingredients_pg: Option<PgJson<JsonValue>> = row.get(4);
     let steps_pg: Option<PgJson<JsonValue>> = row.get(5);
-    let ingredients: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+    let ingredients_json: JsonValue = ingredients_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
     let steps: JsonValue = steps_pg.map(|p| p.0).unwrap_or(JsonValue::Null);
+    let ingredients: Vec<Ingredient> = serde_json::from_value(ingredients_json).unwrap_or_default();
     
     let categories_json: JsonValue = row.get(12);
     let categories: Vec<shared_types::Category> = serde_json::from_value(categories_json)

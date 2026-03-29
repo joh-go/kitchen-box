@@ -1,10 +1,57 @@
 use crate::api;
 use serde_json::json;
-use shared_types::Recipe;
+use shared_types::{Recipe, Ingredient};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{SubmitEvent, HtmlSelectElement};
 use yew::prelude::*;
+
+fn parse_ingredients(lines: &[String]) -> Vec<Ingredient> {
+    lines
+        .iter()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| {
+            let trimmed = line.trim();
+            // Simple parsing: look for patterns like "2 cups flour (optional)"
+            let mut amount = 0.0;
+            let mut unit = String::new();
+            let mut name = String::new();
+            let mut notes = None;
+
+            // Try to extract amount at the beginning
+            let words: Vec<&str> = trimmed.split_whitespace().collect();
+            if let Some(first) = words.first() {
+                if let Ok(num) = first.parse::<f64>() {
+                    amount = num;
+                    let remaining = &words[1..];
+                    if let Some(second) = remaining.first() {
+                        unit = second.to_string();
+                        name = remaining[1..].join(" ");
+                    } else {
+                        name = remaining.join(" ");
+                    }
+                } else {
+                    name = trimmed.to_string();
+                }
+            }
+
+            // Extract notes from parentheses
+            if let Some(start) = name.find('(') {
+                if let Some(end) = name.find(')') {
+                    notes = Some(name[start + 1..end].trim().to_string());
+                    name = format!("{}{}", &name[..start].trim(), &name[end + 1..].trim());
+                }
+            }
+
+            Ingredient {
+                name: name.trim().to_string(),
+                amount,
+                unit,
+                notes,
+            }
+        })
+        .collect()
+}
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -30,15 +77,27 @@ pub fn recipe_form(props: &Props) -> Html {
     });
     let ingredients_text = use_state(|| {
         if let Some(r) = &props.editing {
-            if let Some(arr) = r.ingredients.as_array() {
-                return arr
-                    .iter()
-                    .map(|v| v.as_str().unwrap_or(&v.to_string()).to_string())
-                    .collect::<Vec<String>>()
-                    .join("\n");
-            }
+            r.ingredients
+                .iter()
+                .map(|ing| {
+                    let mut parts = Vec::new();
+                    if ing.amount != 0.0 {
+                        parts.push(ing.amount.to_string());
+                    }
+                    if !ing.unit.is_empty() {
+                        parts.push(ing.unit.clone());
+                    }
+                    parts.push(ing.name.clone());
+                    if let Some(notes) = &ing.notes {
+                        parts.push(format!("({})", notes));
+                    }
+                    parts.join(" ")
+                })
+                .collect::<Vec<String>>()
+                .join("\n")
+        } else {
+            String::new()
         }
-        String::new()
     });
 
     let steps_text = use_state(|| {
@@ -137,7 +196,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     } else {
                         Some((*short).clone())
                     },
-                    ingredients: json!(ingredients_lines),
+                    ingredients: parse_ingredients(&ingredients_lines),
                     steps: json!(steps_lines),
                     prep_minutes: if *prep_minutes > 0 { Some(*prep_minutes) } else { None },
                     cook_minutes: if *cook_minutes > 0 { Some(*cook_minutes) } else { None },
@@ -224,12 +283,22 @@ pub fn recipe_form(props: &Props) -> Html {
 
             <div class="mt-3">
                 <label class="block text-sm font-medium">{ "Ingredients (one per line)" }</label>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-2">
+                    { "Format: [amount] [unit] [name] (optional notes)" }
+                    <br />
+                    { "Examples: 2 cups flour, 1 tsp salt, 3 eggs (large)" }
+                </p>
                 <textarea
                     value={(*ingredients_text).clone()}
                     oninput={Callback::from(move |e: InputEvent| {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         ingredients_text.set(input.value());
                     })}
+                    placeholder="2 cups flour
+1 tsp salt
+3 eggs (large)
+1 cup milk (whole)
+2 tbsp olive oil (extra virgin)"
                     class="w-full border rounded px-3 py-2 mt-1 mb-2"
                     rows={4}
                 />
