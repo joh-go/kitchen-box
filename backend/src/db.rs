@@ -68,9 +68,14 @@ pub async fn init_tables(client: &Client) -> Result<(), Custom<String>> {
         "CREATE TABLE IF NOT EXISTS images (
             id SERIAL PRIMARY KEY,
             recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
-            url TEXT,
+            filename TEXT NOT NULL,
+            original_filename TEXT,
+            file_path TEXT NOT NULL,
+            file_size INTEGER,
+            mime_type TEXT,
             alt TEXT,
             is_primary BOOLEAN DEFAULT false,
+            position INTEGER DEFAULT 0,
             uploaded_at TIMESTAMPTZ DEFAULT now()
         )",
         &[]

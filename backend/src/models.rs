@@ -1,1 +1,1 @@
-pub use shared_types::{Category, Recipe, User};
+pub use shared_types::{Category, Recipe, RecipeImage, User};

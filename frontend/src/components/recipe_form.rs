@@ -205,6 +205,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     author_id: None,
                     is_public: Some(true),
                     categories: Vec::new(),
+                    images: Vec::new(),
                 };
 
                 // Create or update

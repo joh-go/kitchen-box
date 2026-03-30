@@ -1,5 +1,5 @@
 use crate::db::execute_query;
-use crate::models::Recipe;
+use crate::models::{Recipe, RecipeImage};
 use crate::auth::AuthenticatedUser;
 use postgres_types::Json as PgJson;
 use rocket::serde::json::Json;
@@ -46,6 +46,7 @@ pub async fn add_recipe(
         author_id: row.get(10),
         is_public: row.get(11),
         categories: Vec::new(),
+        images: Vec::new(),
     }))
 }
 
@@ -102,6 +103,7 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
             author_id: row.get(10),
             is_public: row.get(11),
             categories,
+            images: Vec::new(),
         });
     }
 
@@ -135,7 +137,8 @@ pub async fn get_my_recipes(conn: &State<Client>, auth_user: AuthenticatedUser) 
             notes: row.get(9),
             author_id: row.get(10),
             is_public: row.get(11),
-            categories: Vec::new(), // Temporarily empty
+            categories: Vec::new(), 
+            images: Vec::new(),
         });
     }
 
@@ -193,6 +196,7 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
         author_id: row.get(10),
         is_public: row.get(11),
         categories,
+        images: Vec::new(),
     }))
 }
 

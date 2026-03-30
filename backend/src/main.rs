@@ -6,7 +6,7 @@ mod db;
 mod handlers;
 mod models;
 
-use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users};
+use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users, images};
 use rocket::http::Method;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::collections::HashSet;
@@ -68,7 +68,11 @@ async fn rocket() -> _ {
                 recipes::update_recipe,
                 recipes::delete_recipe,
                 recipes::assign_category,
-                recipes::clear_categories
+                recipes::clear_categories,
+                images::upload_image,
+                images::get_recipe_images,
+                images::set_primary_image,
+                images::delete_image,
             ],
         )
         .attach(cors)
