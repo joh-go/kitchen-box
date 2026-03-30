@@ -88,28 +88,40 @@ pub fn sidebar(props: &Props) -> Html {
             <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-slide-in">
                 // Header
                 <div class="mb-6">
-                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
-                        {
-                            if is_logged_in {
-                                if let Some(ref name) = user_name {
-                                    format!("Welcome, {}", name)
-                                } else {
-                                    "Welcome".to_string()
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
+                                {
+                                    if is_logged_in {
+                                        if let Some(ref name) = user_name {
+                                            format!("Welcome, {}", name)
+                                        } else {
+                                            "Welcome".to_string()
+                                        }
+                                    } else {
+                                        "Navigation".to_string()
+                                    }
                                 }
-                            } else {
-                                "Navigation".to_string()
+                            </h2>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">
+                                {
+                                    if is_logged_in {
+                                        "Manage your recipes"
+                                    } else {
+                                        "Sign in to get started"
+                                    }
+                                }
+                            </p>
+                        </div>
+                        // Subtle logged-in indicator
+                        {if is_logged_in {
+                            html! {
+                                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow" title="Logged in"></div>
                             }
-                        }
-                    </h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">
-                        {
-                            if is_logged_in {
-                                "Manage your recipes"
-                            } else {
-                                "Sign in to get started"
-                            }
-                        }
-                    </p>
+                        } else {
+                            html! {}
+                        }}
+                    </div>
                 </div>
 
                 // Navigation Items
@@ -133,44 +145,30 @@ pub fn sidebar(props: &Props) -> Html {
                         </svg>
                     </button>
 
-                    // Add Recipe
-                    <button 
-                        onclick={to_add} 
-                        class="w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift"
-                    >
-                        <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
-                            <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Add Recipe"}</span>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Create new recipe"}</p>
-                        </div>
-                        <svg class="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                        </svg>
-                    </button>
-
                     // Auth Section - Show different content based on login state
                     <div class="space-y-2">
                         {if is_logged_in {
                             // Logged in user content
                             html! {
                                 <>
-                                    <div class="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
-                                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                                </svg>
-                                            </div>
-                                            <div class="flex-1">
-                                                <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{"Logged In"}</span>
-                                                <p class="text-xs text-slate-500 dark:text-slate-400">{"Welcome back!"}</p>
-                                            </div>
+                                    // Add Recipe (only for logged in users)
+                                    <button 
+                                        onclick={to_add} 
+                                        class="w-full touch-target flex items-center gap-3 text-left px-4 py-3 rounded-xl hover:bg-orange-50 dark:hover:bg-slate-700 transition-all duration-200 group hover-lift"
+                                    >
+                                        <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
+                                            <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                            </svg>
                                         </div>
-                                    </div>
+                                        <div class="flex-1">
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Add Recipe"}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Create new recipe"}</p>
+                                        </div>
+                                        <svg class="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
                                     
                                     <button 
                                         onclick={to_settings} 

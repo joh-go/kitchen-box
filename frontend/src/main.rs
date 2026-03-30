@@ -259,26 +259,50 @@ fn app() -> Html {
                         <span class="text-xs font-medium">{"Home"}</span>
                     </button>
                     
-                    <button 
-                        onclick={mobile_nav_add}
-                        class="touch-target flex flex-col items-center justify-center py-3 px-2 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <span class="text-xs font-medium">{"Add"}</span>
-                    </button>
+                    // Add Recipe - only show when logged in
+                    {if api::is_logged_in() {
+                        html! {
+                            <button 
+                                onclick={mobile_nav_add}
+                                class="touch-target flex flex-col items-center justify-center py-3 px-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                                <span class="text-xs font-medium">{"Add"}</span>
+                            </button>
+                        }
+                    } else {
+                        html! {
+                            <div class="flex flex-col items-center justify-center py-3 px-2">
+                                <div class="w-5 h-5 mb-1"></div>
+                                <span class="text-xs font-medium"></span>
+                            </div>
+                        }
+                    }}
                     
-                    <button 
-                        onclick={mobile_nav_settings}
-                        class="touch-target flex flex-col items-center justify-center py-3 px-2 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        <span class="text-xs font-medium">{"Settings"}</span>
-                    </button>
+                    // Settings - only show when logged in
+                    {if api::is_logged_in() {
+                        html! {
+                            <button 
+                                onclick={mobile_nav_settings}
+                                class="touch-target flex flex-col items-center justify-center py-3 px-2 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                                <span class="text-xs font-medium">{"Settings"}</span>
+                            </button>
+                        }
+                    } else {
+                        html! {
+                            <div class="flex flex-col items-center justify-center py-3 px-2">
+                                <div class="w-5 h-5 mb-1"></div>
+                                <span class="text-xs font-medium"></span>
+                            </div>
+                        }
+                    }}
                     
                     <button 
                         onclick={mobile_nav_menu}
