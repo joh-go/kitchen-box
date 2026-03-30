@@ -1,7 +1,18 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
-use shared_types::Recipe;
+use shared_types::{Recipe, Ingredient};
+
+fn calculate_adjusted_ingredients(ingredients: &[Ingredient], original_servings: i32, target_servings: i32) -> Vec<(Ingredient, f64)> {
+    let multiplier = target_servings as f64 / original_servings as f64;
+    ingredients
+        .iter()
+        .map(|ing| {
+            let adjusted_amount = ing.amount * multiplier;
+            (ing.clone(), adjusted_amount)
+        })
+        .collect()
+}
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -14,6 +25,7 @@ pub struct Props {
 pub fn view_recipe(props: &Props) -> Html {
     let recipe = use_state(|| None as Option<Recipe>);
     let error = use_state(|| None as Option<String>);
+    let adjusted_servings = use_state(|| None as Option<i32>);
     let id = props.id;
     let on_edit = props.on_edit.clone();
     let on_back = props.on_back.clone();
@@ -49,9 +61,38 @@ pub fn view_recipe(props: &Props) -> Html {
         })
     };
 
+    let on_serving_change = {
+        let adjusted_servings = adjusted_servings.clone();
+        Callback::from(move |e: Event| {
+            let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
+            if let Ok(value) = input.value().parse::<i32>() {
+                if value > 0 {
+                    adjusted_servings.set(Some(value));
+                }
+            }
+        })
+    };
+
+    let reset_servings = {
+        let adjusted_servings = adjusted_servings.clone();
+        let recipe = recipe.clone();
+        Callback::from(move |_: yew::MouseEvent| {
+            if let Some(r) = &*recipe {
+                if let Some(original) = r.servings {
+                    adjusted_servings.set(Some(original));
+                }
+            }
+        })
+    };
+
     html! {
         <div class="space-y-6">
             { if let Some(r) = &*recipe {
+                // Calculate adjusted ingredients outside the html! macro
+                let current_servings = (*adjusted_servings).or(r.servings).unwrap_or(1);
+                let original_servings = r.servings.unwrap_or(1);
+                let adjusted_ingredients = calculate_adjusted_ingredients(&r.ingredients, original_servings, current_servings);
+                
                 html! {
                     <>
                         // Header with back and edit buttons
@@ -123,13 +164,15 @@ pub fn view_recipe(props: &Props) -> Html {
                                     html! {}
                                 }}
                                 {if let Some(servings) = r.servings {
-                                    html! {
-                                        <div class="flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                            </svg>
-                                            <span>{format!("Serves: {}", servings)}</span>
-                                        </div>
+                                    let current_servings = (*adjusted_servings).unwrap_or(servings);
+                                    if current_servings != servings {
+                                        html! {
+                                            <span class="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
+                                                {format!("(adjusted for {} servings)", current_servings)}
+                                            </span>
+                                        }
+                                    } else {
+                                        html! {}
                                     }
                                 } else {
                                     html! {}
@@ -151,20 +194,62 @@ pub fn view_recipe(props: &Props) -> Html {
 
                         // Ingredients
                         <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                </svg>
-                                {"Ingredients"}
-                            </h2>
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                    </svg>
+                                    {"Ingredients"}
+                                    {if let Some(servings) = r.servings {
+                                        let current_servings = (*adjusted_servings).unwrap_or(servings);
+                                        if current_servings != servings {
+                                            html! {
+                                                <span class="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
+                                                    {format!("(adjusted for {} servings)", current_servings)}
+                                                </span>
+                                            }
+                                        } else {
+                                            html! {}
+                                        }
+                                    } else {
+                                        html! {}
+                                    }}
+                                </h2>
+                                {if let Some(original_servings) = r.servings {
+                                    html! {
+                                        <div class="flex items-center gap-2">
+                                            <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Servings:"}</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={(*adjusted_servings).unwrap_or(original_servings).to_string()}
+                                                onchange={on_serving_change}
+                                                class="w-16 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                            />
+                                            <button
+                                                onclick={reset_servings}
+                                                class="text-xs px-2 py-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                            >
+                                                {"Reset"}
+                                            </button>
+                                        </div>
+                                    }
+                                } else {
+                                    html! {}
+                                }}
+                            </div>
                             <ul class="space-y-2">
-                                {r.ingredients.iter().map(|ing| {
+                                {adjusted_ingredients.iter().map(|(ing, adjusted_amount)| {
                                     html! {
                                         <li class="flex items-start gap-2 text-slate-700 dark:text-slate-300">
                                             <span class="w-2 h-2 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></span>
                                             <span>
-                                                {if ing.amount != 0.0 {
-                                                    html! { <span class="font-medium">{ing.amount.to_string()}</span> }
+                                                {if *adjusted_amount != 0.0 {
+                                                    html! { 
+                                                        <span class="font-medium">
+                                                            {format!("{:.2}", adjusted_amount).trim_end_matches(".00")}
+                                                        </span> 
+                                                    }
                                                 } else { html! {} }}
                                                 {" "}{if !ing.unit.is_empty() {
                                                     html! { <span class="font-medium">{ing.unit.clone()}</span> }
@@ -191,17 +276,18 @@ pub fn view_recipe(props: &Props) -> Html {
                             <div class="space-y-4">
                                 {if let Some(arr) = r.steps.as_array() {
                                     arr.iter().filter_map(|s| s.as_str()).enumerate().map(|(idx, step_text)| {
-                                        let step_num = idx + 1;
                                         html! {
                                             <div class="flex gap-4">
-                                                <div class="flex-shrink-0 w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                                                    <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{step_num}</span>
-                                                </div>
-                                                <p class="text-slate-700 dark:text-slate-300 pt-1">{step_text}</p>
+                                                <span class="flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                                                    {idx + 1}
+                                                </span>
+                                                <p class="text-slate-700 dark:text-slate-300 flex-1">{step_text}</p>
                                             </div>
                                         }
                                     }).collect::<Html>()
-                                } else { html! {} }}
+                                } else {
+                                    html! {}
+                                }}
                             </div>
                         </div>
 
