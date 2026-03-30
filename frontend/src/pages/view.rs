@@ -26,6 +26,7 @@ pub fn view_recipe(props: &Props) -> Html {
     let recipe = use_state(|| None as Option<Recipe>);
     let error = use_state(|| None as Option<String>);
     let adjusted_servings = use_state(|| None as Option<i32>);
+    let completed_steps = use_state(|| Vec::<bool>::new());
     let id = props.id;
     let on_edit = props.on_edit.clone();
     let on_back = props.on_back.clone();
@@ -82,6 +83,23 @@ pub fn view_recipe(props: &Props) -> Html {
                     adjusted_servings.set(Some(original));
                 }
             }
+        })
+    };
+
+    let toggle_step = {
+        let completed_steps = completed_steps.clone();
+        Callback::from(move |step_index: usize| {
+            let mut steps = (*completed_steps).clone();
+            if step_index < steps.len() {
+                steps[step_index] = !steps[step_index];
+            } else {
+                // Extend the vector if needed
+                while steps.len() <= step_index {
+                    steps.push(false);
+                }
+                steps[step_index] = true;
+            }
+            completed_steps.set(steps);
         })
     };
 
@@ -275,13 +293,52 @@ pub fn view_recipe(props: &Props) -> Html {
                             </h2>
                             <div class="space-y-4">
                                 {if let Some(arr) = r.steps.as_array() {
+                                    // Ensure completed_steps vector has the right length
+                                    {
+                                        let mut steps = (*completed_steps).clone();
+                                        while steps.len() < arr.len() {
+                                            steps.push(false);
+                                        }
+                                        if steps.len() != arr.len() {
+                                            completed_steps.set(steps);
+                                        }
+                                    }
+                                    
                                     arr.iter().filter_map(|s| s.as_str()).enumerate().map(|(idx, step_text)| {
+                                        let is_completed = if idx < (*completed_steps).len() {
+                                            (*completed_steps)[idx]
+                                        } else {
+                                            false
+                                        };
+                                        
                                         html! {
-                                            <div class="flex gap-4">
-                                                <span class="flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                                                    {idx + 1}
-                                                </span>
-                                                <p class="text-slate-700 dark:text-slate-300 flex-1">{step_text}</p>
+                                            <div 
+                                                class={if is_completed { "flex gap-4 opacity-60 cursor-pointer" } else { "flex gap-4 cursor-pointer" }}
+                                                onclick={
+                                                    let toggle_step = toggle_step.clone();
+                                                    Callback::from(move |_| toggle_step.emit(idx))
+                                                }
+                                            >
+                                                <div class="flex items-center gap-3">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={is_completed}
+                                                        onclick={Callback::from(|e: MouseEvent| {
+                                                            e.stop_propagation();
+                                                        })}
+                                                        onchange={
+                                                            let toggle_step = toggle_step.clone();
+                                                            Callback::from(move |_| toggle_step.emit(idx))
+                                                        }
+                                                        class="w-5 h-5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer"
+                                                    />
+                                                    <span class={if is_completed { "flex-shrink-0 w-8 h-8 bg-emerald-300 text-white rounded-full flex items-center justify-center font-semibold text-sm" } else { "flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm" }}>
+                                                        {idx + 1}
+                                                    </span>
+                                                </div>
+                                                <p class={if is_completed { "text-slate-500 dark:text-slate-400 flex-1 line-through" } else { "text-slate-700 dark:text-slate-300 flex-1" }}>
+                                                    {step_text}
+                                                </p>
                                             </div>
                                         }
                                     }).collect::<Html>()
