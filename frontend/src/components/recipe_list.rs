@@ -2,7 +2,7 @@ use yew::prelude::*;
 use yew::{platform::spawn_local, Callback, Properties};
 use web_sys::{Event, HtmlSelectElement};
 use wasm_bindgen::JsCast;
-use shared_types::{Recipe, Category};
+use shared_types::{Recipe};
 use crate::api;
 
 #[derive(Properties, PartialEq)]

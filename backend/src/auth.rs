@@ -2,8 +2,6 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::response::status::Custom;
-use rocket::serde::json::Json;
-use rocket::State;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_postgres::Client;

@@ -6,7 +6,6 @@ mod theme;
 
 use components::sidebar::Sidebar;
 use components::theme_provider::ThemeToggle;
-use wasm_bindgen_futures::spawn_local;
 
 #[derive(Clone, PartialEq)]
 pub enum Page {
