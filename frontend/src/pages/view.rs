@@ -313,7 +313,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         
                                         html! {
                                             <div 
-                                                class={if is_completed { "flex gap-4 opacity-60 cursor-pointer" } else { "flex gap-4 cursor-pointer" }}
+                                                class={if is_completed { "flex gap-4 opacity-60 cursor-pointer items-start" } else { "flex gap-4 cursor-pointer items-start" }}
                                                 onclick={
                                                     let toggle_step = toggle_step.clone();
                                                     Callback::from(move |_| toggle_step.emit(idx))
@@ -330,13 +330,13 @@ pub fn view_recipe(props: &Props) -> Html {
                                                             let toggle_step = toggle_step.clone();
                                                             Callback::from(move |_| toggle_step.emit(idx))
                                                         }
-                                                        class="w-5 h-5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 cursor-pointer"
+                                                        class="w-5 h-5 text-emerald-600 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer transition-all duration-200 hover:border-emerald-400 dark:hover:border-emerald-500 appearance-none checked:bg-emerald-600 checked:border-emerald-600"
                                                     />
                                                     <span class={if is_completed { "flex-shrink-0 w-8 h-8 bg-emerald-300 text-white rounded-full flex items-center justify-center font-semibold text-sm" } else { "flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm" }}>
                                                         {idx + 1}
                                                     </span>
                                                 </div>
-                                                <p class={if is_completed { "text-slate-500 dark:text-slate-400 flex-1 line-through" } else { "text-slate-700 dark:text-slate-300 flex-1" }}>
+                                                <p class={if is_completed { "text-slate-500 dark:text-slate-400 flex-1 line-through mt-1" } else { "text-slate-700 dark:text-slate-300 flex-1 mt-1" }}>
                                                     {step_text}
                                                 </p>
                                             </div>
