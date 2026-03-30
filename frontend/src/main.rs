@@ -20,7 +20,7 @@ pub enum Page {
     View(i32),
 }
 
-fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
+fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>) -> Html {
     match page {
         Page::Home => {
             let on_edit = {
@@ -38,7 +38,7 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
                 })
             };
 
-            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} refresh={0} search={String::new()} /> }
+            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} refresh={0} search={search} on_search={on_search} /> }
         }
         Page::Login => {
             html! { <crate::pages::login::LoginPage /> }
@@ -82,6 +82,7 @@ fn render_page(page: &Page, navigate: Callback<Page>) -> Html {
 fn app() -> Html {
     let page = use_state(|| Page::Home);
     let mobile_menu_open = use_state(|| false);
+    let search = use_state(|| String::new());
     let navigate = {
         let page = page.clone();
         Callback::from(move |p: Page| {
@@ -104,6 +105,17 @@ fn app() -> Html {
     };
 
     let current = (*page).clone();
+    let search_value = (*search).clone();
+
+    let on_search_input = {
+        let search = search.clone();
+        Callback::from(move |value: String| {
+            search.set(value);
+        })
+    };
+
+    // Clone the callback for desktop search
+    let desktop_search_callback = on_search_input.clone();
 
     // Create mobile navigation callbacks
     let mobile_nav_home = navigate.reform(|_: yew::MouseEvent| Page::Home);
@@ -190,6 +202,21 @@ fn app() -> Html {
 
                         // Desktop Navigation
                         <nav class="hidden lg:flex items-center space-x-6">
+                            <div class="relative">
+                                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Search recipes..."
+                                    value={search_value.clone()}
+                                    oninput={Callback::from(move |e: yew::InputEvent| {
+                                        let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+                                        desktop_search_callback.emit(input.value());
+                                    })}
+                                    class="w-64 pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                            </div>
                             <ThemeToggle class={""} />
                             <div class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                                 <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
@@ -213,7 +240,7 @@ fn app() -> Html {
                     // Main Content
                     <div class="lg:col-span-9">
                         <div class="animate-fade-in">
-                            { render_page(&current, navigate.clone()) }
+                            { render_page(&current, navigate.clone(), search_value, on_search_input) }
                         </div>
                     </div>
                 </div>

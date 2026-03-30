@@ -11,6 +11,7 @@ pub struct Props {
     pub on_view: Callback<i32>,
     pub refresh: i32,
     pub search: String,
+    pub on_search: Callback<String>,
 }
 
 #[function_component(RecipeList)]
@@ -130,7 +131,13 @@ pub fn recipe_list(props: &Props) -> Html {
                                 type="text"
                                 placeholder="Search recipes..."
                                 value={search.clone()}
-                                readonly=true
+                                oninput={
+                                    let on_search = props.on_search.clone();
+                                    Callback::from(move |e: InputEvent| {
+                                        let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+                                        on_search.emit(input.value());
+                                    })
+                                }
                                 class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             />
                         </div>
