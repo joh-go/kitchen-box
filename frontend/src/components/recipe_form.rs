@@ -257,7 +257,7 @@ pub fn recipe_form(props: &Props) -> Html {
     }
 
     html! {
-        <form onsubmit={onsubmit} class="mb-4 bg-white dark:bg-gray-800 p-4 rounded shadow">
+        <form onsubmit={onsubmit} class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
                     <div class="md:col-span-2">
                         <input
@@ -267,7 +267,7 @@ pub fn recipe_form(props: &Props) -> Html {
                                 let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
                                 title.set(input.value());
                             })}
-                            class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 dark:focus:ring-green-700"
+                            class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                         />
                         <input
                             placeholder="Short description"
@@ -276,13 +276,13 @@ pub fn recipe_form(props: &Props) -> Html {
                                 let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
                                 short.set(input.value());
                             })}
-                            class="w-full border rounded px-3 py-2 mt-2 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-700"
+                            class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                         />
                     </div>
                 </div>
 
-            <div class="mt-3">
-                <label class="block text-sm font-medium">{ "Ingredients (one per line)" }</label>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Ingredients (one per line)" }</label>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-2">
                     { "Format: [amount] [unit] [name] (optional notes)" }
                     <br />
@@ -299,27 +299,27 @@ pub fn recipe_form(props: &Props) -> Html {
 3 eggs (large)
 1 cup milk (whole)
 2 tbsp olive oil (extra virgin)"
-                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 mb-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     rows={4}
                 />
             </div>
 
-            <div class="mt-3">
-                <label class="block text-sm font-medium">{ "Steps (one per line)" }</label>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Steps (one per line)" }</label>
                 <textarea
                     value={(*steps_text).clone()}
                     oninput={Callback::from(move |e: InputEvent| {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         steps_text.set(input.value());
                     })}
-                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 mb-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     rows={4}
                 />
             </div>
 
-            <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-sm font-medium">{ "Prep Time (minutes)" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Prep Time (minutes)" }</label>
                     <input
                         type="number"
                         value={(*prep_minutes).to_string()}
@@ -327,11 +327,11 @@ pub fn recipe_form(props: &Props) -> Html {
                             let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
                             prep_minutes.set(input.value().parse::<i32>().unwrap_or(0));
                         })}
-                        class="w-full border rounded px-3 py-2 mt-1"
+                        class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">{ "Cook Time (minutes)" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Cook Time (minutes)" }</label>
                     <input
                         type="number"
                         value={(*cook_minutes).to_string()}
@@ -339,11 +339,11 @@ pub fn recipe_form(props: &Props) -> Html {
                             let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
                             cook_minutes.set(input.value().parse::<i32>().unwrap_or(0));
                         })}
-                        class="w-full border rounded px-3 py-2 mt-1"
+                        class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">{ "Servings" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Servings" }</label>
                     <input
                         type="number"
                         value={(*servings).to_string()}
@@ -351,26 +351,26 @@ pub fn recipe_form(props: &Props) -> Html {
                             let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
                             servings.set(input.value().parse::<i32>().unwrap_or(0));
                         })}
-                        class="w-full border rounded px-3 py-2 mt-1"
+                        class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                 </div>
             </div>
 
-            <div class="mt-3">
-                <label class="block text-sm font-medium">{ "Notes" }</label>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Notes" }</label>
                 <textarea
                     value={(*notes).clone()}
                     oninput={Callback::from(move |e: InputEvent| {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         notes.set(input.value());
                     })}
-                    class="w-full border rounded px-3 py-2 mt-1 mb-2"
+                    class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 mb-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     rows={3}
                 />
             </div>
 
-            <div class="mt-3">
-                <label class="block text-sm font-medium">{ "Category (optional)" }</label>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Category (optional)" }</label>
                 <div class="flex gap-2 mt-1">
                     <select
                         onchange={Callback::from({
@@ -388,7 +388,7 @@ pub fn recipe_form(props: &Props) -> Html {
                                 }
                             }
                         })}
-                        class="border rounded px-2 py-1 flex-1"
+                        class="border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 flex-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     >
                         <option value="" selected={selected_category.is_none()}>{ "— none —" }</option>
                         { for (*categories).iter().map(|c| {
@@ -411,7 +411,7 @@ pub fn recipe_form(props: &Props) -> Html {
                                 new_category_name.set(input.value());
                             }
                         })}
-                        class="border rounded px-2 py-1 flex-1 text-sm"
+                        class="border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 flex-1 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     />
                     <button
                         type="button"
@@ -434,16 +434,16 @@ pub fn recipe_form(props: &Props) -> Html {
                                 });
                             }
                         })}
-                        class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
                         { "+ Add" }
                     </button>
                 </div>
             </div>
             
-            <div class="flex gap-2 mt-6">
-                <button type="submit" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-4 py-2 rounded shadow">{ "Save" }</button>
-                <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-black px-4 py-2 rounded">{ "Cancel" }</button>
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-6 py-2 rounded-md font-medium shadow transition-all duration-200">{ "Save" }</button>
+                <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2 rounded-md font-medium transition-colors">{ "Cancel" }</button>
             </div>
         </form>
     }
