@@ -170,6 +170,7 @@ pub fn recipe_form(props: &Props) -> Html {
         let on_saved = props.on_saved.clone();
         let editing = props.editing.clone();
         let current_recipe_id = current_recipe_id.clone();
+        let images = images.clone();
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
             let title = title.clone();
@@ -184,6 +185,7 @@ pub fn recipe_form(props: &Props) -> Html {
             let on_saved = on_saved.clone();
             let editing = editing.clone();
             let current_recipe_id = current_recipe_id.clone();
+            let images = images.clone();
             spawn_local(async move {
                 let ingredients_lines: Vec<String> = ingredients_text
                     .split('\n')
@@ -215,7 +217,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     author_id: None,
                     is_public: Some(true),
                     categories: Vec::new(),
-                    images: Vec::new(),
+                    images: (*images).clone(),
                 };
 
                 // Create or update

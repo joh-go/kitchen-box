@@ -17,6 +17,16 @@ pub fn image_manager(props: &Props) -> Html {
     let uploading = use_state(|| false);
     let error = use_state(|| None::<String>);
 
+    // Sync with props when they change (e.g., after saving/reloading recipe)
+    {
+        let images = images.clone();
+        let props_images = props.images.clone();
+        use_effect_with(props.images.clone(), move |_| {
+            images.set(props_images);
+            || ()
+        });
+    }
+
     let on_file_select = {
         let recipe_id = props.recipe_id;
         let images = images.clone();

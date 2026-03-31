@@ -182,6 +182,33 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
     let categories: Vec<shared_types::Category> = serde_json::from_value(categories_json)
         .unwrap_or_default();
 
+    // Fetch images for this recipe
+    let image_rows = conn
+        .query(
+            "SELECT id, filename, original_filename, file_path, file_size, mime_type, alt, is_primary, position, uploaded_at 
+             FROM images WHERE recipe_id = $1 ORDER BY position ASC, uploaded_at ASC",
+            &[&id],
+        )
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    let mut images = Vec::new();
+    for img_row in image_rows.iter() {
+        let uploaded_at: Option<String> = img_row.get::<_, Option<chrono::DateTime<chrono::Utc>>>(9).map(|dt| dt.to_string());
+        images.push(RecipeImage {
+            id: Some(img_row.get(0)),
+            filename: img_row.get(1),
+            original_filename: Some(img_row.get(2)),
+            file_path: img_row.get(3),
+            file_size: Some(img_row.get(4)),
+            mime_type: Some(img_row.get(5)),
+            alt: img_row.get(6),
+            is_primary: Some(img_row.get(7)),
+            position: Some(img_row.get(8)),
+            uploaded_at,
+        });
+    }
+
     Ok(Json(Recipe {
         id: Some(row.get(0)),
         title: row.get(1),
@@ -196,7 +223,7 @@ pub async fn get_recipe(conn: &State<Client>, id: i32) -> Result<Json<Recipe>, C
         author_id: row.get(10),
         is_public: row.get(11),
         categories,
-        images: Vec::new(),
+        images,
     }))
 }
 
