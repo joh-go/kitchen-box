@@ -412,15 +412,15 @@
       box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
     }
   </style>
-<link rel="modulepreload" href="/frontend-97ab2398bad17d85.js" crossorigin="anonymous" integrity="sha384-ck95BkpkEFWZgMThUE0wwWNaLUeVEoPSVDGxjoXuPMxQ6FJvOtsN4SB7MjxnLPER"><link rel="preload" href="/frontend-97ab2398bad17d85_bg.wasm" crossorigin="anonymous" integrity="sha384-AKYMc5VCu8x/wgekMzpNyt3yBT6oJib0w+hDVlp06a2eGCkQlS/LBtciMnQt2x6a" as="fetch" type="application/wasm"></head>
+<link rel="modulepreload" href="/frontend-fc34c9a87fc899b8.js" crossorigin="anonymous" integrity="sha384-WzK81joQawQpKKYCpQAa46SIv8DIzcvoPBYWpfn5ZNL9gtNBRicBHf6nknlUVFvO"><link rel="preload" href="/frontend-fc34c9a87fc899b8_bg.wasm" crossorigin="anonymous" integrity="sha384-6KVLoRuHVL2Fd+u0SrXJE98BhdK7RrVRB4NM1sw6BICTsOlb6rW4K83sk3uht1+h" as="fetch" type="application/wasm"></head>
 
 <body>
   <div id="app"></div>
   <!-- Trunk injects the correct module loader; remove manual pkg import to avoid 404/mime issues -->
 
 <script type="module">
-import init, * as bindings from '/frontend-97ab2398bad17d85.js';
-const wasm = await init({ module_or_path: '/frontend-97ab2398bad17d85_bg.wasm' });
+import init, * as bindings from '/frontend-fc34c9a87fc899b8.js';
+const wasm = await init({ module_or_path: '/frontend-fc34c9a87fc899b8_bg.wasm' });
 
 
 window.wasmBindings = bindings;

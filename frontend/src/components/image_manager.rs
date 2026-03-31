@@ -170,6 +170,7 @@ pub fn image_manager(props: &Props) -> Html {
                                             { if !is_primary {
                                                 html! {
                                                     <button
+                                                        type="button"
                                                         onclick={Callback::from(move |_| {
                                                             let recipe_id = recipe_id;
                                                             let on_images_changed = on_images_changed_primary.clone();
@@ -194,6 +195,7 @@ pub fn image_manager(props: &Props) -> Html {
                                                 html! {}
                                             }}
                                             <button
+                                                type="button"
                                                 onclick={Callback::from(move |_| {
                                                     let recipe_id = recipe_id;
                                                     let on_images_changed = on_images_changed_delete.clone();

@@ -58,6 +58,8 @@ fn parse_ingredients(lines: &[String]) -> Vec<Ingredient> {
 pub struct Props {
     pub on_saved: Callback<()>,
     pub editing: Option<Recipe>,
+    #[prop_or_default]
+    pub on_refresh: Callback<()>,
 }
 
 #[function_component(RecipeForm)]
@@ -156,6 +158,16 @@ pub fn recipe_form(props: &Props) -> Html {
             .unwrap_or_default()
     });
     let current_recipe_id = use_state(|| props.editing.as_ref().and_then(|r| r.id));
+
+    // Sync current_recipe_id when props.editing changes (e.g., after refresh)
+    {
+        let current_recipe_id = current_recipe_id.clone();
+        let editing_id = props.editing.as_ref().and_then(|r| r.id);
+        use_effect_with(editing_id, move |id| {
+            current_recipe_id.set(*id);
+            || ()
+        });
+    }
 
     let onsubmit = {
         let title = title.clone();
@@ -458,8 +470,11 @@ pub fn recipe_form(props: &Props) -> Html {
                 <ImageManager 
                     recipe_id={*current_recipe_id}
                     images={(*images).clone()}
-                    on_images_changed={Callback::from(move |new_images: Vec<RecipeImage>| {
-                        images.set(new_images);
+                    on_images_changed={Callback::from({
+                        let images = images.clone();
+                        move |new_images: Vec<RecipeImage>| {
+                            images.set(new_images);
+                        }
                     })}
                 />
             </div>

@@ -198,10 +198,11 @@ pub async fn delete_image(
     )
     .await?;
 
-    // Delete file from disk
+    // Delete file from disk (don't fail if file doesn't exist)
     if Path::new(&file_path).exists() {
-        fs::remove_file(&file_path)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Failed to delete file: {}", e)))?;
+        if let Err(e) = fs::remove_file(&file_path) {
+            eprintln!("Warning: Failed to delete file {}: {}", file_path, e);
+        }
     }
     
 
