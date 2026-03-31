@@ -393,6 +393,50 @@ pub fn view_recipe(props: &Props) -> Html {
                         } else {
                             html! {}
                         }}
+
+                        // All Images Gallery
+                        {if r.images.len() > 1 {
+                            html! {
+                                <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
+                                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                        </svg>
+                                        {"Gallery"}
+                                    </h2>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        { for r.images.iter().map(|image| {
+                                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                                r.id.unwrap_or(0), image.filename);
+                                            let is_primary = image.is_primary.unwrap_or(false);
+                                            
+                                            html! {
+                                                <div class="relative group">
+                                                    <div class="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                        <img 
+                                                            src={image_url}
+                                                            alt={image.alt.clone().unwrap_or_else(|| image.filename.clone())}
+                                                            class="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    { if is_primary {
+                                                        html! {
+                                                            <div class="absolute top-2 left-2 bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
+                                                                { "Primary" }
+                                                            </div>
+                                                        }
+                                                    } else {
+                                                        html! {}
+                                                    }}
+                                                </div>
+                                            }
+                                        }) }
+                                    </div>
+                                </div>
+                            }
+                        } else {
+                            html! {}
+                        }}
                     </>
                 }
             } else if let Some(e) = &*error {
