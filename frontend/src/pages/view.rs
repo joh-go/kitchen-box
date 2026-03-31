@@ -27,6 +27,8 @@ pub fn view_recipe(props: &Props) -> Html {
     let error = use_state(|| None as Option<String>);
     let adjusted_servings = use_state(|| None as Option<i32>);
     let completed_steps = use_state(|| Vec::<bool>::new());
+    let lightbox_open = use_state(|| false);
+    let lightbox_index = use_state(|| 0usize);
     let id = props.id;
     let on_edit = props.on_edit.clone();
     let on_back = props.on_back.clone();
@@ -100,6 +102,53 @@ pub fn view_recipe(props: &Props) -> Html {
                 steps[step_index] = true;
             }
             completed_steps.set(steps);
+        })
+    };
+
+    // Lightbox navigation callbacks
+    let open_lightbox = {
+        let lightbox_open = lightbox_open.clone();
+        let lightbox_index = lightbox_index.clone();
+        Callback::from(move |index: usize| {
+            lightbox_index.set(index);
+            lightbox_open.set(true);
+        })
+    };
+
+    let close_lightbox = {
+        let lightbox_open = lightbox_open.clone();
+        Callback::from(move |_: MouseEvent| {
+            lightbox_open.set(false);
+        })
+    };
+
+    let next_image = {
+        let lightbox_index = lightbox_index.clone();
+        let recipe = recipe.clone();
+        Callback::from(move |_: MouseEvent| {
+            if let Some(r) = &*recipe {
+                let total = r.images.len();
+                if total > 0 {
+                    lightbox_index.set((*lightbox_index + 1) % total);
+                }
+            }
+        })
+    };
+
+    let prev_image = {
+        let lightbox_index = lightbox_index.clone();
+        let recipe = recipe.clone();
+        Callback::from(move |_: MouseEvent| {
+            if let Some(r) = &*recipe {
+                let total = r.images.len();
+                if total > 0 {
+                    if *lightbox_index == 0 {
+                        lightbox_index.set(total - 1);
+                    } else {
+                        lightbox_index.set(*lightbox_index - 1);
+                    }
+                }
+            }
         })
     };
 
@@ -210,11 +259,13 @@ pub fn view_recipe(props: &Props) -> Html {
                             </div>
 
                             // Primary Image
-                            {if let Some(primary_image) = r.images.iter().find(|img| img.is_primary == Some(true)) {
+                            {if let Some((primary_idx, primary_image)) = r.images.iter().enumerate().find(|(_, img)| img.is_primary == Some(true)) {
                                 let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
                                     r.id.unwrap_or(0), primary_image.filename);
+                                let open_lightbox = open_lightbox.clone();
                                 html! {
-                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg">
+                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                                         onclick={Callback::from(move |_| open_lightbox.emit(primary_idx))}>
                                         <img 
                                             src={image_url}
                                             alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
@@ -225,8 +276,10 @@ pub fn view_recipe(props: &Props) -> Html {
                             } else if let Some(first_image) = r.images.first() {
                                 let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
                                     r.id.unwrap_or(0), first_image.filename);
+                                let open_lightbox = open_lightbox.clone();
                                 html! {
-                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg">
+                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                                         onclick={Callback::from(move |_| open_lightbox.emit(0))}>
                                         <img 
                                             src={image_url}
                                             alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
@@ -394,7 +447,91 @@ pub fn view_recipe(props: &Props) -> Html {
                             html! {}
                         }}
 
-                        // All Images Gallery
+                        // Lightbox Modal
+                        {if *lightbox_open && !r.images.is_empty() {
+                            let current_image = &r.images[*lightbox_index];
+                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                r.id.unwrap_or(0), current_image.filename);
+                            let current_num = *lightbox_index + 1;
+                            let total_num = r.images.len();
+                            
+                            html! {
+                                <div 
+                                    class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+                                    onclick={close_lightbox.clone()}
+                                >
+                                    // Close button
+                                    <button 
+                                        class="absolute top-4 right-4 text-white/80 hover:text-white p-2"
+                                        onclick={Callback::from(move |e: MouseEvent| {
+                                            e.stop_propagation();
+                                            close_lightbox.emit(e);
+                                        })}
+                                    >
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                    
+                                    // Previous button
+                                    {if r.images.len() > 1 {
+                                        html! {
+                                            <button 
+                                                class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/30 rounded-full hover:bg-black/50 transition-colors"
+                                                onclick={Callback::from(move |e: MouseEvent| {
+                                                    e.stop_propagation();
+                                                    prev_image.emit(e);
+                                                })}
+                                            >
+                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                                </svg>
+                                            </button>
+                                        }
+                                    } else {
+                                        html! {}
+                                    }}
+                                    
+                                    // Image container
+                                    <div class="max-w-5xl max-h-[85vh] px-4" onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}>
+                                        <img 
+                                            src={image_url}
+                                            alt={current_image.alt.clone().unwrap_or_else(|| current_image.filename.clone())}
+                                            class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                                        />
+                                        <div class="text-center text-white/80 mt-4">
+                                            <span class="text-sm">{format!("{} / {}", current_num, total_num)}</span>
+                                            {if let Some(alt) = &current_image.alt {
+                                                html! { <p class="text-lg mt-1">{alt}</p> }
+                                            } else {
+                                                html! {}
+                                            }}
+                                        </div>
+                                    </div>
+                                    
+                                    // Next button
+                                    {if r.images.len() > 1 {
+                                        html! {
+                                            <button 
+                                                class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/30 rounded-full hover:bg-black/50 transition-colors"
+                                                onclick={Callback::from(move |e: MouseEvent| {
+                                                    e.stop_propagation();
+                                                    next_image.emit(e);
+                                                })}
+                                            >
+                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                                </svg>
+                                            </button>
+                                        }
+                                    } else {
+                                        html! {}
+                                    }}
+                                </div>
+                            }
+                        } else {
+                            html! {}
+                        }}
                         {if r.images.len() > 1 {
                             html! {
                                 <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
@@ -405,14 +542,16 @@ pub fn view_recipe(props: &Props) -> Html {
                                         {"Gallery"}
                                     </h2>
                                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        { for r.images.iter().map(|image| {
+                                        { for r.images.iter().enumerate().map(|(idx, image)| {
                                             let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
                                                 r.id.unwrap_or(0), image.filename);
                                             let is_primary = image.is_primary.unwrap_or(false);
+                                            let open_lightbox = open_lightbox.clone();
                                             
                                             html! {
-                                                <div class="relative group">
-                                                    <div class="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
+                                                <div class="relative group cursor-pointer"
+                                                     onclick={Callback::from(move |_| open_lightbox.emit(idx))}>
+                                                    <div class="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden hover:opacity-90 transition-opacity">
                                                         <img 
                                                             src={image_url}
                                                             alt={image.alt.clone().unwrap_or_else(|| image.filename.clone())}
