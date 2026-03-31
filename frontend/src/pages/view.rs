@@ -208,6 +208,35 @@ pub fn view_recipe(props: &Props) -> Html {
                                     html! {}
                                 }}
                             </div>
+
+                            // Primary Image
+                            {if let Some(primary_image) = r.images.iter().find(|img| img.is_primary == Some(true)) {
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                    r.id.unwrap_or(0), primary_image.filename);
+                                html! {
+                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg">
+                                        <img 
+                                            src={image_url}
+                                            alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                            class="w-full h-64 md:h-80 object-cover"
+                                        />
+                                    </div>
+                                }
+                            } else if let Some(first_image) = r.images.first() {
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                    r.id.unwrap_or(0), first_image.filename);
+                                html! {
+                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg">
+                                        <img 
+                                            src={image_url}
+                                            alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                            class="w-full h-64 md:h-80 object-cover"
+                                        />
+                                    </div>
+                                }
+                            } else {
+                                html! {}
+                            }}
                         </div>
 
                         // Ingredients
