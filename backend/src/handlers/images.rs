@@ -29,8 +29,8 @@ pub async fn upload_image<'r>(
         return Err(Custom(Status::Forbidden, "You don't own this recipe".to_string()));
     }
 
-    // Generate unique filename
-    let file_extension = "jpg"; // You might want to detect this from the file
+    // Generate unique filename - for now use jpg, but we should get this from the frontend
+    let file_extension = "jpg"; // TODO: Get actual file extension from frontend
     let uuid = Uuid::new_v4();
     let filename = format!("{}.{}", uuid, file_extension);
     

@@ -1,6 +1,6 @@
 use gloo::net::http::{Request, Method};
 use serde_json::json;
-use shared_types::{Category, Recipe, User};
+use shared_types::{Category, Recipe, RecipeImage, User};
 use web_sys::window;
 
 const BASE: &str = "http://127.0.0.1:8000";
@@ -330,5 +330,131 @@ pub async fn get_current_user() -> Result<serde_json::Value, String> {
             .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
         Err(format!("Failed to get user: {}", resp.status()))
+    }
+}
+
+// --- Images API ---
+pub async fn get_recipe_images(recipe_id: i32) -> Result<Vec<RecipeImage>, String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let resp = Request::get(&format!("{}/api/recipes/{}/images", BASE, recipe_id))
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    resp.json::<Vec<RecipeImage>>().await.map_err(|e| e.to_string())
+}
+
+pub async fn upload_recipe_image(recipe_id: i32, file: &web_sys::File) -> Result<RecipeImage, String> {
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+    
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    
+    let file_name = file.name();
+    
+    // Use a simple FileReader implementation that works
+    let reader = web_sys::FileReader::new().map_err(|e| format!("Failed to create FileReader: {:?}", e))?;
+    
+    // Create a promise that resolves when file is read
+    let promise = js_sys::Promise::new(&mut |resolve, reject| {
+        let file_clone = file.clone();
+        let reject_clone = reject.clone();
+        
+        // Set up onload callback
+        let onload = wasm_bindgen::closure::Closure::once(Box::new(move |event: web_sys::Event| {
+            let target = event.target().unwrap();
+            let reader = target.dyn_into::<web_sys::FileReader>().unwrap();
+            let result = reader.result().unwrap();
+            
+            if result.is_instance_of::<js_sys::ArrayBuffer>() {
+                // Convert ArrayBuffer to Uint8Array
+                let array_buffer = result.dyn_into::<js_sys::ArrayBuffer>().unwrap();
+                let uint8_array = js_sys::Uint8Array::new(&array_buffer);
+                
+                // Resolve with the Uint8Array directly
+                resolve.call1(&wasm_bindgen::JsValue::NULL, &uint8_array).unwrap();
+            } else {
+                reject.call0(&wasm_bindgen::JsValue::from_str("Failed to read file as ArrayBuffer")).unwrap();
+            }
+        }));
+        
+        // Set up onerror callback
+        let onerror = wasm_bindgen::closure::Closure::once(Box::new(move |_event: web_sys::Event| {
+            reject_clone.call0(&wasm_bindgen::JsValue::from_str("Failed to read file")).unwrap();
+        }));
+        
+        reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+        reader.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+        
+        // Keep closures alive until they're called
+        onload.forget();
+        onerror.forget();
+        
+        // Start reading the actual file
+        reader.read_as_array_buffer(&file_clone).unwrap();
+    });
+    
+    // Wait for the file to be read
+    let result = JsFuture::from(promise).await.map_err(|e| format!("File read error: {:?}", e))?;
+    
+    // Convert the result back to Vec<u8>
+    let uint8_array = result.dyn_into::<js_sys::Uint8Array>()
+        .map_err(|e| format!("Failed to convert to Uint8Array: {:?}", e))?;
+    
+    let mut file_bytes = vec![0u8; uint8_array.length() as usize];
+    uint8_array.copy_to(&mut file_bytes);
+    
+    let request = Request::new(&format!("{}/api/recipes/{}/images", BASE, recipe_id))
+        .method(Method::POST)
+        .header("Authorization", &auth_header)
+        .header("Content-Type", "application/octet-stream")
+        .header("X-Filename", &file_name)
+        .header("X-File-Size", &file_bytes.len().to_string())
+        .body(file_bytes);
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        resp.json::<RecipeImage>().await.map_err(|e| e.to_string())
+    } else {
+        Err(format!("Image upload failed: {}", resp.status()))
+    }
+}
+
+pub async fn set_primary_image(recipe_id: i32, image_id: i32) -> Result<(), String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let url = format!("{}/api/recipes/{}/images/{}/primary", BASE, recipe_id, image_id);
+    
+    let resp = Request::put(&url)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("Failed to set primary image: {}", resp.status()))
+    }
+}
+
+pub async fn delete_recipe_image(recipe_id: i32, image_id: i32) -> Result<(), String> {
+    let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
+    let url = format!("{}/api/recipes/{}/images/{}", BASE, recipe_id, image_id);
+    
+    let resp = Request::delete(&url)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete image: {}", resp.status()))
     }
 }

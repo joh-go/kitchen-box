@@ -1,6 +1,7 @@
 use crate::api;
+use crate::components::image_manager::ImageManager;
 use serde_json::json;
-use shared_types::{Recipe, Ingredient};
+use shared_types::{Recipe, Ingredient, RecipeImage};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{SubmitEvent, HtmlSelectElement};
@@ -148,6 +149,13 @@ pub fn recipe_form(props: &Props) -> Html {
             .and_then(|c| c.id)
     });
     let new_category_name = use_state(|| String::new());
+    let images = use_state(|| {
+        props.editing
+            .as_ref()
+            .map(|r| r.images.clone())
+            .unwrap_or_default()
+    });
+    let current_recipe_id = use_state(|| props.editing.as_ref().and_then(|r| r.id));
 
     let onsubmit = {
         let title = title.clone();
@@ -161,6 +169,7 @@ pub fn recipe_form(props: &Props) -> Html {
         let selected_category = selected_category.clone();
         let on_saved = props.on_saved.clone();
         let editing = props.editing.clone();
+        let current_recipe_id = current_recipe_id.clone();
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
             let title = title.clone();
@@ -174,6 +183,7 @@ pub fn recipe_form(props: &Props) -> Html {
             let selected_category = selected_category.clone();
             let on_saved = on_saved.clone();
             let editing = editing.clone();
+            let current_recipe_id = current_recipe_id.clone();
             spawn_local(async move {
                 let ingredients_lines: Vec<String> = ingredients_text
                     .split('\n')
@@ -216,16 +226,15 @@ pub fn recipe_form(props: &Props) -> Html {
                 };
 
                 if let Ok(created) = res {
-                    // use returned recipe (with id)
-                    let rid = created.id;
-                    if let Some(cid) = *selected_category {
-                        // Assign the new category
-                        if let Some(rid) = rid {
+                    // Update the current recipe ID for image management
+                    if let Some(rid) = created.id {
+                        current_recipe_id.set(Some(rid));
+                        
+                        if let Some(cid) = *selected_category {
+                            // Assign the new category
                             let _ = api::assign_category(rid, cid).await;
-                        }
-                    } else {
-                        // Clear all categories if none selected
-                        if let Some(rid) = rid {
+                        } else {
+                            // Clear all categories if none selected
                             let _ = api::clear_categories(rid).await;
                         }
                     }
@@ -440,6 +449,17 @@ pub fn recipe_form(props: &Props) -> Html {
                         { "+ Add" }
                     </button>
                 </div>
+            </div>
+
+            // Image Management Section
+            <div class="mt-6">
+                <ImageManager 
+                    recipe_id={*current_recipe_id}
+                    images={(*images).clone()}
+                    on_images_changed={Callback::from(move |new_images: Vec<RecipeImage>| {
+                        images.set(new_images);
+                    })}
+                />
             </div>
             
             <div class="flex gap-3 mt-6">
