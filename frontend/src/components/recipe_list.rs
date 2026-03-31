@@ -199,80 +199,112 @@ pub fn recipe_list(props: &Props) -> Html {
                     
                     html!{
                         <div 
-                            class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900"
+                            class="glass rounded-2xl overflow-hidden shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900"
                             onclick={props.on_view.reform(move |_| id)}
                         >
-                            // Recipe Header
-                            <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
-                                        { &r.title }
-                                    </h3>
-                                    <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">
-                                        { r.short_description.clone().unwrap_or_default() }
-                                    </p>
-                                </div>
-                                
-                                // Prep Time Badge
-                                if let Some(prep_time) = r.prep_minutes {
-                                    <div class="ml-4 flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-sm font-medium">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        { format!("{}m", prep_time) }
-                                    </div>
-                                }
-                            </div>
-
-                            // Recipe Categories
-                            { if !r.categories.is_empty() {
-                                html!{
-                                    <div class="flex flex-wrap gap-2 mb-4">
-                                        { for r.categories.iter().take(3).map(|cat| {
-                                            html!{
-                                                <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
-                                                    { &cat.name }
-                                                </span>
-                                            }
-                                        })}
-                                        { if r.categories.len() > 3 {
-                                            html!{
-                                                <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
-                                                    { format!("+{}", r.categories.len() - 3) }
-                                                </span>
-                                            }
-                                        } else {
-                                            html!{}
-                                        }}
-                                    </div>
-                                }
-                            } else { html!{} } }
-
-                            // Action Buttons - Only show for owned recipes
-                            {if is_owned {
+                            // Primary Image
+                            {if let Some(primary_image) = r.images.iter().find(|img| img.is_primary == Some(true)) {
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                    r.id.unwrap_or(0), primary_image.filename);
                                 html! {
-                                    <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
-                                        <button 
-                                            class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
-                                            onclick={props.on_edit.reform(move |_| r_clone.clone())}
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                            </svg>
-                                            {"Edit"}
-                                        </button>
-                                        <button 
-                                            class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
-                                            onclick={on_delete.reform(move |_| id)}
-                                        >
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                            </svg>
-                                            {"Delete"}
-                                        </button>
+                                    <div class="w-full h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                        <img 
+                                            src={image_url}
+                                            alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                            class="w-full h-full object-cover"
+                                        />
                                     </div>
                                 }
-                            } else { html!{} }}
+                            } else if let Some(first_image) = r.images.first() {
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                    r.id.unwrap_or(0), first_image.filename);
+                                html! {
+                                    <div class="w-full h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                        <img 
+                                            src={image_url}
+                                            alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                            class="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                }
+                            } else {
+                                html! {}
+                            }}
+
+                            // Recipe Content
+                            <div class="p-6">
+                                // Recipe Header
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
+                                            { &r.title }
+                                        </h3>
+                                        <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">
+                                            { r.short_description.clone().unwrap_or_default() }
+                                        </p>
+                                    </div>
+                                    
+                                    // Prep Time Badge
+                                    if let Some(prep_time) = r.prep_minutes {
+                                        <div class="ml-4 flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-sm font-medium">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            { format!("{}m", prep_time) }
+                                        </div>
+                                    }
+                                </div>
+
+                                // Recipe Categories
+                                { if !r.categories.is_empty() {
+                                    html!{
+                                        <div class="flex flex-wrap gap-2 mb-4">
+                                            { for r.categories.iter().take(3).map(|cat| {
+                                                html!{
+                                                    <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
+                                                        { &cat.name }
+                                                    </span>
+                                                }
+                                            })}
+                                            { if r.categories.len() > 3 {
+                                                html!{
+                                                    <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
+                                                        { format!("+{}", r.categories.len() - 3) }
+                                                    </span>
+                                                }
+                                            } else {
+                                                html!{}
+                                            }}
+                                        </div>
+                                    }
+                                } else { html!{} } }
+
+                                // Action Buttons - Only show for owned recipes
+                                {if is_owned {
+                                    html! {
+                                        <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
+                                            <button 
+                                                class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
+                                                onclick={props.on_edit.reform(move |_| r_clone.clone())}
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                                {"Edit"}
+                                            </button>
+                                            <button 
+                                                class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
+                                                onclick={on_delete.reform(move |_| id)}
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                </svg>
+                                                {"Delete"}
+                                            </button>
+                                        </div>
+                                    }
+                                } else { html!{} }}
+                            </div>
                         </div>
                     }
                 }) }

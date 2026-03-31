@@ -67,10 +67,28 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
                            )
                        ) FILTER (WHERE c.id IS NOT NULL), 
                        '[]'::json
-                   ) as categories
+                   ) as categories,
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'id', i.id,
+                               'filename', i.filename,
+                               'original_filename', i.original_filename,
+                               'file_path', i.file_path,
+                               'file_size', i.file_size,
+                               'mime_type', i.mime_type,
+                               'alt', i.alt,
+                               'is_primary', i.is_primary,
+                               'position', i.position,
+                               'uploaded_at', i.uploaded_at
+                           )
+                       ) FILTER (WHERE i.id IS NOT NULL), 
+                       '[]'::json
+                   ) as images
             FROM recipes r
             LEFT JOIN recipe_categories rc ON r.id = rc.recipe_id
             LEFT JOIN categories c ON rc.category_id = c.id
+            LEFT JOIN images i ON r.id = i.recipe_id
             GROUP BY r.id, r.title, r.slug, r.short_description, r.ingredients, r.steps, 
                      r.prep_minutes, r.cook_minutes, r.servings, r.notes, r.author_id, r.is_public
             ORDER BY r.created_at DESC
@@ -88,6 +106,10 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
         let categories_json: JsonValue = row.get(12);
         let categories: Vec<shared_types::Category> = serde_json::from_value(categories_json)
             .unwrap_or_default();
+        
+        let images_json: JsonValue = row.get(13);
+        let images: Vec<RecipeImage> = serde_json::from_value(images_json)
+            .unwrap_or_default();
 
         recipes.push(Recipe {
             id: Some(row.get(0)),
@@ -103,7 +125,7 @@ pub async fn get_recipes(conn: &State<Client>) -> Result<Json<Vec<Recipe>>, Cust
             author_id: row.get(10),
             is_public: row.get(11),
             categories,
-            images: Vec::new(),
+            images,
         });
     }
 
