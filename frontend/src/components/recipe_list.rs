@@ -207,11 +207,11 @@ pub fn recipe_list(props: &Props) -> Html {
                                 let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
                                     r.id.unwrap_or(0), primary_image.filename);
                                 html! {
-                                    <div class="w-full h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                    <div class="w-full min-h-[200px] max-h-[300px] bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
                                         <img 
                                             src={image_url}
                                             alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="w-full h-full object-cover"
+                                            class="max-w-full max-h-[300px] object-contain"
                                         />
                                     </div>
                                 }
@@ -219,11 +219,11 @@ pub fn recipe_list(props: &Props) -> Html {
                                 let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
                                     r.id.unwrap_or(0), first_image.filename);
                                 html! {
-                                    <div class="w-full h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                    <div class="w-full min-h-[200px] max-h-[300px] bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
                                         <img 
                                             src={image_url}
                                             alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="w-full h-full object-cover"
+                                            class="max-w-full max-h-[300px] object-contain"
                                         />
                                     </div>
                                 }

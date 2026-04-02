@@ -41,7 +41,7 @@ pub async fn upload_image<'r>(
     
     // Save file to disk
     let file_path = format!("{}/{}", upload_dir, filename);
-    let data_slice = data.open(1.megabytes()).into_bytes().await.unwrap().into_inner();
+    let data_slice = data.open(100.megabytes()).into_bytes().await.unwrap().into_inner();
     fs::write(&file_path, &data_slice)
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to save file: {}", e)))?;
 
