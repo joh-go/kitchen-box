@@ -7,3 +7,4 @@ pub mod settings;
 pub mod view;
 pub mod admin_setup;
 pub mod admin_users;
+pub mod admin_recipes;

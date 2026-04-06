@@ -188,13 +188,31 @@ pub fn admin_users_page() -> Html {
             spawn_local(async move {
                 let result = match current_action {
                     UserAction::Create => {
-                        api::create_admin_user(&name, &email, &password, is_admin).await
+                        let user_data = serde_json::json!({
+                            "name": name,
+                            "email": email,
+                            "password": password,
+                            "is_admin": is_admin
+                        });
+                        api::create_admin_user(user_data).await
                     }
                     UserAction::Edit(user_id) => {
                         if password.is_empty() {
-                            api::update_admin_user(user_id, Some(&name), Some(&email), None, Some(is_admin)).await
+                            let user_data = serde_json::json!({
+                                "name": Some(name),
+                                "email": Some(email),
+                                "password": None::<String>,
+                                "is_admin": Some(is_admin)
+                            });
+                            api::update_admin_user(user_id, user_data).await
                         } else {
-                            api::update_admin_user(user_id, Some(&name), Some(&email), Some(&password), Some(is_admin)).await
+                            let user_data = serde_json::json!({
+                                "name": Some(name),
+                                "email": Some(email),
+                                "password": Some(password),
+                                "is_admin": Some(is_admin)
+                            });
+                            api::update_admin_user(user_id, user_data).await
                         }
                     }
                     _ => Err("Invalid action".to_string()),

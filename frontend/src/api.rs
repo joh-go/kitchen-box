@@ -495,60 +495,50 @@ pub async fn get_admin_users() -> Result<serde_json::Value, String> {
 }
 
 // Create user (admin only)
-pub async fn create_admin_user(name: &str, email: &str, password: &str, is_admin: bool) -> Result<(), String> {
+pub async fn create_admin_user(user_data: serde_json::Value) -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_default();
-    let body = json!({
-        "name": name,
-        "email": email,
-        "password": password,
-        "is_admin": is_admin
-    });
-
+    let body = serde_json::to_string(&user_data).map_err(|e| e.to_string())?;
+    
     let resp = Request::new(&format!("{}/api/admin/users", BASE))
         .method(Method::POST)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/json")
-        .body(body.to_string())
+        .body(body)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
     if resp.ok() {
-        Ok(())
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        Ok(response)
     } else {
         Err(format!("Failed to create user: {}", resp.status()))
     }
 }
 
 // Update user (admin only)
-pub async fn update_admin_user(user_id: i32, name: Option<&str>, email: Option<&str>, password: Option<&str>, is_admin: Option<bool>) -> Result<(), String> {
+pub async fn update_admin_user(user_id: i32, user_data: serde_json::Value) -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_default();
+    let body = serde_json::to_string(&user_data).map_err(|e| e.to_string())?;
     
-    let mut update_data = serde_json::Map::new();
-    if let Some(name) = name {
-        update_data.insert("name".to_string(), json!(name));
-    }
-    if let Some(email) = email {
-        update_data.insert("email".to_string(), json!(email));
-    }
-    if let Some(password) = password {
-        update_data.insert("password".to_string(), json!(password));
-    }
-    if let Some(is_admin) = is_admin {
-        update_data.insert("is_admin".to_string(), json!(is_admin));
-    }
-
     let resp = Request::new(&format!("{}/api/admin/users/{}", BASE, user_id))
         .method(Method::PUT)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/json")
-        .body(json!(update_data).to_string())
+        .body(body)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
     if resp.ok() {
-        Ok(())
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        Ok(response)
     } else {
         Err(format!("Failed to update user: {}", resp.status()))
     }
@@ -557,6 +547,7 @@ pub async fn update_admin_user(user_id: i32, name: Option<&str>, email: Option<&
 // Delete user (admin only)
 pub async fn delete_admin_user(user_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_default();
+    
     let resp = Request::new(&format!("{}/api/admin/users/{}", BASE, user_id))
         .method(Method::DELETE)
         .header("Authorization", &auth_header)
@@ -568,6 +559,84 @@ pub async fn delete_admin_user(user_id: i32) -> Result<(), String> {
         Ok(())
     } else {
         Err(format!("Failed to delete user: {}", resp.status()))
+    }
+}
+
+// Get all recipes (admin only)
+pub async fn get_admin_recipes() -> Result<serde_json::Value, String> {
+    let auth_header = get_auth_header().unwrap_or_default();
+    let resp = Request::new(&format!("{}/api/admin/recipes", BASE))
+        .method(Method::GET)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        Ok(response)
+    } else {
+        Err(format!("Failed to get recipes: {}", resp.status()))
+    }
+}
+
+// Delete any recipe (admin only)
+pub async fn delete_admin_recipe(recipe_id: i32) -> Result<(), String> {
+    let auth_header = get_auth_header().unwrap_or_default();
+    
+    let resp = Request::new(&format!("{}/api/admin/recipes/{}", BASE, recipe_id))
+        .method(Method::DELETE)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete recipe: {}", resp.status()))
+    }
+}
+
+// Get all categories (admin only)
+pub async fn get_admin_categories() -> Result<serde_json::Value, String> {
+    let auth_header = get_auth_header().unwrap_or_default();
+    let resp = Request::new(&format!("{}/api/admin/categories", BASE))
+        .method(Method::GET)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        Ok(response)
+    } else {
+        Err(format!("Failed to get categories: {}", resp.status()))
+    }
+}
+
+// Delete category (admin only)
+pub async fn delete_admin_category(category_id: i32) -> Result<(), String> {
+    let auth_header = get_auth_header().unwrap_or_default();
+    
+    let resp = Request::new(&format!("{}/api/admin/categories/{}", BASE, category_id))
+        .method(Method::DELETE)
+        .header("Authorization", &auth_header)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        Ok(())
+    } else {
+        Err(format!("Failed to delete category: {}", resp.status()))
     }
 }
 
