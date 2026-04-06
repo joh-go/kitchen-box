@@ -28,6 +28,7 @@ pub fn admin_users_page() -> Html {
     let error = use_state(|| None::<String>);
     let action = use_state(|| UserAction::None);
     let show_create_form = use_state(|| false);
+    let selected_user = use_state(|| None::<User>);
 
     // Form state
     let form_name = use_state(|| String::new());
@@ -79,6 +80,26 @@ pub fn admin_users_page() -> Html {
         let show_create_form = show_create_form.clone();
         Callback::from(move |_| {
             show_create_form.set(true);
+        })
+    };
+
+    let on_user_click = {
+        let action = action.clone();
+        let selected_user = selected_user.clone();
+        Callback::from(move |user: User| {
+            // Toggle selection - if clicking same user, deselect
+            if let Some(ref selected) = *selected_user {
+                if selected.id == user.id {
+                    selected_user.set(None);
+                    action.set(UserAction::None);
+                } else {
+                    selected_user.set(Some(user.clone()));
+                    action.set(UserAction::None);
+                }
+            } else {
+                selected_user.set(Some(user.clone()));
+                action.set(UserAction::None);
+            }
         })
     };
 
@@ -296,14 +317,8 @@ pub fn admin_users_page() -> Html {
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                                 {"User"}
                                             </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Email"}
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
                                                 {"Role"}
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Created"}
                                             </th>
                                             <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                                 {"Actions"}
@@ -314,30 +329,41 @@ pub fn admin_users_page() -> Html {
                                         {for users.iter().map(|user| {
                                             let on_edit = on_edit_user.clone();
                                             let on_delete = on_delete_user.clone();
+                                            let on_click = on_user_click.clone();
+                                            let user_clone = user.clone();
                                             let user_id = user.id;
+                                            let is_selected = selected_user.as_ref().map(|u| u.id).unwrap_or(0) == user_id;
                                             
                                             html! {
-                                                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <div class="flex items-center">
-                                                            <div class="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mr-3">
-                                                                <span class="text-emerald-600 dark:text-emerald-400 text-sm font-medium">
-                                                                    {&user.name.chars().next().unwrap_or('U').to_uppercase().to_string()}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                                    {&user.name}
+                                                <>
+                                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                                        <td class="px-6 py-4 whitespace-nowrap" onclick={Callback::from(move |_| {
+                            let user = user_clone.clone();
+                            on_click.emit(user);
+                        })}>
+                                                            <div class="flex items-center cursor-pointer">
+                                                                <div class="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mr-3">
+                                                                    <span class="text-emerald-600 dark:text-emerald-400 text-sm font-medium">
+                                                                        {&user.name.chars().next().unwrap_or('U').to_uppercase().to_string()}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                                                        {&user.name}
+                                                                    </div>
+                                                                    {if is_selected {
+                                                                        html! {
+                                                                            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                                                {&user.email}
+                                                                            </div>
+                                                                        }
+                                                                    } else {
+                                                                        html! {}
+                                                                    }}
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
-                                                        <div class="text-sm text-slate-600 dark:text-slate-400">
-                                                            {&user.email}
-                                                        </div>
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        </td>
+                                                        <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                                                         {if user.is_admin {
                                                             html! {
                                                                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
@@ -352,24 +378,65 @@ pub fn admin_users_page() -> Html {
                                                             }
                                                         }}
                                                     </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
-                                                        {&user.created_at}
-                                                    </td>
-                                                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <td class="px-2 py-4 whitespace-nowrap text-right text-sm font-medium lg:px-6">
                                                         <button 
                                                             onclick={Callback::from(move |_| on_edit.emit(user_id))}
-                                                            class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 mr-3"
+                                                            class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors lg:mr-3"
+                                                            title="Edit User"
                                                         >
-                                                            {"Edit"}
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-11h-1z"></path>
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 9l-3-3"></path>
+                                                            </svg>
                                                         </button>
                                                         <button 
                                                             onclick={Callback::from(move |_| on_delete.emit(user_id))}
-                                                            class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                                            class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                            title="Delete User"
                                                         >
-                                                            {"Delete"}
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
+                                                            </svg>
                                                         </button>
                                                     </td>
-                                                </tr>
+                                                    </tr>
+                                                    // Expanded row with email, created_at, and role
+                                                    {if is_selected {
+                                                        html! {
+                                                            <tr class="bg-slate-50 dark:bg-slate-800">
+                                                                <td colspan="3" class="px-6 py-4">
+                                                                    <div class="text-sm text-slate-600 dark:text-slate-400 space-y-2">
+                                                                        <div>
+                                                                            <span class="font-medium">{"Email: "}</span>
+                                                                            {&user.email}
+                                                                        </div>
+                                                                        <div>
+                                                                            <span class="font-medium">{"Created: "}</span>
+                                                                            {&user.created_at}
+                                                                        </div>
+                                                                        <div>
+                                                                            {if user.is_admin {
+                                                                                html! {
+                                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300 lg:hidden">
+                                                                                        {"Admin"}
+                                                                                    </span>
+                                                                                }
+                                                                            } else {
+                                                                                html! {
+                                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 lg:hidden">
+                                                                                        {"User"}
+                                                                                    </span>
+                                                                                }
+                                                                            }}
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    } else {
+                                                        html! {}
+                                                    }}
+                                                </>
                                             }
                                         })}
                                     </tbody>
