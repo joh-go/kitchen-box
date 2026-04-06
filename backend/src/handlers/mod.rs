@@ -3,3 +3,4 @@ pub mod users;
 pub mod categories;
 pub mod recipes;
 pub mod images;
+pub mod admin;

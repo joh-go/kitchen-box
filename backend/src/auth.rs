@@ -31,11 +31,13 @@ pub struct UserInfo {
     pub id: i32,
     pub name: String,
     pub email: String,
+    pub is_admin: bool,
 }
 
 pub struct AuthenticatedUser {
     pub user_id: i32,
     pub user_email: String,
+    pub is_admin: bool,
 }
 
 #[rocket::async_trait]
@@ -56,9 +58,14 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
                 match decode::<Claims>(token, &key, &Validation::default()) {
                     Ok(token_data) => {
                         let claims = token_data.claims;
+                        let user_id: i32 = claims.sub.parse().unwrap_or(0);
+                        
+                        // For now, we'll fetch admin status from a simple check
+                        // In a real app, you'd want to cache this or include it in the token
                         return Outcome::Success(AuthenticatedUser {
-                            user_id: claims.sub.parse().unwrap_or(0),
+                            user_id,
                             user_email: "".to_string(), // We'll need to fetch this from DB if needed
+                            is_admin: false, // Default to false, will be updated in handlers
                         });
                     }
                     Err(_) => {
@@ -100,7 +107,7 @@ pub async fn authenticate_user(
 ) -> Result<Option<UserInfo>, String> {
     // Get user by email
     let rows = conn
-        .query("SELECT id, name, email, password FROM users WHERE email = $1", &[&email])
+        .query("SELECT id, name, email, password, is_admin FROM users WHERE email = $1", &[&email])
         .await
         .map_err(|e| e.to_string())?;
     
@@ -114,6 +121,7 @@ pub async fn authenticate_user(
                     id: row.get(0),
                     name: row.get(1),
                     email: row.get(2),
+                    is_admin: row.get(4),
                 }))
             }
             Ok(false) => Ok(None), // Password doesn't match
@@ -126,7 +134,7 @@ pub async fn authenticate_user(
 
 pub async fn get_user_by_id(conn: &Client, user_id: i32) -> Result<Option<UserInfo>, String> {
     let rows = conn
-        .query("SELECT id, name, email FROM users WHERE id = $1", &[&user_id])
+        .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&user_id])
         .await
         .map_err(|e| e.to_string())?;
     
@@ -135,6 +143,7 @@ pub async fn get_user_by_id(conn: &Client, user_id: i32) -> Result<Option<UserIn
             id: row.get(0),
             name: row.get(1),
             email: row.get(2),
+            is_admin: row.get(3),
         }))
     } else {
         Ok(None)

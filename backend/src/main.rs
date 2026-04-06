@@ -6,7 +6,7 @@ mod db;
 mod handlers;
 mod models;
 
-use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users, images};
+use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users, images, admin};
 use rocket::http::Method;
 use rocket::fs::FileServer;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
@@ -31,6 +31,10 @@ async fn rocket() -> _ {
     db::init_tables(&client)
         .await
         .expect("Failed to initialize database tables");
+
+    db::create_default_admin(&client)
+        .await
+        .expect("Failed to create default admin user");
 
     let mut methods = HashSet::new();
     methods.insert(Method::Get.into());
@@ -72,6 +76,14 @@ async fn rocket() -> _ {
             images::get_recipe_images,
             images::set_primary_image,
             images::delete_image,
+            admin::get_all_users,
+            admin::create_user,
+            admin::update_user,
+            admin::delete_user,
+            admin::get_all_recipes,
+            admin::delete_any_recipe,
+            admin::get_all_categories,
+            admin::delete_category,
         ])
         .mount("/uploads", FileServer::from("uploads"))
         .attach(cors)

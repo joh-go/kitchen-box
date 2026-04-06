@@ -1,5 +1,6 @@
 use rocket::{response::status::Custom, http::Status};
 use tokio_postgres::Client;
+use bcrypt::{hash, DEFAULT_COST};
 
 pub async fn execute_query(
     client: &Client,
@@ -16,8 +17,10 @@ pub async fn init_tables(client: &Client) -> Result<(), Custom<String>> {
         "CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            password TEXT NOT NULL
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            is_admin BOOLEAN DEFAULT false,
+            created_at TIMESTAMPTZ DEFAULT now()
         )",
         &[]
     ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
@@ -92,5 +95,35 @@ pub async fn init_tables(client: &Client) -> Result<(), Custom<String>> {
         &[]
     ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
+    Ok(())
+}
+
+pub async fn create_default_admin(client: &Client) -> Result<(), Custom<String>> {
+    // Check if any admin user exists
+    let admin_count = client
+        .query_one("SELECT COUNT(*) as count FROM users WHERE is_admin = true", &[])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    
+    let count: i64 = admin_count.get("count");
+    
+    if count == 0 {
+        // Create default admin user
+        let admin_email = "admin@recipes.local";
+        let admin_password = "admin123"; // Default password, should be changed
+        let hashed_password = hash(admin_password, DEFAULT_COST)
+            .map_err(|e| Custom(Status::InternalServerError, format!("Failed to hash password: {}", e)))?;
+        
+        client.execute(
+            "INSERT INTO users (name, email, password, is_admin) VALUES ($1, $2, $3, $4)",
+            &[&"Admin User", &admin_email, &hashed_password, &true]
+        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        
+        println!("🔑 Default admin user created:");
+        println!("   Email: {}", admin_email);
+        println!("   Password: {}", admin_password);
+        println!("   ⚠️  Please change this password after first login!");
+    }
+    
     Ok(())
 }

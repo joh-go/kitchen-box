@@ -29,6 +29,7 @@ pub async fn login(
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    is_admin: user.is_admin,
                 },
             }))
         }
@@ -53,7 +54,7 @@ pub async fn get_current_user(
 ) -> Result<Json<UserInfo>, Custom<String>> {
     // Fetch full user info from database
     let rows = conn
-        .query("SELECT id, name, email FROM users WHERE id = $1", &[&auth_user.user_id])
+        .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&auth_user.user_id])
         .await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     
@@ -62,6 +63,7 @@ pub async fn get_current_user(
             id: row.get(0),
             name: row.get(1),
             email: row.get(2),
+            is_admin: row.get(3),
         }))
     } else {
         Err(Custom(Status::NotFound, "User not found".to_string()))
@@ -162,7 +164,7 @@ pub async fn update_current_user(
     
     // Return updated user info
     let rows = conn
-        .query("SELECT id, name, email FROM users WHERE id = $1", &[&auth_user.user_id])
+        .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&auth_user.user_id])
         .await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     
@@ -171,6 +173,7 @@ pub async fn update_current_user(
             id: row.get(0),
             name: row.get(1),
             email: row.get(2),
+            is_admin: row.get(3),
         }))
     } else {
         Err(Custom(Status::NotFound, "User not found".to_string()))
