@@ -267,7 +267,32 @@ pub async fn delete_recipe(
         return Err(Custom(Status::Forbidden, "You can only delete your own recipes".to_string()));
     }
     
+    // Get all image file paths before deleting the recipe
+    let image_rows = conn
+        .query("SELECT file_path FROM images WHERE recipe_id = $1", &[&id])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    // Collect file paths
+    let file_paths: Vec<String> = image_rows.iter()
+        .filter_map(|row| row.get::<_, Option<String>>(0))
+        .collect();
+    
+    // Delete recipe (cascade will handle images, categories, etc.)
     execute_query(conn, "DELETE FROM recipes WHERE id = $1", &[&id]).await?;
+    
+    // Delete image files from filesystem (don't fail if files don't exist)
+    use std::path::Path;
+    use std::fs;
+    
+    for file_path in file_paths {
+        if Path::new(&file_path).exists() {
+            if let Err(e) = fs::remove_file(&file_path) {
+                eprintln!("Warning: Failed to delete file {}: {}", file_path, e);
+            }
+        }
+    }
+    
     Ok(Status::NoContent)
 }
 
