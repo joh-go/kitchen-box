@@ -8,6 +8,7 @@ use components::sidebar::Sidebar;
 use components::theme_provider::ThemeToggle;
 use pages::admin_setup::AdminSetupPage;
 use pages::admin_recipes::AdminRecipesPage;
+use pages::admin_categories::AdminCategoriesPage;
 
 #[derive(Clone, PartialEq)]
 pub enum Page {
@@ -18,6 +19,7 @@ pub enum Page {
     Edit(i32),
     Users,
     Recipes,
+    Categories,
     Settings,
     View(i32),
     AdminSetup,
@@ -88,6 +90,9 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
         }
         Page::Recipes => {
             html! { <AdminRecipesPage /> }
+        }
+        Page::Categories => {
+            html! { <AdminCategoriesPage /> }
         }
     }
 }
@@ -180,6 +185,7 @@ fn app() -> Html {
                 match pathname.as_str() {
                     "/admin/users" => page.set(Page::AdminUsers),
                     "/admin/recipes" => page.set(Page::Recipes),
+                    "/admin/categories" => page.set(Page::Categories),
                     "/admin/setup" => page.set(Page::AdminSetup),
                     "/settings" => page.set(Page::Settings),
                     "/login" => page.set(Page::Login),
@@ -242,6 +248,7 @@ fn app() -> Html {
                 let path = match p {
                     Page::AdminUsers => "/admin/users",
                     Page::Recipes => "/admin/recipes",
+                    Page::Categories => "/admin/categories",
                     Page::AdminSetup => "/admin/setup",
                     Page::Settings => "/settings",
                     Page::Login => "/login",

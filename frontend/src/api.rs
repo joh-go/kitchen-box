@@ -622,6 +622,31 @@ pub async fn get_admin_categories() -> Result<serde_json::Value, String> {
     }
 }
 
+// Create category (admin only)
+pub async fn create_admin_category(category_data: serde_json::Value) -> Result<serde_json::Value, String> {
+    let auth_header = get_auth_header().unwrap_or_default();
+    let body = serde_json::to_string(&category_data).map_err(|e| e.to_string())?;
+    
+    let resp = Request::new(&format!("{}/api/admin/categories", BASE))
+        .method(Method::POST)
+        .header("Authorization", &auth_header)
+        .header("Content-Type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        Ok(response)
+    } else {
+        Err(format!("Failed to create category: {}", resp.status()))
+    }
+}
+
 // Delete category (admin only)
 pub async fn delete_admin_category(category_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_default();

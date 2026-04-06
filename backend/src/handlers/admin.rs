@@ -422,7 +422,51 @@ pub async fn get_all_categories(
     Ok(Json(serde_json::json!({ "categories": categories })))
 }
 
-// Delete any category (admin only)
+// Create category (admin only)
+#[post("/api/admin/categories", data = "<category_data>")]
+pub async fn create_category(
+    conn: &State<Client>,
+    auth_user: AuthenticatedUser,
+    category_data: Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, Custom<String>> {
+    require_admin(&auth_user)?;
+
+    // Extract category name from request
+    let name = category_data.get("name")
+        .and_then(|n| n.as_str())
+        .ok_or_else(|| Custom(Status::BadRequest, "Category name is required".to_string()))?;
+
+    if name.trim().is_empty() {
+        return Err(Custom(Status::BadRequest, "Category name cannot be empty".to_string()));
+    }
+
+    // Check if category already exists
+    let existing = conn
+        .query_one("SELECT id FROM categories WHERE name = $1", &[&name])
+        .await;
+
+    match existing {
+        Ok(_) => return Err(Custom(Status::Conflict, "Category already exists".to_string())),
+        Err(_) => {} // Category doesn't exist, continue
+    }
+
+    // Create category
+    let row = conn
+        .query_one(
+            "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id, name, created_at",
+            &[&name, &name.to_lowercase().replace(' ', "-")]
+        )
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    Ok(Json(serde_json::json!({
+        "id": row.get::<_, i32>(0),
+        "name": row.get::<_, String>(1),
+        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(2)
+    })))
+}
+
+// Delete category (admin only)
 #[delete("/api/admin/categories/<category_id>")]
 pub async fn delete_category(
     conn: &State<Client>,
