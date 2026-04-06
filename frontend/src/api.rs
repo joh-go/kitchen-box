@@ -463,23 +463,21 @@ pub async fn delete_recipe_image(recipe_id: i32, image_id: i32) -> Result<(), St
 
 // Check if any admin users exist
 pub async fn check_admin_exists() -> Result<bool, String> {
-    let auth_header = get_auth_header().unwrap_or_default();
-    let resp = Request::new(&format!("{}/api/admin/users", BASE))
+    let resp = Request::new(&format!("{}/api/admin/check", BASE))
         .method(Method::GET)
-        .header("Authorization", &auth_header)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    if resp.status() == 401 || resp.status() == 403 {
-        // No admin access or not logged in - assume no admin exists
-        Ok(false)
-    } else if resp.ok() {
-        // Can access admin endpoint - admin exists
-        Ok(true)
+    if resp.ok() {
+        let response: serde_json::Value = resp
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+        
+        Ok(response["admin_exists"].as_bool().unwrap_or(false))
     } else {
-        // Other error - assume no admin exists for setup purposes
-        Ok(false)
+        Err(format!("Failed to check admin status: {}", resp.status()))
     }
 }
 

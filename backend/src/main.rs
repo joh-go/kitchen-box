@@ -84,6 +84,7 @@ async fn rocket() -> _ {
             admin::delete_any_recipe,
             admin::get_all_categories,
             admin::delete_category,
+            admin::check_admin_exists,
             admin::setup_initial_admin,
         ])
         .mount("/uploads", FileServer::from("uploads"))

@@ -58,6 +58,24 @@ pub async fn get_all_users(
     Ok(Json(serde_json::json!({ "users": users })))
 }
 
+// Check if any admin users exist (no authentication required)
+#[get("/api/admin/check")]
+pub async fn check_admin_exists(
+    conn: &State<Client>,
+) -> Result<Json<serde_json::Value>, Custom<String>> {
+    let admin_count = conn
+        .query_one("SELECT COUNT(*) as count FROM users WHERE is_admin = true", &[])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    
+    let count: i64 = admin_count.get("count");
+    
+    Ok(Json(serde_json::json!({
+        "admin_exists": count > 0,
+        "admin_count": count
+    })))
+}
+
 // Create initial admin user (no authentication required for first setup)
 #[post("/api/admin/setup", data = "<user_data>")]
 pub async fn setup_initial_admin(

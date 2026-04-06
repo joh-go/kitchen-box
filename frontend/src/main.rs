@@ -6,6 +6,7 @@ mod theme;
 
 use components::sidebar::Sidebar;
 use components::theme_provider::ThemeToggle;
+use pages::admin_setup::AdminSetupPage;
 
 #[derive(Clone, PartialEq)]
 pub enum Page {
@@ -76,8 +77,80 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             html! { <crate::pages::view::ViewRecipe id={*id} on_edit={on_edit} on_back={on_back} /> }
         }
         Page::AdminSetup => {
-            html! { <crate::pages::admin_setup::AdminSetupPage /> }
+            // Double-check admin existence before showing setup page
+            html! { <AdminSetupWithGuard /> }
         }
+    }
+}
+
+#[function_component(AdminSetupWithGuard)]
+fn admin_setup_with_guard() -> Html {
+    let admin_exists = use_state(|| None::<bool>);
+    let loading = use_state(|| true);
+
+    {
+        let admin_exists = admin_exists.clone();
+        let loading = loading.clone();
+        
+        use_effect_with((), move |_| {
+            wasm_bindgen_futures::spawn_local(async move {
+                match api::check_admin_exists().await {
+                    Ok(exists) => {
+                        admin_exists.set(Some(exists));
+                        loading.set(false);
+                    }
+                    Err(_) => {
+                        // If check fails, assume admin exists
+                        admin_exists.set(Some(true));
+                        loading.set(false);
+                    }
+                }
+            });
+            || ()
+        });
+    }
+
+    if *loading {
+        html! {
+            <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+                <div class="text-center">
+                    <div class="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-slate-600 dark:text-slate-400">{"Checking setup status..."}</p>
+                </div>
+            </div>
+        }
+    } else if let Some(true) = *admin_exists {
+        // Admin already exists, redirect to home
+        html! {
+            <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
+                <div class="text-center max-w-md mx-auto p-6">
+                    <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                        {"Setup Already Complete"}
+                    </h2>
+                    <p class="text-slate-600 dark:text-slate-400 mb-6">
+                        {"An administrator account already exists. You can now log in with your credentials."}
+                    </p>
+                    <button 
+                        onclick={Callback::from(|_| {
+                            if let Some(window) = web_sys::window() {
+                                let _ = window.location().set_href("/");
+                            }
+                        })}
+                        class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                    >
+                        {"Go to Login"}
+                    </button>
+                </div>
+            </div>
+        }
+    } else {
+        // No admin exists, show setup
+        html! { <AdminSetupPage /> }
     }
 }
 
@@ -102,8 +175,9 @@ fn app() -> Html {
                                 page.set(Page::AdminSetup);
                             }
                         }
-                        Err(_) => {
-                            // Assume admin exists if check fails
+                        Err(e) => {
+                            // If check fails, assume admin exists to avoid showing setup unnecessarily
+                            eprintln!("Failed to check admin existence: {}", e);
                         }
                     }
                     admin_check_done.set(true);
