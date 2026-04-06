@@ -32,9 +32,9 @@ async fn rocket() -> _ {
         .await
         .expect("Failed to initialize database tables");
 
-    db::create_default_admin(&client)
-        .await
-        .expect("Failed to create default admin user");
+    //db::create_default_admin(&client)
+    //    .await
+    //    .expect("Failed to create default admin user");
 
     let mut methods = HashSet::new();
     methods.insert(Method::Get.into());
@@ -84,6 +84,7 @@ async fn rocket() -> _ {
             admin::delete_any_recipe,
             admin::get_all_categories,
             admin::delete_category,
+            admin::setup_initial_admin,
         ])
         .mount("/uploads", FileServer::from("uploads"))
         .attach(cors)

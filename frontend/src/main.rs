@@ -17,6 +17,7 @@ pub enum Page {
     Users,
     Settings,
     View(i32),
+    AdminSetup,
 }
 
 fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>) -> Html {
@@ -74,6 +75,9 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             };
             html! { <crate::pages::view::ViewRecipe id={*id} on_edit={on_edit} on_back={on_back} /> }
         }
+        Page::AdminSetup => {
+            html! { <crate::pages::admin_setup::AdminSetupPage /> }
+        }
     }
 }
 
@@ -82,6 +86,32 @@ fn app() -> Html {
     let page = use_state(|| Page::Home);
     let mobile_menu_open = use_state(|| false);
     let search = use_state(|| String::new());
+    let admin_check_done = use_state(|| false);
+    
+    // Check for admin existence on app startup
+    {
+        let admin_check_done = admin_check_done.clone();
+        let page = page.clone();
+        
+        use_effect_with(admin_check_done.clone(), move |_| {
+            if !*admin_check_done {
+                wasm_bindgen_futures::spawn_local(async move {
+                    match api::check_admin_exists().await {
+                        Ok(admin_exists) => {
+                            if !admin_exists {
+                                page.set(Page::AdminSetup);
+                            }
+                        }
+                        Err(_) => {
+                            // Assume admin exists if check fails
+                        }
+                    }
+                    admin_check_done.set(true);
+                });
+            }
+            || ()
+        });
+    }
     let navigate = {
         let page = page.clone();
         Callback::from(move |p: Page| {

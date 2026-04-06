@@ -58,6 +58,56 @@ pub async fn get_all_users(
     Ok(Json(serde_json::json!({ "users": users })))
 }
 
+// Create initial admin user (no authentication required for first setup)
+#[post("/api/admin/setup", data = "<user_data>")]
+pub async fn setup_initial_admin(
+    conn: &State<Client>,
+    user_data: Json<AdminUserCreateRequest>,
+) -> Result<Json<serde_json::Value>, Custom<String>> {
+    // Check if any admin already exists
+    let admin_count = conn
+        .query_one("SELECT COUNT(*) as count FROM users WHERE is_admin = true", &[])
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+    
+    let count: i64 = admin_count.get("count");
+    
+    if count > 0 {
+        return Err(Custom(Status::Forbidden, "Admin user already exists".to_string()));
+    }
+
+    // Check if email already exists
+    let existing = conn
+        .query_one("SELECT id FROM users WHERE email = $1", &[&user_data.email])
+        .await;
+
+    match existing {
+        Ok(_) => return Err(Custom(Status::Conflict, "Email already exists".to_string())),
+        Err(_) => {} // Email doesn't exist, continue
+    }
+
+    // Hash password
+    let hashed_password = hash(&user_data.password, DEFAULT_COST)
+        .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
+
+    // Create user
+    let row = conn
+        .query_one(
+            "INSERT INTO users (name, email, password, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, name, email, is_admin, created_at",
+            &[&user_data.name, &user_data.email, &hashed_password, &user_data.is_admin]
+        )
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    Ok(Json(serde_json::json!({
+        "id": row.get::<_, i32>(0),
+        "name": row.get::<_, String>(1),
+        "email": row.get::<_, String>(2),
+        "is_admin": row.get::<_, bool>(3),
+        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(4)
+    })))
+}
+
 // Create user (admin only)
 #[post("/api/admin/users", data = "<user_data>")]
 pub async fn create_user(
