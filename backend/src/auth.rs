@@ -1,10 +1,8 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use rocket::http::Status;
-use rocket::request::{FromRequest, Outcome};
-use rocket::response::status::Custom;
+use rocket::{State, response::status::Custom, http::Status, request::{FromRequest, Outcome}};
+use tokio_postgres::Client;
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio_postgres::Client;
 use bcrypt::verify;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,13 +58,30 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
                         let claims = token_data.claims;
                         let user_id: i32 = claims.sub.parse().unwrap_or(0);
                         
-                        // For now, we'll fetch admin status from a simple check
-                        // In a real app, you'd want to cache this or include it in the token
-                        return Outcome::Success(AuthenticatedUser {
-                            user_id,
-                            user_email: "".to_string(), // We'll need to fetch this from DB if needed
-                            is_admin: false, // Default to false, will be updated in handlers
-                        });
+                        // Get database connection from request state
+                        let conn = request.guard::<&State<Client>>().await.unwrap();
+                        
+                        // Fetch user info including admin status from database
+                        let rows = conn
+                            .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&user_id])
+                            .await;
+                        
+                        match rows {
+                            Ok(rows) => {
+                                if let Some(row) = rows.iter().next() {
+                                    return Outcome::Success(AuthenticatedUser {
+                                        user_id,
+                                        user_email: row.get(2),
+                                        is_admin: row.get(3),
+                                    });
+                                } else {
+                                    return Outcome::Error((Status::Unauthorized, Custom(Status::Unauthorized, "User not found".to_string())));
+                                }
+                            }
+                            Err(e) => {
+                                return Outcome::Error((Status::InternalServerError, Custom(Status::InternalServerError, format!("Database error: {}", e))));
+                            }
+                        }
                     }
                     Err(_) => {
                         return Outcome::Error((Status::Unauthorized, Custom(Status::Unauthorized, "Invalid token".to_string())));

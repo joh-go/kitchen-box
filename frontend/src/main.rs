@@ -19,6 +19,7 @@ pub enum Page {
     Settings,
     View(i32),
     AdminSetup,
+    AdminUsers,
 }
 
 fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>) -> Html {
@@ -79,6 +80,9 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
         Page::AdminSetup => {
             // Double-check admin existence before showing setup page
             html! { <AdminSetupWithGuard /> }
+        }
+        Page::AdminUsers => {
+            html! { <crate::pages::admin_users::AdminUsersPage /> }
         }
     }
 }
@@ -161,6 +165,43 @@ fn app() -> Html {
     let search = use_state(|| String::new());
     let admin_check_done = use_state(|| false);
     
+    // Initialize page based on current URL
+    {
+        let page = page.clone();
+        use_effect_with((), move |_| {
+            if let Some(window) = web_sys::window() {
+                let location = window.location();
+                let pathname = location.pathname().unwrap_or_default();
+                match pathname.as_str() {
+                    "/admin/users" => page.set(Page::AdminUsers),
+                    "/admin/setup" => page.set(Page::AdminSetup),
+                    "/settings" => page.set(Page::Settings),
+                    "/login" => page.set(Page::Login),
+                    "/register" => page.set(Page::Register),
+                    "/add" => page.set(Page::Add),
+                    path if path.starts_with("/edit/") => {
+                        let parts: Vec<&str> = path.split('/').collect();
+                        if parts.len() > 2 {
+                            if let Ok(id) = parts[2].parse::<i32>() {
+                                page.set(Page::Edit(id));
+                            }
+                        }
+                    }
+                    path if path.starts_with("/view/") => {
+                        let parts: Vec<&str> = path.split('/').collect();
+                        if parts.len() > 2 {
+                            if let Ok(id) = parts[2].parse::<i32>() {
+                                page.set(Page::View(id));
+                            }
+                        }
+                    }
+                    _ => page.set(Page::Home),
+                }
+            }
+            || ()
+        });
+    }
+    
     // Check for admin existence on app startup
     {
         let admin_check_done = admin_check_done.clone();
@@ -189,6 +230,22 @@ fn app() -> Html {
     let navigate = {
         let page = page.clone();
         Callback::from(move |p: Page| {
+            // Update URL based on page
+            if let Some(window) = web_sys::window() {
+                let location = window.location();
+                let path = match p {
+                    Page::AdminUsers => "/admin/users",
+                    Page::AdminSetup => "/admin/setup",
+                    Page::Settings => "/settings",
+                    Page::Login => "/login",
+                    Page::Register => "/register",
+                    Page::Add => "/add",
+                    Page::Edit(id) => &format!("/edit/{}", id),
+                    Page::View(id) => &format!("/view/{}", id),
+                    _ => "/",
+                };
+                let _ = location.set_pathname(path);
+            }
             page.set(p);
         })
     };

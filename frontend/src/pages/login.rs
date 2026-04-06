@@ -59,6 +59,10 @@ pub fn login() -> Html {
                                             if let Some(name) = user.get("name").and_then(|n| n.as_str()) {
                                                 let _ = storage.set_item("user_name", name);
                                             }
+                                            // Store admin status if available
+                                            if let Some(is_admin) = user.get("is_admin").and_then(|a| a.as_bool()) {
+                                                let _ = storage.set_item("user_is_admin", &is_admin.to_string());
+                                            }
                                         }
                                     }
                                     
