@@ -1,6 +1,8 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use shared_types::{Recipe, Ingredient};
 
 fn calculate_adjusted_ingredients(ingredients: &[Ingredient], original_servings: i32, target_servings: i32) -> Vec<(Ingredient, f64)> {
@@ -23,6 +25,9 @@ pub struct Props {
 
 #[function_component(ViewRecipe)]
 pub fn view_recipe(props: &Props) -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let recipe = use_state(|| None as Option<Recipe>);
     let error = use_state(|| None as Option<String>);
     let adjusted_servings = use_state(|| None as Option<i32>);
@@ -171,7 +176,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
-                                <span>{"Back to Recipes"}</span>
+                                <span>{t("back_to_recipes", lang)}</span>
                             </button>
 
                             {if r.author_id == api::get_current_user_id() {
@@ -183,7 +188,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
-                                        {"Edit Recipe"}
+                                        {t("edit_recipe", lang)}
                                     </button>
                                 }
                             } else {
@@ -212,7 +217,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <span>{format!("Prep: {} min", prep)}</span>
+                                            <span>{format!("{}", t("prep_minutes", lang))}</span>
                                         </div>
                                     }
                                 } else {
@@ -224,7 +229,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
                                             </svg>
-                                            <span>{format!("Cook: {} min", cook)}</span>
+                                            <span>{format!("{}", t("cook_minutes", lang))}</span>
                                         </div>
                                     }
                                 } else {
@@ -250,7 +255,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                                             </svg>
-                                            <span>{&category.name}</span>
+                                            <span>{format!("{}: {}", t("category", lang), &category.name)}</span>
                                         </div>
                                     }
                                 } else {
@@ -299,7 +304,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                     <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                                     </svg>
-                                    {"Ingredients"}
+                                    {t("ingredients", lang)}
                                     {if let Some(servings) = r.servings {
                                         let current_servings = (*adjusted_servings).unwrap_or(servings);
                                         if current_servings != servings {
@@ -318,7 +323,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                 {if let Some(original_servings) = r.servings {
                                     html! {
                                         <div class="flex items-center gap-2">
-                                            <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Servings:"}</label>
+                                            <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{t("servings_label", lang)}</label>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -330,7 +335,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                                 onclick={reset_servings}
                                                 class="text-xs px-2 py-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                                             >
-                                                {"Reset"}
+                                                {t("reset", lang)}
                                             </button>
                                         </div>
                                     }
@@ -371,7 +376,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                 <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                                 </svg>
-                                {"Instructions"}
+                                {t("instructions", lang)}
                             </h2>
                             <div class="space-y-4">
                                 {if let Some(arr) = r.steps.as_array() {
@@ -438,7 +443,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                         </svg>
-                                        {"Notes"}
+                                        {t("notes", lang)}
                                     </h2>
                                     <p class="text-slate-600 dark:text-slate-400 whitespace-pre-line">{notes}</p>
                                 </div>
@@ -539,7 +544,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                         </svg>
-                                        {"Gallery"}
+                                        {t("gallery", lang)}
                                     </h2>
                                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                         { for r.images.iter().enumerate().map(|(idx, image)| {

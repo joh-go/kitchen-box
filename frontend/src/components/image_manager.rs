@@ -1,4 +1,6 @@
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use shared_types::RecipeImage;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
@@ -13,6 +15,9 @@ pub struct Props {
 
 #[function_component(ImageManager)]
 pub fn image_manager(props: &Props) -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let images = use_state(|| props.images.clone());
     let uploading = use_state(|| false);
     let error = use_state(|| None::<String>);
@@ -58,7 +63,7 @@ pub fn image_manager(props: &Props) -> Html {
                                         on_images_changed.emit(current_images);
                                     }
                                     Err(err) => {
-                                        error.set(Some(format!("Failed to upload image: {}", err)));
+                                        error.set(Some(format!("{}: {}", t("failed_upload_image", lang), err)));
                                     }
                                 }
                             }
@@ -76,7 +81,7 @@ pub fn image_manager(props: &Props) -> Html {
         <div class="space-y-4">
             <div>
                 <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
-                    { "Images" }
+                    { t("images", lang) }
                 </h3>
                 
                 // Upload section
@@ -94,13 +99,13 @@ pub fn image_manager(props: &Props) -> Html {
                         class="cursor-pointer inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         { if *uploading { 
-                            "Uploading..." 
+                            t("uploading", lang)
                         } else { 
-                            "Choose Image" 
+                            t("choose_image", lang)
                         } }
                     </label>
                     <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                        { "Upload images for your recipe (JPG, PNG, etc.)" }
+                        { t("upload_images_description", lang) }
                     </p>
                 </div>
 
@@ -157,7 +162,7 @@ pub fn image_manager(props: &Props) -> Html {
                                     { if is_primary {
                                         html! {
                                             <div class="absolute top-2 left-2 bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
-                                                { "Primary" }
+                                                { t("primary", lang) }
                                             </div>
                                         }
                                     } else {
@@ -186,7 +191,7 @@ pub fn image_manager(props: &Props) -> Html {
                                                             });
                                                         })}
                                                         class="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs"
-                                                        title="Set as primary"
+                                                        title={t("set_as_primary", lang)}
                                                     >
                                                         { "STAR" }
                                                     </button>
@@ -211,7 +216,7 @@ pub fn image_manager(props: &Props) -> Html {
                                                     });
                                                 })}
                                                 class="bg-red-600 hover:bg-red-700 text-white p-1 rounded text-xs"
-                                                title="Delete image"
+                                                title={t("delete_image", lang)}
                                             >
                                                 { "DELETE" }
                                             </button>
@@ -219,13 +224,13 @@ pub fn image_manager(props: &Props) -> Html {
                                     </div>
                                 </div>
                             }
-                        }) }
+                        })}
                     </div>
                 }
             } else {
                 html! {
                     <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-                        { "No images uploaded yet" }
+                        { t("no_images_uploaded", lang) }
                     </div>
                 }
             }}

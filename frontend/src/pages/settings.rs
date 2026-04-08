@@ -294,20 +294,20 @@ pub fn settings() -> Html {
 
                     <div class="border-t border-slate-200 dark:border-slate-700 pt-6">
                         <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                            {"Change Password"}
+                            {t("change_password", lang)}
                         </h2>
                         
                         <div class="space-y-4">
                             <div>
                                 <label for="current_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {"Current Password"}
+                                    {t("current_password_label", lang)}
                                 </label>
                                 <input
                                     id="current_password"
                                     name="current_password"
                                     type="password"
                                     class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                    placeholder="Enter current password"
+                                    placeholder={t("enter_current_password", lang)}
                                     value={state.current_password.clone()}
                                     oninput={oninput.clone()}
                                 />
@@ -315,14 +315,14 @@ pub fn settings() -> Html {
 
                             <div>
                                 <label for="new_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {"New Password"}
+                                    {t("new_password_label", lang)}
                                 </label>
                                 <input
                                     id="new_password"
                                     name="new_password"
                                     type="password"
                                     class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                    placeholder="Enter new password"
+                                    placeholder={t("enter_new_password", lang)}
                                     value={state.new_password.clone()}
                                     oninput={oninput.clone()}
                                 />
@@ -330,14 +330,14 @@ pub fn settings() -> Html {
 
                             <div>
                                 <label for="confirm_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {"Confirm New Password"}
+                                    {t("confirm_new_password", lang)}
                                 </label>
                                 <input
                                     id="confirm_password"
                                     name="confirm_password"
                                     type="password"
                                     class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                    placeholder="Confirm new password"
+                                    placeholder={t("confirm_new_password", lang)}
                                     value={state.confirm_password.clone()}
                                     oninput={oninput}
                                 />
@@ -358,11 +358,11 @@ pub fn settings() -> Html {
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0h12c6.627 0 12 5.373 12v12c0 6.627-5.373 12-12h-4zm-1 1.465L9.465 15H15v-2h-4v-2h4v-2z"></path>
                                         </svg>
-                                        {"Saving..."}
+                                        {t("saving", lang)}
                                     </>
                                 }
                             } else {
-                                html! {"Save Changes"}
+                                html! {t("save_changes", lang)}
                             }}
                         </button>
                     </div>
@@ -381,10 +381,10 @@ pub fn settings() -> Html {
                             </div>
                             <div>
                                 <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200">
-                                    {"Admin Panel"}
+                                    {t("admin_panel", lang)}
                                 </h2>
                                 <p class="text-sm text-slate-500 dark:text-slate-400">
-                                    {"Manage users, recipes, and system settings"}
+                                    {t("manage_admin_settings", lang)}
                                 </p>
                             </div>
                         </div>
@@ -396,10 +396,10 @@ pub fn settings() -> Html {
                                     <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                     </svg>
-                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{"User Management"}</h3>
+                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{t("user_management_title", lang)}</h3>
                                 </div>
                                 <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                    {"Create, edit, and delete user accounts"}
+                                    {t("user_management", lang)}
                                 </p>
                                 <button 
                                     onclick={Callback::from(|_| {
@@ -410,7 +410,7 @@ pub fn settings() -> Html {
                                     })}
                                     class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                                 >
-                                    {"Manage Users"}
+                                    {t("manage_users", lang)}
                                 </button>
                             </div>
 
@@ -420,10 +420,10 @@ pub fn settings() -> Html {
                                     <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                                     </svg>
-                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{"Recipe Management"}</h3>
+                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{t("recipe_management", lang)}</h3>
                                 </div>
                                 <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                    {"View and delete any recipe in the system"}
+                                    {t("view_delete_recipes", lang)}
                                 </p>
                                 <button 
                                     onclick={Callback::from(|_| {
@@ -433,7 +433,7 @@ pub fn settings() -> Html {
                                     })}
                                     class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                                 >
-                                    {"Manage Recipes"}
+                                    {t("manage_recipes", lang)}
                                 </button>
                             </div>
 
@@ -443,10 +443,10 @@ pub fn settings() -> Html {
                                     <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                                     </svg>
-                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{"Category Management"}</h3>
+                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{t("category_management", lang)}</h3>
                                 </div>
                                 <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                    {"Manage recipe categories"}
+                                    {t("manage_categories", lang)}
                                 </p>
                                 <button 
                                     onclick={Callback::from(|_| {
@@ -456,7 +456,7 @@ pub fn settings() -> Html {
                                     })}
                                     class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                                 >
-                                    {"Manage Categories"}
+                                    {t("manage_categories_button", lang)}
                                 </button>
                             </div>
 
@@ -466,10 +466,10 @@ pub fn settings() -> Html {
                                     <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                     </svg>
-                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{"System Statistics"}</h3>
+                                    <h3 class="font-medium text-slate-800 dark:text-slate-200">{t("system_statistics", lang)}</h3>
                                 </div>
                                 <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                                    {"View system usage and statistics"}
+                                    {t("view_system_stats", lang)}
                                 </p>
                                 <button 
                                     onclick={Callback::from(|_| {
@@ -479,7 +479,7 @@ pub fn settings() -> Html {
                                     })}
                                     class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
                                 >
-                                    {"View Stats"}
+                                    {t("view_stats", lang)}
                                 </button>
                             </div>
                         </div>
@@ -490,9 +490,9 @@ pub fn settings() -> Html {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                 </svg>
                                 <div>
-                                    <h4 class="font-medium text-amber-800 dark:text-amber-200">{"Admin Privileges"}</h4>
+                                    <h4 class="font-medium text-amber-800 dark:text-amber-200">{t("admin_privileges", lang)}</h4>
                                     <p class="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                                        {"You have administrative access. Use these features responsibly to manage the system and users."}
+                                        {t("admin_privileges_desc", lang)}
                                     </p>
                                 </div>
                             </div>

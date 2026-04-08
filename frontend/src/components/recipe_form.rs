@@ -323,11 +323,7 @@ pub fn recipe_form(props: &Props) -> Html {
                         let input = e.target_dyn_into::<web_sys::HtmlTextAreaElement>().unwrap();
                         ingredients_text.set(input.value());
                     })}
-                    placeholder="2 cups flour
-1 tsp salt
-3 eggs (large)
-1 cup milk (whole)
-2 tbsp olive oil (extra virgin)"
+                    placeholder={t("ingredient_examples_placeholder", lang)}
                     class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 mt-1 mb-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     rows={4}
                 />
@@ -465,7 +461,7 @@ pub fn recipe_form(props: &Props) -> Html {
                         })}
                         class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                     >
-                        { "+ Add" }
+                        { t("add_category", lang) }
                     </button>
                 </div>
             </div>
@@ -485,8 +481,8 @@ pub fn recipe_form(props: &Props) -> Html {
             </div>
             
             <div class="flex gap-3 mt-6">
-                <button type="submit" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-6 py-2 rounded-md font-medium shadow transition-all duration-200">{ "Save" }</button>
-                <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2 rounded-md font-medium transition-colors">{ "Cancel" }</button>
+                <button type="submit" class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-6 py-2 rounded-md font-medium shadow transition-all duration-200">{ t("save", lang) }</button>
+                <button type="button" onclick={Callback::from(move |_| { on_saved_prop.emit(()); })} class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 px-6 py-2 rounded-md font-medium transition-colors">{ t("cancel", lang) }</button>
             </div>
         </form>
     }

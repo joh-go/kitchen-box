@@ -381,6 +381,27 @@ lazy_static! {
             h
         });
         
+        m.insert("reset", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Reset");
+            h.insert(Language::German, "Zurücksetzen");
+            h
+        });
+        
+        m.insert("instructions", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Instructions");
+            h.insert(Language::German, "Anweisungen");
+            h
+        });
+        
+        m.insert("gallery", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Gallery");
+            h.insert(Language::German, "Galerie");
+            h
+        });
+        
         m.insert("delete", {
             let mut h = HashMap::new();
             h.insert(Language::English, "Delete");
@@ -937,6 +958,83 @@ lazy_static! {
             h
         });
         
+        m.insert("manage_admin_settings", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage Admin Settings");
+            h.insert(Language::German, "Admin-Einstellungen verwalten");
+            h
+        });
+        
+        m.insert("admin_panel", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Admin Panel");
+            h.insert(Language::German, "Admin-Panel");
+            h
+        });
+        
+        m.insert("user_management_title", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "User Management");
+            h.insert(Language::German, "Benutzerverwaltung");
+            h
+        });
+        
+        m.insert("system_statistics", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "System Statistics");
+            h.insert(Language::German, "Systemstatistiken");
+            h
+        });
+        
+        m.insert("view_stats", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "View Stats");
+            h.insert(Language::German, "Statistiken anzeigen");
+            h
+        });
+        
+        m.insert("admin_privileges", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Admin Privileges");
+            h.insert(Language::German, "Admin-Rechte");
+            h
+        });
+        
+        m.insert("admin_privileges_desc", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "You have administrative access. Use these features responsibly to manage the system and users.");
+            h.insert(Language::German, "Sie haben administrativen Zugriff. Nutzen Sie diese Funktionen verantwortungsvoll, um das System und die Benutzer zu verwalten.");
+            h
+        });
+        
+        m.insert("view_system_stats", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "View system usage and statistics");
+            h.insert(Language::German, "Systemnutzung und Statistiken anzeigen");
+            h
+        });
+        
+        m.insert("manage_categories_button", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage Categories");
+            h.insert(Language::German, "Kategorien verwalten");
+            h
+        });
+        
+        m.insert("saving", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Saving...");
+            h.insert(Language::German, "Wird gespeichert...");
+            h
+        });
+        
+        m.insert("save_changes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Save Changes");
+            h.insert(Language::German, "Änderungen speichern");
+            h
+        });
+        
         // Login page
         m.insert("sign_in_account", {
             let mut h = HashMap::new();
@@ -1136,6 +1234,69 @@ lazy_static! {
             h
         });
         
+        m.insert("servings_label", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Servings:");
+            h.insert(Language::German, "Portionen:");
+            h
+        });
+        
+        m.insert("passwords_do_not_match", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Passwords do not match");
+            h.insert(Language::German, "Passwörter stimmen nicht überein");
+            h
+        });
+        
+        m.insert("current_password_required", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Current password is required");
+            h.insert(Language::German, "Aktuelles Passwort ist erforderlich");
+            h
+        });
+        
+        m.insert("change_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Change Password");
+            h.insert(Language::German, "Passwort ändern");
+            h
+        });
+        
+        m.insert("current_password_label", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Current Password");
+            h.insert(Language::German, "Aktuelles Passwort");
+            h
+        });
+        
+        m.insert("new_password_label", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "New Password");
+            h.insert(Language::German, "Neues Passwort");
+            h
+        });
+        
+        m.insert("enter_current_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter current password");
+            h.insert(Language::German, "Aktuelles Passwort eingeben");
+            h
+        });
+        
+        m.insert("enter_new_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter new password");
+            h.insert(Language::German, "Neues Passwort eingeben");
+            h
+        });
+        
+        m.insert("confirm_new_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Confirm New Password");
+            h.insert(Language::German, "Neues Passwort bestätigen");
+            h
+        });
+        
         m.insert("notes", {
             let mut h = HashMap::new();
             h.insert(Language::English, "Notes");
@@ -1303,6 +1464,177 @@ lazy_static! {
             let mut h = HashMap::new();
             h.insert(Language::English, "Get Started");
             h.insert(Language::German, "Loslegen");
+            h
+        });
+        
+        m.insert("add_category", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "+ Add");
+            h.insert(Language::German, "+ Hinzufügen");
+            h
+        });
+        
+        m.insert("save", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Save");
+            h.insert(Language::German, "Speichern");
+            h
+        });
+        
+        m.insert("cancel", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Cancel");
+            h.insert(Language::German, "Abbrechen");
+            h
+        });
+        
+        m.insert("ingredient_examples_placeholder", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "2 cups flour\n1 tsp salt\n3 eggs (large)\n1 cup milk (whole)\n2 tbsp olive oil (extra virgin)");
+            h.insert(Language::German, "2 Tassen Mehl\n1 TL Salz\n3 Eier (groß)\n1 Tasse Milch (Vollmilch)\n2 EL Olivenöl (extra vergine)");
+            h
+        });
+        
+        // Image manager
+        m.insert("images", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Images");
+            h.insert(Language::German, "Bilder");
+            h
+        });
+        
+        m.insert("uploading", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Uploading...");
+            h.insert(Language::German, "Wird hochgeladen...");
+            h
+        });
+        
+        m.insert("choose_image", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Choose Image");
+            h.insert(Language::German, "Bild auswählen");
+            h
+        });
+        
+        m.insert("upload_images_description", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Upload images for your recipe (JPG, PNG, etc.)");
+            h.insert(Language::German, "Laden Sie Bilder für Ihr Rezept hoch (JPG, PNG, etc.)");
+            h
+        });
+        
+        m.insert("failed_upload_image", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Failed to upload image");
+            h.insert(Language::German, "Bild konnte nicht hochgeladen werden");
+            h
+        });
+        
+        m.insert("no_images_uploaded", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "No images uploaded yet");
+            h.insert(Language::German, "Noch keine Bilder hochgeladen");
+            h
+        });
+        
+        m.insert("primary", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Primary");
+            h.insert(Language::German, "Hauptbild");
+            h
+        });
+        
+        m.insert("set_as_primary", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Set as primary");
+            h.insert(Language::German, "Als Hauptbild festlegen");
+            h
+        });
+        
+        m.insert("delete_image", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Delete image");
+            h.insert(Language::German, "Bild löschen");
+            h
+        });
+        
+        // Users page
+        m.insert("manage_users", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage Users");
+            h.insert(Language::German, "Benutzer verwalten");
+            h
+        });
+        
+        m.insert("view_delete_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "View and delete any recipe in the system");
+            h.insert(Language::German, "Alle Rezepte ansehen und löschen");
+            h
+        });
+        
+        m.insert("manage_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage Recipes");
+            h.insert(Language::German, "Rezepte verwalten");
+            h
+        });
+        
+        m.insert("category_management", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Category Management");
+            h.insert(Language::German, "Kategorienverwaltung");
+            h
+        });
+        
+        m.insert("manage_categories", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage recipe categories");
+            h.insert(Language::German, "Rezeptkategorien verwalten");
+            h
+        });
+        
+        // Recipe view page
+        m.insert("back_to_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Back to Recipes");
+            h.insert(Language::German, "Zurück zu Rezepten");
+            h
+        });
+        
+        m.insert("edit_recipe", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Edit Recipe");
+            h.insert(Language::German, "Rezept bearbeiten");
+            h
+        });
+        
+        m.insert("prep_minutes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Prep: {} min");
+            h.insert(Language::German, "Vorbereitung: {} Min");
+            h
+        });
+        
+        m.insert("cook_minutes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Cook: {} min");
+            h.insert(Language::German, "Kochzeit: {} Min");
+            h
+        });
+        
+        m.insert("adjusted_for_servings", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "(adjusted for {} servings)");
+            h.insert(Language::German, "(angepasst für {} Portionen)");
+            h
+        });
+        
+        m.insert("category", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Category");
+            h.insert(Language::German, "Kategorie");
             h
         });
         
