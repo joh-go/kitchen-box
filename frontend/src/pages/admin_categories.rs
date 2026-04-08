@@ -2,6 +2,8 @@ use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use serde_json::json;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdminCategory {
@@ -18,6 +20,9 @@ pub enum CategoryAction {
 
 #[function_component(AdminCategoriesPage)]
 pub fn admin_categories_page() -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let categories = use_state(|| Vec::<AdminCategory>::new());
     let loading = use_state(|| true);
     let error = use_state(|| None::<String>);
@@ -48,7 +53,7 @@ pub fn admin_categories_page() -> Html {
                             categories.set(parsed_categories);
                             loading.set(false);
                         } else {
-                            error.set(Some("Failed to parse categories data".to_string()));
+                            error.set(Some(t("failed_parse_categories", lang).to_string()));
                             loading.set(false);
                         }
                     }
@@ -168,10 +173,10 @@ pub fn admin_categories_page() -> Html {
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {"Category Management"}
+                            {t("category_management_title", lang)}
                         </h1>
                         <p class="text-slate-500 dark:text-slate-400 mt-1">
-                            {"Manage all categories in the system"}
+                            {t("manage_all_categories_system", lang)}
                         </p>
                     </div>
                 </div>
@@ -180,12 +185,12 @@ pub fn admin_categories_page() -> Html {
             // Create Category Form
             <div class="glass rounded-2xl shadow-lg border border-emerald-100 dark:border-slate-700 p-6 animate-fade-in">
                 <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                    {"Add New Category"}
+                    {t("add_new_category", lang)}
                 </h2>
                 <form onsubmit={on_create_category} class="flex flex-col sm:flex-row gap-3">
                     <input
                         type="text"
-                        placeholder="Enter category name..."
+                        placeholder={t("enter_category_name", lang)}
                         value={(*new_category_name).clone()}
                         oninput={Callback::from(move |e: InputEvent| {
                             let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
@@ -200,12 +205,12 @@ pub fn admin_categories_page() -> Html {
                     >
                         if *creating {
                             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            {"Creating..."}
+                            {t("creating_category", lang)}
                         } else {
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
-                            {"Add Category"}
+                            {t("add_category_button", lang)}
                         }
                     </button>
                 </form>
@@ -234,13 +239,13 @@ pub fn admin_categories_page() -> Html {
                                     <thead class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Category"}
+                                                {t("category_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {"Created"}
+                                                {t("created_label", lang)}
                                             </th>
                                             <th class="px-2 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider lg:px-6">
-                                                {"Actions"}
+                                                {t("actions_column", lang)}
                                             </th>
                                         </tr>
                                     </thead>
@@ -283,7 +288,7 @@ pub fn admin_categories_page() -> Html {
                                                             <button 
                                                                 onclick={Callback::from(move |_| on_delete.emit(category_id))}
                                                                 class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                                title="Delete Category"
+                                                                title={t("delete_category_title", lang)}
                                                             >
                                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
@@ -298,15 +303,15 @@ pub fn admin_categories_page() -> Html {
                                                                 <td colspan="3" class="px-6 py-4">
                                                                     <div class="text-sm text-slate-600 dark:text-slate-400 space-y-2">
                                                                         <div>
-                                                                            <span class="font-medium">{"Name: "}</span>
+                                                                            <span class="font-medium">{t("name_label", lang)}</span>
                                                                             {&category.name}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"Created: "}</span>
+                                                                            <span class="font-medium">{t("created_label", lang)}</span>
                                                                             {&category.created_at}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"ID: "}</span>
+                                                                            <span class="font-medium">{t("id_label", lang)}</span>
                                                                             {category.id}
                                                                         </div>
                                                                     </div>

@@ -1,6 +1,8 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdminRecipe {
@@ -23,6 +25,9 @@ pub enum RecipeAction {
 
 #[function_component(AdminRecipesPage)]
 pub fn admin_recipes_page() -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let recipes = use_state(|| Vec::<AdminRecipe>::new());
     let loading = use_state(|| true);
     let error = use_state(|| None::<String>);
@@ -57,7 +62,7 @@ pub fn admin_recipes_page() -> Html {
                             recipes.set(parsed_recipes);
                             loading.set(false);
                         } else {
-                            error.set(Some("Failed to parse recipes data".to_string()));
+                            error.set(Some(t("failed_parse_recipes", lang).to_string()));
                             loading.set(false);
                         }
                     }
@@ -135,10 +140,10 @@ pub fn admin_recipes_page() -> Html {
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {"Recipe Management"}
+                            {t("recipe_management_title", lang)}
                         </h1>
                         <p class="text-slate-500 dark:text-slate-400 mt-1">
-                            {"Manage all recipes in the system"}
+                            {t("manage_all_recipes_system", lang)}
                         </p>
                     </div>
                 </div>
@@ -167,16 +172,16 @@ pub fn admin_recipes_page() -> Html {
                                     <thead class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Recipe"}
+                                                {t("recipe_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {"Author"}
+                                                {t("author_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {"Status"}
+                                                {t("status_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Actions"}
+                                                {t("actions_column", lang)}
                                             </th>
                                         </tr>
                                     </thead>
@@ -207,7 +212,7 @@ pub fn admin_recipes_page() -> Html {
                                                                     {if is_selected {
                                                                         html! {
                                                                             <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                                                {recipe.short_description.as_ref().unwrap_or(&"No description".to_string())}
+                                                                                {recipe.short_description.as_ref().unwrap_or(&t("no_description", lang).to_string())}
                                                                             </div>
                                                                         }
                                                                     } else {
@@ -225,13 +230,13 @@ pub fn admin_recipes_page() -> Html {
                                                             {if recipe.is_public {
                                                                 html! {
                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
-                                                                        {"Public"}
+                                                                        {t("public", lang)}
                                                                     </span>
                                                                 }
                                                             } else {
                                                                 html! {
                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                                                                        {"Private"}
+                                                                        {t("private", lang)}
                                                                     </span>
                                                                 }
                                                             }}
@@ -240,7 +245,7 @@ pub fn admin_recipes_page() -> Html {
                                                             <button 
                                                                 onclick={Callback::from(move |_| on_delete.emit(recipe_id))}
                                                                 class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                                title="Delete Recipe"
+                                                                title={t("delete_recipe_title", lang)}
                                                             >
                                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
@@ -255,12 +260,12 @@ pub fn admin_recipes_page() -> Html {
                                                                 <td colspan="4" class="px-6 py-4">
                                                                     <div class="text-sm text-slate-600 dark:text-slate-400 space-y-2">
                                                                         <div>
-                                                                            <span class="font-medium">{"Description: "}</span>
-                                                                            {recipe.short_description.as_ref().unwrap_or(&"No description available".to_string())}
+                                                                            <span class="font-medium">{t("description_label", lang)}</span>
+                                                                            {recipe.short_description.as_ref().unwrap_or(&t("no_description_available", lang).to_string())}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"Author: "}</span>
-                                                                            {recipe.author_name.as_ref().unwrap_or(&"Unknown".to_string())}
+                                                                            <span class="font-medium">{t("author_label", lang)}</span>
+                                                                            {recipe.author_name.as_ref().unwrap_or(&t("unknown", lang).to_string())}
                                                                             {if let Some(ref email) = recipe.author_email {
                                                                                 html! {
                                                     <span class="text-slate-500 dark:text-slate-500">{" ("}{email}{")"}</span>
@@ -270,27 +275,27 @@ pub fn admin_recipes_page() -> Html {
                                             }}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"Status: "}</span>
+                                                                            <span class="font-medium">{t("status_label", lang)}</span>
                                                                             {if recipe.is_public {
                                                                                 html! {
                                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300 lg:hidden">
-                                                                                        {"Public"}
+                                                                                        {t("public", lang)}
                                                                                     </span>
                                                                                 }
                                                                             } else {
                                                                                 html! {
                                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 lg:hidden">
-                                                                                        {"Private"}
+                                                                                        {t("private", lang)}
                                                                                     </span>
                                                                                 }
                                                                             }}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"Created: "}</span>
+                                                                            <span class="font-medium">{t("created_label", lang)}</span>
                                                                             {&recipe.created_at}
                                                                         </div>
                                                                         <div>
-                                                                            <span class="font-medium">{"Updated: "}</span>
+                                                                            <span class="font-medium">{t("updated_label", lang)}</span>
                                                                             {&recipe.updated_at}
                                                                         </div>
                                                                     </div>

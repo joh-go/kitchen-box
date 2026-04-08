@@ -84,7 +84,7 @@ pub fn admin_setup_page() -> Html {
                     }
                     Err(e) => {
                         loading.set(false);
-                        error.set(Some(format!("Failed to create admin: {}", e)));
+                        error.set(Some(format!("{}{}", t("failed_to_create_admin", lang), e)));
                     }
                 }
             });
@@ -205,7 +205,7 @@ pub fn admin_setup_page() -> Html {
                         SetupStep::CreateAdmin => html! {
                             <div>
                                 <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-6 text-center">
-                                    {"Create Administrator Account"}
+                                    {t("create_administrator_account", lang)}
                                 </h2>
                                 
                                 {if let Some(ref error_msg) = *error {
@@ -221,13 +221,13 @@ pub fn admin_setup_page() -> Html {
                                 <form class="space-y-4">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {"Name"}
+                                            {t("name", lang)}
                                         </label>
                                         <input
                                             type="text"
                                             value={(*name).clone()}
                                             oninput={on_name_change}
-                                            placeholder="Enter your name"
+                                            placeholder={t("enter_your_name", lang)}
                                             class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                             disabled={*loading}
                                         />
@@ -235,13 +235,13 @@ pub fn admin_setup_page() -> Html {
 
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {"Email"}
+                                            {t("email_address", lang)}
                                         </label>
                                         <input
                                             type="email"
                                             value={(*email).clone()}
                                             oninput={on_email_change}
-                                            placeholder="admin@example.com"
+                                            placeholder={t("admin_example_email", lang)}
                                             class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                             disabled={*loading}
                                         />
@@ -249,13 +249,13 @@ pub fn admin_setup_page() -> Html {
 
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {"Password"}
+                                            {t("password", lang)}
                                         </label>
                                         <input
                                             type="password"
                                             value={(*password).clone()}
                                             oninput={on_password_change}
-                                            placeholder="Create a strong password"
+                                            placeholder={t("create_strong_password", lang)}
                                             class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                             disabled={*loading}
                                         />
@@ -263,13 +263,13 @@ pub fn admin_setup_page() -> Html {
 
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {"Confirm Password"}
+                                            {t("confirm_password", lang)}
                                         </label>
                                         <input
                                             type="password"
                                             value={(*confirm_password).clone()}
                                             oninput={on_confirm_password_change}
-                                            placeholder="Confirm your password"
+                                            placeholder={t("confirm_your_password", lang)}
                                             class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                             disabled={*loading}
                                         />
@@ -288,11 +288,11 @@ pub fn admin_setup_page() -> Html {
                                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
-                                                    <span>{"Creating Admin..."}</span>
+                                                    <span>{t("creating_admin", lang)}</span>
                                                 </div>
                                             }
                                         } else {
-                                            html! { <span>{"Create Administrator"}</span> }
+                                            html! { <span>{t("create_administrator", lang)}</span> }
                                         }}
                                     </button>
                                 </form>
@@ -306,10 +306,10 @@ pub fn admin_setup_page() -> Html {
                                     </svg>
                                 </div>
                                 <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                                    {"Setup Complete!"}
+                                    {t("setup_complete", lang)}
                                 </h2>
                                 <p class="text-slate-600 dark:text-slate-400 mb-6">
-                                    {"Your administrator account has been created successfully. You can now log in and start using Kitchenbox."}
+                                    {t("admin_created_success", lang)}
                                 </p>
                                 <button 
                                     onclick={Callback::from(|_| {
@@ -320,7 +320,7 @@ pub fn admin_setup_page() -> Html {
                                     })}
                                     class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
                                 >
-                                    {"Go to Login"}
+                                    {t("go_to_login", lang)}
                                 </button>
                             </div>
                         }

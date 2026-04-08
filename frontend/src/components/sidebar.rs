@@ -99,7 +99,7 @@ pub fn sidebar(props: &Props) -> Html {
                                 {
                                     if is_logged_in {
                                         if let Some(ref name) = user_name {
-                                            format!("{}, {}", t("nav_home", lang), name)
+                                            t("welcome_back", lang).replace("{}", name)
                                         } else {
                                             t("nav_home", lang).to_string()
                                         }

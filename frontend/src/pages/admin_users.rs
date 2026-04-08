@@ -3,6 +3,8 @@ use yew::{function_component, html, use_state, use_effect_with};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct User {
@@ -23,6 +25,9 @@ pub enum UserAction {
 
 #[function_component(AdminUsersPage)]
 pub fn admin_users_page() -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let users = use_state(|| Vec::<User>::new());
     let loading = use_state(|| true);
     let error = use_state(|| None::<String>);
@@ -62,7 +67,7 @@ pub fn admin_users_page() -> Html {
                             users.set(parsed_users);
                             loading.set(false);
                         } else {
-                            error.set(Some("Failed to parse users data".to_string()));
+                            error.set(Some(t("failed_parse_users", lang).to_string()));
                             loading.set(false);
                         }
                     }
@@ -160,15 +165,15 @@ pub fn admin_users_page() -> Html {
 
             // Validation
             if name.trim().is_empty() {
-                form_error.set(Some("Name is required".to_string()));
+                form_error.set(Some(t("name_required", lang).to_string()));
                 return;
             }
             if email.trim().is_empty() {
-                form_error.set(Some("Email is required".to_string()));
+                form_error.set(Some(t("email_required", lang).to_string()));
                 return;
             }
             if password.trim().is_empty() && matches!(current_action, UserAction::Create) {
-                form_error.set(Some("Password is required for new users".to_string()));
+                form_error.set(Some(t("password_required_new_users", lang).to_string()));
                 return;
             }
 
@@ -215,7 +220,7 @@ pub fn admin_users_page() -> Html {
                             api::update_admin_user(user_id, user_data).await
                         }
                     }
-                    _ => Err("Invalid action".to_string()),
+                    _ => Err(t("invalid_action", lang).to_string()),
                 };
 
                 match result {
@@ -292,10 +297,10 @@ pub fn admin_users_page() -> Html {
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {"User Management"}
+                            {t("user_management_title", lang)}
                         </h1>
                         <p class="text-slate-500 dark:text-slate-400 mt-1">
-                            {"Manage user accounts and permissions"}
+                            {t("manage_user_accounts_permissions", lang)}
                         </p>
                     </div>
                     <button 
@@ -305,7 +310,7 @@ pub fn admin_users_page() -> Html {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                         </svg>
-                        {"Add User"}
+                        {t("add_user", lang)}
                     </button>
                 </div>
             </div>
@@ -333,13 +338,13 @@ pub fn admin_users_page() -> Html {
                                     <thead class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"User"}
+                                                {t("user_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {"Role"}
+                                                {t("role_column", lang)}
                                             </th>
                                             <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {"Actions"}
+                                                {t("actions_column", lang)}
                                             </th>
                                         </tr>
                                     </thead>
@@ -385,13 +390,13 @@ pub fn admin_users_page() -> Html {
                                                         {if user.is_admin {
                                                             html! {
                                                                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
-                                                                    {"Admin"}
+                                                                    {t("admin", lang)}
                                                                 </span>
                                                             }
                                                         } else {
                                                             html! {
                                                                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                                                                    {"User"}
+                                                                    {t("user", lang)}
                                                                 </span>
                                                             }
                                                         }}
@@ -400,7 +405,7 @@ pub fn admin_users_page() -> Html {
                                                         <button 
                                                             onclick={Callback::from(move |_| on_edit.emit(user_id))}
                                                             class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300 p-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors lg:mr-3"
-                                                            title="Edit User"
+                                                            title={t("edit_user_title", lang)}
                                                         >
                                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2H5a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-11h-1z"></path>
@@ -410,7 +415,7 @@ pub fn admin_users_page() -> Html {
                                                         <button 
                                                             onclick={Callback::from(move |_| on_delete.emit(user_id))}
                                                             class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                            title="Delete User"
+                                                            title={t("delete_user_title", lang)}
                                                         >
                                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
@@ -436,13 +441,13 @@ pub fn admin_users_page() -> Html {
                                                                             {if user.is_admin {
                                                                                 html! {
                                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300 lg:hidden">
-                                                                                        {"Admin"}
+                                                                                        {t("admin", lang)}
                                                                                     </span>
                                                                                 }
                                                                             } else {
                                                                                 html! {
                                                                                     <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 lg:hidden">
-                                                                                        {"User"}
+                                                                                        {t("user", lang)}
                                                                                     </span>
                                                                                 }
                                                                             }}
@@ -468,7 +473,7 @@ pub fn admin_users_page() -> Html {
                                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                                     <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4">
                                         <h2 class="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                                            {if matches!(*action, UserAction::Edit(_)) { "Edit User" } else { "Create User" }}
+                                            {if matches!(*action, UserAction::Edit(_)) { t("edit_user_title", lang) } else { t("create_user_title", lang) }}
                                         </h2>
 
                                         {if let Some(ref error_msg) = *form_error {
@@ -484,7 +489,7 @@ pub fn admin_users_page() -> Html {
                                         <form class="space-y-4" onsubmit={on_form_submit}>
                                             <div>
                                                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                                    {"Name"}
+                                                    {t("name", lang)}
                                                 </label>
                                                 <input
                                                     type="text"
@@ -494,14 +499,14 @@ pub fn admin_users_page() -> Html {
                                                         form_name.set(input.value());
                                                     })}
                                                     class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                                    placeholder="Enter name"
+                                                    placeholder={t("enter_name", lang)}
                                                     required=true
                                                 />
                                             </div>
 
                                             <div>
                                                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                                    {"Email"}
+                                                    {t("email", lang)}
                                                 </label>
                                                 <input
                                                     type="email"
@@ -511,14 +516,14 @@ pub fn admin_users_page() -> Html {
                                                         form_email.set(input.value());
                                                     })}
                                                     class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                                    placeholder="Enter email"
+                                                    placeholder={t("enter_email", lang)}
                                                     required=true
                                                 />
                                             </div>
 
                                             <div>
                                                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                                    {"Password"}
+                                                    {t("password", lang)}
                                                 </label>
                                                 <input
                                                     type="password"
@@ -528,7 +533,7 @@ pub fn admin_users_page() -> Html {
                                                         form_password.set(input.value());
                                                     })}
                                                     class="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                                    placeholder={if matches!(*action, UserAction::Edit(_)) { "Leave blank to keep current password" } else { "Enter password" }}
+                                                    placeholder={if matches!(*action, UserAction::Edit(_)) { t("leave_blank_keep_password", lang) } else { t("enter_password", lang) }}
                                                     required={matches!(*action, UserAction::Create)}
                                                 />
                                             </div>
@@ -545,7 +550,7 @@ pub fn admin_users_page() -> Html {
                                                     class="w-4 h-4 text-emerald-600 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 rounded focus:ring-emerald-500"
                                                 />
                                                 <label for="is_admin" class="ml-2 text-sm text-slate-700 dark:text-slate-300">
-                                                    {"Administrator"}
+                                                    {t("administrator_label", lang)}
                                                 </label>
                                             </div>
 
@@ -555,14 +560,14 @@ pub fn admin_users_page() -> Html {
                                                     onclick={on_cancel_action.clone()}
                                                     class="px-4 py-2 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                                                 >
-                                                    {"Cancel"}
+                                                    {t("cancel", lang)}
                                                 </button>
                                                 <button
                                                     type="submit"
                                                     disabled={*form_loading}
                                                     class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50"
                                                 >
-                                                    {if *form_loading { "Saving..." } else { if matches!(*action, UserAction::Edit(_)) { "Update" } else { "Create" } }}
+                                                    {if *form_loading { t("saving", lang) } else { if matches!(*action, UserAction::Edit(_)) { t("update", lang) } else { t("create", lang) } }}
                                                 </button>
                                             </div>
                                         </form>
@@ -585,23 +590,23 @@ pub fn admin_users_page() -> Html {
                                                 </svg>
                                             </div>
                                             <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                                                {"Delete User"}
+                                                {t("delete_user_title", lang)}
                                             </h3>
                                             <p class="text-slate-600 dark:text-slate-400 mb-6">
-                                                {"Are you sure you want to delete this user? This action cannot be undone."}
+                                                {t("delete_user_confirmation", lang)}
                                             </p>
                                             <div class="flex justify-center space-x-3">
                                                 <button
                                                     onclick={on_cancel_action.clone()}
                                                     class="px-4 py-2 text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                                                 >
-                                                    {"Cancel"}
+                                                    {t("cancel", lang)}
                                                 </button>
                                                 <button
                                                     onclick={on_confirm_delete}
                                                     class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
                                                 >
-                                                    {"Delete"}
+                                                    {t("delete", lang)}
                                                 </button>
                                             </div>
                                         </div>
