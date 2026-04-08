@@ -217,7 +217,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <span>{format!("{}", t("prep_minutes", lang))}</span>
+                                            <span>{t("prep_minutes", lang).replace("{}", &prep.to_string())}</span>
                                         </div>
                                     }
                                 } else {
@@ -229,7 +229,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
                                             </svg>
-                                            <span>{format!("{}", t("cook_minutes", lang))}</span>
+                                            <span>{t("cook_minutes", lang).replace("{}", &cook.to_string())}</span>
                                         </div>
                                     }
                                 } else {

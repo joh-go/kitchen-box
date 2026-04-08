@@ -4,6 +4,7 @@ use crate::api;
 use crate::i18n::t;
 use crate::language_provider::LanguageState;
 use crate::i18n::Language;
+use crate::components::language_switcher::LanguageSwitcher;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -118,14 +119,18 @@ pub fn sidebar(props: &Props) -> Html {
                                 }
                             </p>
                         </div>
-                        // Subtle logged-in indicator
-                        {if is_logged_in {
-                            html! {
-                                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow" title={t("logged_in", lang)}></div>
-                            }
-                        } else {
-                            html! {}
-                        }}
+                        <div class="flex items-center gap-3">
+                            // Language Switcher (mobile only)
+                            <LanguageSwitcher class="w-auto block lg:hidden" />
+                            // Subtle logged-in indicator
+                            {if is_logged_in {
+                                html! {
+                                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow" title={t("logged_in", lang)}></div>
+                                }
+                            } else {
+                                html! {}
+                            }}
+                        </div>
                     </div>
                 </div>
 

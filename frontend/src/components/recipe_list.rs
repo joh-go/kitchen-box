@@ -262,19 +262,47 @@ pub fn recipe_list(props: &Props) -> Html {
 
                                 // Recipe Categories
                                 { if !r.categories.is_empty() {
+                                    // Deduplicate categories manually by ID while preserving order
+                                    let mut seen_ids = Vec::new();
+                                    let unique_categories: Vec<_> = r.categories.iter()
+                                        .filter(|cat| {
+                                            if let Some(id) = cat.id {
+                                                if seen_ids.contains(&id) {
+                                                    false
+                                                } else {
+                                                    seen_ids.push(id);
+                                                    true
+                                                }
+                                            } else {
+                                                true // Include categories without ID
+                                            }
+                                        })
+                                        .take(3)
+                                        .collect();
+                                    let total_unique = r.categories.iter()
+                                        .filter(|cat| {
+                                            if let Some(id) = cat.id {
+                                                seen_ids.contains(&id)
+                                            } else {
+                                                true
+                                            }
+                                        })
+                                        .count();
+                                    let remaining_count = total_unique.saturating_sub(3);
+                                    
                                     html!{
                                         <div class="flex flex-wrap gap-2 mb-4">
-                                            { for r.categories.iter().take(3).map(|cat| {
+                                            { for unique_categories.iter().map(|cat| {
                                                 html!{
                                                     <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
                                                         { &cat.name }
                                                     </span>
                                                 }
                                             })}
-                                            { if r.categories.len() > 3 {
+                                            { if remaining_count > 0 {
                                                 html!{
                                                     <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
-                                                        { format!("+{}", r.categories.len() - 3) }
+                                                        { format!("+{}", remaining_count) }
                                                     </span>
                                                 }
                                             } else {
