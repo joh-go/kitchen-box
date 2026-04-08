@@ -1,5 +1,7 @@
 use yew::prelude::*;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use web_sys::window;
 
 #[derive(Clone, PartialEq)]
@@ -11,6 +13,9 @@ pub enum SetupStep {
 
 #[function_component(AdminSetupPage)]
 pub fn admin_setup_page() -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let current_step = use_state(|| SetupStep::Welcome);
     let loading = use_state(|| false);
     let error = use_state(|| None::<String>);
@@ -52,15 +57,15 @@ pub fn admin_setup_page() -> Html {
 
             // Validation
             if name.trim().is_empty() {
-                error.set(Some("Please enter your name".to_string()));
+                error.set(Some(t("please_enter_name", lang)));
                 return;
             }
             if email.trim().is_empty() {
-                error.set(Some("Please enter your email".to_string()));
+                error.set(Some(t("please_enter_email", lang)));
                 return;
             }
             if password.len() < 6 {
-                error.set(Some("Password must be at least 6 characters".to_string()));
+                error.set(Some(t("password_min_chars", lang)));
                 return;
             }
             if password != confirm_password {
@@ -129,10 +134,10 @@ pub fn admin_setup_page() -> Html {
                         <span class="text-white text-2xl">{"🍳"}</span>
                     </div>
                     <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent mb-2">
-                        {"Kitchenbox Setup"}
+                        {t("kitchenbox_setup", lang)}
                     </h1>
                     <p class="text-slate-600 dark:text-slate-400">
-                        {"Let's get your recipe manager configured"}
+                        {t("setup_description", lang)}
                     </p>
                 </div>
 
@@ -164,36 +169,36 @@ pub fn admin_setup_page() -> Html {
                                     </svg>
                                 </div>
                                 <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                                    {"Welcome to Kitchenbox!"}
+                                    {t("welcome_kitchenbox", lang)}
                                 </h2>
                                 <p class="text-slate-600 dark:text-slate-400 mb-6">
-                                    {"This appears to be your first time running Kitchenbox. Let's create an administrator account to get you started."}
+                                    {t("setup_welcome_message", lang)}
                                 </p>
                                 <div class="space-y-3 text-left bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mb-6">
                                     <div class="flex items-center space-x-3">
                                         <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{"Manage all users and recipes"}</span>
+                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("manage_users_recipes", lang)}</span>
                                     </div>
                                     <div class="flex items-center space-x-3">
                                         <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{"Configure system settings"}</span>
+                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("configure_system", lang)}</span>
                                     </div>
                                     <div class="flex items-center space-x-3">
                                         <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{"Full access to all features"}</span>
+                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("full_access_features", lang)}</span>
                                     </div>
                                 </div>
                                 <button 
                                     onclick={on_next}
                                     class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
                                 >
-                                    {"Get Started"}
+                                    {t("get_started", lang)}
                                 </button>
                             </div>
                         },

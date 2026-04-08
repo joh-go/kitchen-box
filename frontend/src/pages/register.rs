@@ -3,6 +3,8 @@ use yew::{function_component, html, use_state};
 use web_sys::HtmlInputElement;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use shared_types::User;
 use std::ops::Deref;
 
@@ -32,6 +34,8 @@ impl Default for RegisterState {
 #[function_component(RegisterPage)]
 pub fn register() -> Html {
     let state = use_state(RegisterState::default);
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
 
     let onsubmit = {
         let state = state.clone();
@@ -42,7 +46,7 @@ pub fn register() -> Html {
             // Validate passwords match
             if state.deref().password != state.deref().confirm_password {
                 state.set(RegisterState {
-                    error: Some("Passwords do not match".to_string()),
+                    error: Some(t("passwords_match", lang)),
                     loading: false,
                     ..state.deref().clone()
                 });
@@ -122,10 +126,10 @@ pub fn register() -> Html {
         <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
             <div class="text-center">
                 <h2 class="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    {"Create Account"}
+                    {t("create_account", lang)}
                 </h2>
                 <p class="text-slate-600 dark:text-slate-400">
-                    {"Join our recipe community"}
+                    {t("join_community", lang)}
                 </p>
             </div>
 
@@ -142,7 +146,7 @@ pub fn register() -> Html {
 
                 <div>
                     <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {"Full Name"}
+                        {t("full_name", lang)}
                     </label>
                     <input
                         id="name"
@@ -150,7 +154,7 @@ pub fn register() -> Html {
                         type="text"
                         required=true
                         class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                        placeholder="Enter your full name"
+                        placeholder={t("enter_full_name", lang)}
                         value={state.name.clone()}
                         oninput={oninput.clone()}
                     />
@@ -158,7 +162,7 @@ pub fn register() -> Html {
 
                 <div>
                     <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {"Email address"}
+                        {t("email_address", lang)}
                     </label>
                     <input
                         id="email"
@@ -166,7 +170,7 @@ pub fn register() -> Html {
                         type="email"
                         required=true
                         class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                        placeholder="Enter your email"
+                        placeholder={t("enter_email", lang)}
                         value={state.email.clone()}
                         oninput={oninput.clone()}
                     />
@@ -174,7 +178,7 @@ pub fn register() -> Html {
 
                 <div>
                     <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {"Password"}
+                        {t("password", lang)}
                     </label>
                     <input
                         id="password"
@@ -182,7 +186,7 @@ pub fn register() -> Html {
                         type="password"
                         required=true
                         class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                        placeholder="Enter your password"
+                        placeholder={t("enter_password", lang)}
                         value={state.password.clone()}
                         oninput={oninput.clone()}
                     />
@@ -190,7 +194,7 @@ pub fn register() -> Html {
 
                 <div>
                     <label for="confirm_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {"Confirm Password"}
+                        {t("confirm_password_label", lang)}
                     </label>
                     <input
                         id="confirm_password"
@@ -198,7 +202,7 @@ pub fn register() -> Html {
                         type="password"
                         required=true
                         class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
-                        placeholder="Confirm your password"
+                        placeholder={t("confirm_password_placeholder", lang)}
                         value={state.confirm_password.clone()}
                         oninput={oninput}
                     />
@@ -217,20 +221,20 @@ pub fn register() -> Html {
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0h12c6.627 0 12 5.373 12v12c0 6.627-5.373 12-12h-4zm-1 1.465L9.465 15H15v-2h-4v-2h4v-2z"></path>
                                     </svg>
-                                    {"Creating account..."}
+                                    {t("creating_account", lang)}
                                 </>
                             }
                         } else {
-                            html! {"Create Account"}
+                            html! {t("register_button", lang)}
                         }}
                     </button>
                 </div>
 
                 <div class="mt-6 text-center">
                     <div class="text-sm text-slate-600 dark:text-slate-400">
-                        {"Already have an account? "}
+                        {t("already_have_account", lang)}
                         <a href="/login" class="font-medium text-emerald-600 hover:text-emerald-500">
-                            {"Sign in"}
+                            {t("login", lang)}
                         </a>
                     </div>
                 </div>

@@ -121,7 +121,7 @@ pub fn sidebar(props: &Props) -> Html {
                         // Subtle logged-in indicator
                         {if is_logged_in {
                             html! {
-                                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow" title="Logged in"></div>
+                                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow" title={t("logged_in", lang)}></div>
                             }
                         } else {
                             html! {}

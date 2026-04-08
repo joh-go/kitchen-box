@@ -1,5 +1,7 @@
 use crate::api;
 use crate::components::image_manager::ImageManager;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use serde_json::json;
 use shared_types::{Recipe, Ingredient, RecipeImage};
 use wasm_bindgen::JsCast;
@@ -64,6 +66,9 @@ pub struct Props {
 
 #[function_component(RecipeForm)]
 pub fn recipe_form(props: &Props) -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let title = use_state(|| {
         props
             .editing
@@ -285,7 +290,7 @@ pub fn recipe_form(props: &Props) -> Html {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
                     <div class="md:col-span-2">
                         <input
-                            placeholder="Title"
+                            placeholder={t("recipe_title", lang)}
                             value={(*title).clone()}
                             oninput={Callback::from(move |e: InputEvent| {
                                 let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
@@ -294,7 +299,7 @@ pub fn recipe_form(props: &Props) -> Html {
                             class="w-full border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                         />
                         <input
-                            placeholder="Short description"
+                            placeholder={t("recipe_short_desc", lang)}
                             value={(*short).clone()}
                             oninput={Callback::from(move |e: InputEvent| {
                                 let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
@@ -306,11 +311,11 @@ pub fn recipe_form(props: &Props) -> Html {
                 </div>
 
             <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Ingredients (one per line)" }</label>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("ingredients_one_per_line", lang) }</label>
                 <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-2">
-                    { "Format: [amount] [unit] [name] (optional notes)" }
+                    { t("ingredient_format", lang) }
                     <br />
-                    { "Examples: 2 cups flour, 1 tsp salt, 3 eggs (large)" }
+                    { t("ingredient_examples", lang) }
                 </p>
                 <textarea
                     value={(*ingredients_text).clone()}
@@ -329,7 +334,7 @@ pub fn recipe_form(props: &Props) -> Html {
             </div>
 
             <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Steps (one per line)" }</label>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("steps_one_per_line", lang) }</label>
                 <textarea
                     value={(*steps_text).clone()}
                     oninput={Callback::from(move |e: InputEvent| {
@@ -343,7 +348,7 @@ pub fn recipe_form(props: &Props) -> Html {
 
             <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Prep Time (minutes)" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("prep_time_minutes", lang) }</label>
                     <input
                         type="number"
                         value={(*prep_minutes).to_string()}
@@ -355,7 +360,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Cook Time (minutes)" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("cook_time_minutes", lang) }</label>
                     <input
                         type="number"
                         value={(*cook_minutes).to_string()}
@@ -367,7 +372,7 @@ pub fn recipe_form(props: &Props) -> Html {
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Servings" }</label>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("servings", lang) }</label>
                     <input
                         type="number"
                         value={(*servings).to_string()}
@@ -381,7 +386,7 @@ pub fn recipe_form(props: &Props) -> Html {
             </div>
 
             <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Notes" }</label>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("notes", lang) }</label>
                 <textarea
                     value={(*notes).clone()}
                     oninput={Callback::from(move |e: InputEvent| {
@@ -394,7 +399,7 @@ pub fn recipe_form(props: &Props) -> Html {
             </div>
 
             <div class="mt-4">
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ "Category (optional)" }</label>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">{ t("category_optional", lang) }</label>
                 <div class="flex gap-2 mt-1">
                     <select
                         onchange={Callback::from({
@@ -414,7 +419,7 @@ pub fn recipe_form(props: &Props) -> Html {
                         })}
                         class="border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 flex-1 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     >
-                        <option value="" selected={selected_category.is_none()}>{ "— none —" }</option>
+                        <option value="" selected={selected_category.is_none()}>{ format!("— {} —", t("none_category", lang)) }</option>
                         { for (*categories).iter().map(|c| {
                             let is_selected = c.id == *selected_category;
                             html!{ 
@@ -426,7 +431,7 @@ pub fn recipe_form(props: &Props) -> Html {
                 <div class="flex gap-2 mt-2">
                     <input
                         type="text"
-                        placeholder="New category name"
+                        placeholder={t("new_category_name", lang)}
                         value={(*new_category_name).clone()}
                         oninput={Callback::from({
                             let new_category_name = new_category_name.clone();

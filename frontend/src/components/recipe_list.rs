@@ -4,6 +4,8 @@ use web_sys::{Event, HtmlSelectElement};
 use wasm_bindgen::JsCast;
 use shared_types::{Recipe};
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -16,6 +18,9 @@ pub struct Props {
 
 #[function_component(RecipeList)]
 pub fn recipe_list(props: &Props) -> Html {
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
     let categories = use_state(|| Vec::<shared_types::Category>::new());
@@ -84,16 +89,16 @@ pub fn recipe_list(props: &Props) -> Html {
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {"Your Recipes"}
+                            {t("your_recipes", lang)}
                         </h1>
                         <p class="text-slate-500 dark:text-slate-400 mt-1">
-                            { format!("{} delicious recipes", (*recipes).len()) }
+                            { format!("{} {}", (*recipes).len(), t("delicious_recipes_count", lang)) }
                         </p>
                     </div>
                     
                     // Category Filter
                     <div class="flex items-center gap-3">
-                        <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Filter by category:"}</label>
+                        <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{t("filter_by_category", lang)}</label>
                         <select
                             onchange={Callback::from({
                                 let selected_category = selected_category.clone();
@@ -114,7 +119,7 @@ pub fn recipe_list(props: &Props) -> Html {
                             })}
                             class="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         >
-                            <option value="" selected=true>{ "All Categories" }</option>
+                            <option value="" selected=true>{ t("all_categories", lang) }</option>
                             { for (*categories).iter().map(|c| html!{ 
                                 <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> 
                             }) }
@@ -129,7 +134,7 @@ pub fn recipe_list(props: &Props) -> Html {
                             </svg>
                             <input
                                 type="text"
-                                placeholder="Search recipes..."
+                                placeholder={t("search_recipes_placeholder", lang)}
                                 value={search.clone()}
                                 oninput={
                                     let on_search = props.on_search.clone();
@@ -157,7 +162,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="font-medium text-red-800 dark:text-red-200">{"Error loading recipes"}</h3>
+                                    <h3 class="font-medium text-red-800 dark:text-red-200">{t("error_loading_recipes", lang)}</h3>
                                     <p class="text-sm text-red-600 dark:text-red-400 mt-1">{ e }</p>
                                 </div>
                             </div>

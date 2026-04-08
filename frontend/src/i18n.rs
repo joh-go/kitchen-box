@@ -937,6 +937,375 @@ lazy_static! {
             h
         });
         
+        // Login page
+        m.insert("sign_in_account", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Sign in to your account");
+            h.insert(Language::German, "Melden Sie sich bei Ihrem Konto an");
+            h
+        });
+        
+        m.insert("email_address", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Email address");
+            h.insert(Language::German, "E-Mail-Adresse");
+            h
+        });
+        
+        m.insert("enter_email", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter your email");
+            h.insert(Language::German, "Geben Sie Ihre E-Mail ein");
+            h
+        });
+        
+        m.insert("enter_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter your password");
+            h.insert(Language::German, "Geben Sie Ihr Passwort ein");
+            h
+        });
+        
+        m.insert("remember_me", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Remember me");
+            h.insert(Language::German, "Angemeldet bleiben");
+            h
+        });
+        
+        m.insert("forgot_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Forgot your password?");
+            h.insert(Language::German, "Passwort vergessen?");
+            h
+        });
+        
+        m.insert("signing_in", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Signing in...");
+            h.insert(Language::German, "Anmeldung...");
+            h
+        });
+        
+        m.insert("dont_have_account", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Don't have an account?");
+            h.insert(Language::German, "Haben Sie kein Konto?");
+            h
+        });
+        
+        m.insert("sign_up", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Sign up");
+            h.insert(Language::German, "Registrieren");
+            h
+        });
+        
+        m.insert("failed_auth_token", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Failed to get authentication token");
+            h.insert(Language::German, "Authentifizierungs-Token konnte nicht abgerufen werden");
+            h
+        });
+        
+        m.insert("failed_user_info", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Failed to get user info");
+            h.insert(Language::German, "Benutzerinformationen konnten nicht abgerufen werden");
+            h
+        });
+        
+        m.insert("failed_user_id", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Failed to get user ID");
+            h.insert(Language::German, "Benutzer-ID konnte nicht abgerufen werden");
+            h
+        });
+        
+        // Register page
+        m.insert("create_account", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Create Account");
+            h.insert(Language::German, "Konto erstellen");
+            h
+        });
+        
+        m.insert("join_community", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Join our recipe community");
+            h.insert(Language::German, "Treten Sie unserer Rezept-Community bei");
+            h
+        });
+        
+        m.insert("full_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Full Name");
+            h.insert(Language::German, "Vollständiger Name");
+            h
+        });
+        
+        m.insert("enter_full_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter your full name");
+            h.insert(Language::German, "Geben Sie Ihren vollständigen Namen ein");
+            h
+        });
+        
+        m.insert("confirm_password_label", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Confirm Password");
+            h.insert(Language::German, "Passwort bestätigen");
+            h
+        });
+        
+        m.insert("confirm_password_placeholder", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Confirm your password");
+            h.insert(Language::German, "Bestätigen Sie Ihr Passwort");
+            h
+        });
+        
+        m.insert("creating_account", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Creating account...");
+            h.insert(Language::German, "Konto wird erstellt...");
+            h
+        });
+        
+        m.insert("already_have_account", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Already have an account?");
+            h.insert(Language::German, "Haben Sie bereits ein Konto?");
+            h
+        });
+        
+        m.insert("logged_in", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Logged in");
+            h.insert(Language::German, "Angemeldet");
+            h
+        });
+        
+        // Recipe form
+        m.insert("ingredients_one_per_line", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Ingredients (one per line)");
+            h.insert(Language::German, "Zutaten (eine pro Zeile)");
+            h
+        });
+        
+        m.insert("ingredient_format", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Format: [amount] [unit] [name] (optional notes)");
+            h.insert(Language::German, "Format: [Menge] [Einheit] [Name] (optionale Notizen)");
+            h
+        });
+        
+        m.insert("ingredient_examples", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Examples: 2 cups flour, 1 tsp salt, 3 eggs (large)");
+            h.insert(Language::German, "Beispiele: 2 Tassen Mehl, 1 TL Salz, 3 Eier (groß)");
+            h
+        });
+        
+        m.insert("steps_one_per_line", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Steps (one per line)");
+            h.insert(Language::German, "Schritte (eine pro Zeile)");
+            h
+        });
+        
+        m.insert("prep_time_minutes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Prep Time (minutes)");
+            h.insert(Language::German, "Vorbereitungszeit (Minuten)");
+            h
+        });
+        
+        m.insert("cook_time_minutes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Cook Time (minutes)");
+            h.insert(Language::German, "Kochzeit (Minuten)");
+            h
+        });
+        
+        m.insert("servings", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Servings");
+            h.insert(Language::German, "Portionen");
+            h
+        });
+        
+        m.insert("notes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Notes");
+            h.insert(Language::German, "Notizen");
+            h
+        });
+        
+        m.insert("category_optional", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Category (optional)");
+            h.insert(Language::German, "Kategorie (optional)");
+            h
+        });
+        
+        m.insert("select_category", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Select category");
+            h.insert(Language::German, "Kategorie auswählen");
+            h
+        });
+        
+        m.insert("none_category", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "none");
+            h.insert(Language::German, "keine");
+            h
+        });
+        
+        m.insert("new_category_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "New category name");
+            h.insert(Language::German, "Neuer Kategoriename");
+            h
+        });
+        
+        // Recipe list
+        m.insert("your_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Your Recipes");
+            h.insert(Language::German, "Ihre Rezepte");
+            h
+        });
+        
+        m.insert("delicious_recipes_count", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "delicious recipes");
+            h.insert(Language::German, "köstliche Rezepte");
+            h
+        });
+        
+        m.insert("filter_by_category", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Filter by category:");
+            h.insert(Language::German, "Nach Kategorie filtern:");
+            h
+        });
+        
+        m.insert("all_categories", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "All Categories");
+            h.insert(Language::German, "Alle Kategorien");
+            h
+        });
+        
+        m.insert("search_recipes_placeholder", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Search recipes...");
+            h.insert(Language::German, "Rezepte suchen...");
+            h
+        });
+        
+        m.insert("error_loading_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Error loading recipes");
+            h.insert(Language::German, "Fehler beim Laden der Rezepte");
+            h
+        });
+        
+        m.insert("edit", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Edit");
+            h.insert(Language::German, "Bearbeiten");
+            h
+        });
+        
+        m.insert("delete", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Delete");
+            h.insert(Language::German, "Löschen");
+            h
+        });
+        
+        // Admin setup page
+        m.insert("please_enter_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Please enter your name");
+            h.insert(Language::German, "Bitte geben Sie Ihren Namen ein");
+            h
+        });
+        
+        m.insert("please_enter_email", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Please enter your email");
+            h.insert(Language::German, "Bitte geben Sie Ihre E-Mail ein");
+            h
+        });
+        
+        m.insert("password_min_chars", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Password must be at least 6 characters");
+            h.insert(Language::German, "Passwort muss mindestens 6 Zeichen lang sein");
+            h
+        });
+        
+        m.insert("kitchenbox_setup", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Kitchenbox Setup");
+            h.insert(Language::German, "Kitchenbox Einrichtung");
+            h
+        });
+        
+        m.insert("setup_description", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Let's get your recipe manager configured");
+            h.insert(Language::German, "Lassen Sie uns Ihren Rezept-Manager konfigurieren");
+            h
+        });
+        
+        m.insert("welcome_kitchenbox", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Welcome to Kitchenbox!");
+            h.insert(Language::German, "Willkommen bei Kitchenbox!");
+            h
+        });
+        
+        m.insert("setup_welcome_message", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "This appears to be your first time running Kitchenbox. Let's create an administrator account to get you started.");
+            h.insert(Language::German, "Dies scheint Ihr erster Start von Kitchenbox zu sein. Lassen Sie uns ein Administratorkonto erstellen, um loszulegen.");
+            h
+        });
+        
+        m.insert("manage_users_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage all users and recipes");
+            h.insert(Language::German, "Alle Benutzer und Rezepte verwalten");
+            h
+        });
+        
+        m.insert("configure_system", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Configure system settings");
+            h.insert(Language::German, "Systemeinstellungen konfigurieren");
+            h
+        });
+        
+        m.insert("full_access_features", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Full access to all features");
+            h.insert(Language::German, "Vollzugriff auf alle Funktionen");
+            h
+        });
+        
+        m.insert("get_started", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Get Started");
+            h.insert(Language::German, "Loslegen");
+            h
+        });
+        
         m
     };
 }
