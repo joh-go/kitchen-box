@@ -1,6 +1,9 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
+use crate::i18n::t;
+use crate::language_provider::LanguageState;
+use crate::i18n::Language;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -13,6 +16,8 @@ pub struct Props {
 pub fn sidebar(props: &Props) -> Html {
     let on_nav = props.on_navigate.clone();
     let on_mobile_close = props.on_mobile_close.clone();
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
     
     // Check authentication state
     let is_logged_in = api::is_logged_in();
@@ -94,21 +99,21 @@ pub fn sidebar(props: &Props) -> Html {
                                 {
                                     if is_logged_in {
                                         if let Some(ref name) = user_name {
-                                            format!("Welcome, {}", name)
+                                            format!("{}, {}", t("nav_home", lang), name)
                                         } else {
-                                            "Welcome".to_string()
+                                            t("nav_home", lang).to_string()
                                         }
                                     } else {
-                                        "Navigation".to_string()
+                                        t("nav_home", lang).to_string()
                                     }
                                 }
                             </h2>
                             <p class="text-sm text-slate-500 dark:text-slate-400">
                                 {
                                     if is_logged_in {
-                                        "Manage your recipes"
+                                        t("my_recipes", lang)
                                     } else {
-                                        "Sign in to get started"
+                                        t("login", lang)
                                     }
                                 }
                             </p>
@@ -137,8 +142,8 @@ pub fn sidebar(props: &Props) -> Html {
                             </svg>
                         </div>
                         <div class="flex-1">
-                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Recipes"}</span>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"View all recipes"}</p>
+                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("all_recipes", lang)}</span>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("view_recipe", lang)}</p>
                         </div>
                         <svg class="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -162,8 +167,8 @@ pub fn sidebar(props: &Props) -> Html {
                                             </svg>
                                         </div>
                                         <div class="flex-1">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Add Recipe"}</span>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Create new recipe"}</p>
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("nav_add", lang)}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("recipe_create", lang)}</p>
                                         </div>
                                         <svg class="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -181,8 +186,8 @@ pub fn sidebar(props: &Props) -> Html {
                                             </svg>
                                         </div>
                                         <div class="flex-1">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Settings"}</span>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Manage your account"}</p>
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("nav_settings", lang)}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("profile_settings", lang)}</p>
                                         </div>
                                         <svg class="w-4 h-4 text-slate-400 group-hover:text-slate-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -199,8 +204,8 @@ pub fn sidebar(props: &Props) -> Html {
                                             </svg>
                                         </div>
                                         <div class="flex-1">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Logout"}</span>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Sign out of your account"}</p>
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("logout", lang)}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("logout", lang)}</p>
                                         </div>
                                         <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -222,8 +227,8 @@ pub fn sidebar(props: &Props) -> Html {
                                             </svg>
                                         </div>
                                         <div class="flex-1">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Login"}</span>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Sign in to your account"}</p>
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("login", lang)}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("login", lang)}</p>
                                         </div>
                                     </button>
 
@@ -237,8 +242,8 @@ pub fn sidebar(props: &Props) -> Html {
                                             </svg>
                                         </div>
                                         <div class="flex-1">
-                                            <span class="font-medium text-slate-700 dark:text-slate-300">{"Register"}</span>
-                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{"Create new account"}</p>
+                                            <span class="font-medium text-slate-700 dark:text-slate-300">{t("register", lang)}</span>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t("register", lang)}</p>
                                         </div>
                                     </button>
                                 </>
@@ -252,11 +257,11 @@ pub fn sidebar(props: &Props) -> Html {
 
                 // Quick Stats
                 <div class="space-y-4">
-                    <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400">{"Quick Stats"}</h3>
+                    <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400">{t("recipes_count", lang)}</h3>
                     <div class="flex justify-center">
                         <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center w-32">
                             <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{*recipe_count}</div>
-                            <div class="text-xs text-emerald-700 dark:text-emerald-300">{"Recipes"}</div>
+                            <div class="text-xs text-emerald-700 dark:text-emerald-300">{t("recipes_count", lang)}</div>
                         </div>
                     </div>
                 </div>

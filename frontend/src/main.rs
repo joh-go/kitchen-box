@@ -1,11 +1,16 @@
 use yew::prelude::*;
 mod api;
 mod components;
+mod i18n;
+mod language_provider;
 mod pages;
 mod theme;
 
 use components::sidebar::Sidebar;
 use components::theme_provider::ThemeToggle;
+use i18n::{Language, t};
+use language_provider::LanguageState;
+use language_provider::LanguageProvider;
 use pages::admin_setup::AdminSetupPage;
 use pages::admin_recipes::AdminRecipesPage;
 use pages::admin_categories::AdminCategoriesPage;
@@ -26,7 +31,7 @@ pub enum Page {
     AdminUsers,
 }
 
-fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>) -> Html {
+fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>, lang: Language) -> Html {
     match page {
         Page::Home => {
             let on_edit = {
@@ -174,6 +179,8 @@ fn app() -> Html {
     let mobile_menu_open = use_state(|| false);
     let search = use_state(|| String::new());
     let admin_check_done = use_state(|| false);
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
     
     // Initialize page based on current URL
     {
@@ -318,7 +325,7 @@ fn app() -> Html {
                                     <span class="text-white text-lg">{"🍳"}</span>
                                 </div>
                                 <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                    {"Menu"}
+                                    {t("menu", lang)}
                                 </h2>
                             </div>
                             <div class="flex items-center space-x-2">
@@ -356,10 +363,10 @@ fn app() -> Html {
                             </div>
                             <div>
                                 <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
-                                    {"Kitchenbox"}
+                                    {t("app_name", lang)}
                                 </h1>
                                 <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
-                                    {"Your personal kitchen companion"}
+                                    {t("app_tagline", lang)}
                                 </p>
                             </div>
                         </div>
@@ -382,7 +389,7 @@ fn app() -> Html {
                                 </svg>
                                 <input
                                     type="text"
-                                    placeholder="Search recipes..."
+                                    placeholder={t("search_placeholder", lang)}
                                     value={search_value.clone()}
                                     oninput={Callback::from(move |e: yew::InputEvent| {
                                         let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
@@ -394,7 +401,7 @@ fn app() -> Html {
                             <ThemeToggle class={""} />
                             <div class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                                 <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
-                                <span>{"Ready to cook"}</span>
+                                <span>{t("ready_to_cook", lang)}</span>
                             </div>
                         </nav>
                     </div>
@@ -414,7 +421,7 @@ fn app() -> Html {
                     // Main Content
                     <div class="lg:col-span-9">
                         <div class="animate-fade-in">
-                            { render_page(&current, navigate.clone(), search_value, on_search_input) }
+                            { render_page(&current, navigate.clone(), search_value, on_search_input, lang) }
                         </div>
                     </div>
                 </div>
@@ -430,7 +437,7 @@ fn app() -> Html {
                         <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span class="text-xs font-medium">{"Home"}</span>
+                        <span class="text-xs font-medium">{t("nav_home", lang)}</span>
                     </button>
                     
                     // Add Recipe - only show when logged in
@@ -443,7 +450,7 @@ fn app() -> Html {
                                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
-                                <span class="text-xs font-medium">{"Add"}</span>
+                                <span class="text-xs font-medium">{t("nav_add", lang)}</span>
                             </button>
                         }
                     } else {
@@ -466,7 +473,7 @@ fn app() -> Html {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
-                                <span class="text-xs font-medium">{"Settings"}</span>
+                                <span class="text-xs font-medium">{t("nav_settings", lang)}</span>
                             </button>
                         }
                     } else {
@@ -485,7 +492,7 @@ fn app() -> Html {
                         <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
-                        <span class="text-xs font-medium">{"Menu"}</span>
+                        <span class="text-xs font-medium">{t("menu", lang)}</span>
                     </button>
                 </div>
             </nav>
@@ -503,5 +510,14 @@ fn main() {
         crate::theme::init_theme();
     });
     
-    yew::Renderer::<App>::new().render();
+    yew::Renderer::<AppWrapper>::new().render();
+}
+
+#[function_component(AppWrapper)]
+fn app_wrapper() -> Html {
+    html! {
+        <LanguageProvider>
+            <App />
+        </LanguageProvider>
+    }
 }

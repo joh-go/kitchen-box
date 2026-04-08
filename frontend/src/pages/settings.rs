@@ -3,6 +3,8 @@ use yew::{function_component, html, use_state, use_effect_with};
 use web_sys::HtmlInputElement;
 use wasm_bindgen_futures::spawn_local;
 use crate::api;
+use crate::i18n::{Language, t};
+use crate::language_provider::LanguageState;
 use std::ops::Deref;
 
 #[derive(Clone, Debug)]
@@ -35,6 +37,17 @@ impl Default for SettingsState {
 #[function_component(SettingsPage)]
 pub fn settings() -> Html {
     let state = use_state(SettingsState::default);
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    
+    let set_lang = {
+        let lang_ctx = lang_ctx.clone();
+        Callback::from(move |new_lang: Language| {
+            if let Some(ref ctx) = lang_ctx {
+                ctx.dispatch(crate::language_provider::LanguageAction::SetLanguage(new_lang));
+            }
+        })
+    };
 
     // Fetch current user data on page load
     {
@@ -244,6 +257,37 @@ pub fn settings() -> Html {
                                     value={state.email.clone()}
                                     oninput={oninput.clone()}
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-200 dark:border-slate-700 pt-6">
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+                            {t("language", lang)}
+                        </h2>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                    {t("language", lang)}
+                                </label>
+                                <select
+                                    class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    onchange={{
+                                        let set_lang = set_lang.clone();
+                                        Callback::from(move |e: Event| {
+                                            let target = e.target_unchecked_into::<web_sys::HtmlSelectElement>();
+                                            let value = target.value();
+                                            match value.as_str() {
+                                                "de" => set_lang.emit(Language::German),
+                                                _ => set_lang.emit(Language::English),
+                                            }
+                                        })
+                                    }}
+                                >
+                                    <option value="en" selected={lang == Language::English}>{"English"}</option>
+                                    <option value="de" selected={lang == Language::German}>{"Deutsch"}</option>
+                                </select>
                             </div>
                         </div>
                     </div>
