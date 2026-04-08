@@ -866,6 +866,77 @@ lazy_static! {
             h
         });
         
+        // Settings page
+        m.insert("account_settings", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Account Settings");
+            h.insert(Language::German, "Kontoeinstellungen");
+            h
+        });
+        
+        m.insert("manage_profile_password", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Manage your profile and password");
+            h.insert(Language::German, "Verwalten Sie Ihr Profil und Passwort");
+            h
+        });
+        
+        m.insert("profile_information", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Profile Information");
+            h.insert(Language::German, "Profilinformationen");
+            h
+        });
+        
+        m.insert("display_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Display Name");
+            h.insert(Language::German, "Anzeigename");
+            h
+        });
+        
+        m.insert("enter_display_name", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter your display name");
+            h.insert(Language::German, "Geben Sie Ihren Anzeigenamen ein");
+            h
+        });
+        
+        m.insert("email_address", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Email Address");
+            h.insert(Language::German, "E-Mail-Adresse");
+            h
+        });
+        
+        m.insert("enter_email", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Enter your email");
+            h.insert(Language::German, "Geben Sie Ihre E-Mail ein");
+            h
+        });
+        
+        m.insert("passwords_do_not_match", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "New passwords do not match");
+            h.insert(Language::German, "Neue Passwörter stimmen nicht überein");
+            h
+        });
+        
+        m.insert("current_password_required", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Current password is required to change password");
+            h.insert(Language::German, "Aktuelles Passwort ist erforderlich, um das Passwort zu ändern");
+            h
+        });
+        
+        m.insert("profile_updated", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Profile updated successfully");
+            h.insert(Language::German, "Profil erfolgreich aktualisiert");
+            h
+        });
+        
         m
     };
 }

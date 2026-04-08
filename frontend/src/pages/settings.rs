@@ -85,7 +85,7 @@ pub fn settings() -> Html {
             if !state.deref().new_password.is_empty() {
                 if state.deref().new_password != state.deref().confirm_password {
                     state.set(SettingsState {
-                        error: Some("New passwords do not match".to_string()),
+                        error: Some(t("passwords_do_not_match", lang)),
                         success: None,
                         ..state.deref().clone()
                     });
@@ -93,7 +93,7 @@ pub fn settings() -> Html {
                 }
                 if state.deref().current_password.is_empty() {
                     state.set(SettingsState {
-                        error: Some("Current password is required to change password".to_string()),
+                        error: Some(t("current_password_required", lang)),
                         success: None,
                         ..state.deref().clone()
                     });
@@ -126,7 +126,7 @@ pub fn settings() -> Html {
                         state.set(SettingsState {
                             loading: false,
                             error: None,
-                            success: Some("Profile updated successfully".to_string()),
+                            success: Some(t("profile_updated", lang)),
                             current_password: String::new(),
                             new_password: String::new(),
                             confirm_password: String::new(),
@@ -194,10 +194,10 @@ pub fn settings() -> Html {
         <div class="space-y-6">
             <div class="animate-fade-in">
                 <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                    {"Account Settings"}
+                    {t("account_settings", lang)}
                 </h1>
                 <p class="text-slate-500 dark:text-slate-400 mt-1">
-                    {"Manage your profile and password"}
+                    {t("manage_profile_password", lang)}
                 </p>
             </div>
 
@@ -225,20 +225,20 @@ pub fn settings() -> Html {
 
                     <div>
                         <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                            {"Profile Information"}
+                            {t("profile_information", lang)}
                         </h2>
                         
                         <div class="space-y-4">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {"Display Name"}
+                                    {t("display_name", lang)}
                                 </label>
                                 <input
                                     id="name"
                                     name="name"
                                     type="text"
                                     class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                    placeholder="Enter your display name"
+                                    placeholder={t("enter_display_name", lang)}
                                     value={state.name.clone()}
                                     oninput={oninput.clone()}
                                 />
@@ -246,14 +246,14 @@ pub fn settings() -> Html {
 
                             <div>
                                 <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                    {"Email Address"}
+                                    {t("email_address", lang)}
                                 </label>
                                 <input
                                     id="email"
                                     name="email"
                                     type="email"
                                     class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                    placeholder="Enter your email"
+                                    placeholder={t("enter_email", lang)}
                                     value={state.email.clone()}
                                     oninput={oninput.clone()}
                                 />

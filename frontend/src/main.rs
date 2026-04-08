@@ -8,6 +8,7 @@ mod theme;
 
 use components::sidebar::Sidebar;
 use components::theme_provider::ThemeToggle;
+use components::language_switcher::LanguageSwitcher;
 use i18n::{Language, t};
 use language_provider::LanguageState;
 use language_provider::LanguageProvider;
@@ -106,6 +107,8 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
 fn admin_setup_with_guard() -> Html {
     let admin_exists = use_state(|| None::<bool>);
     let loading = use_state(|| true);
+    let lang_ctx = use_context::<LanguageState>();
+    let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
 
     {
         let admin_exists = admin_exists.clone();
@@ -134,7 +137,7 @@ fn admin_setup_with_guard() -> Html {
             <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
                 <div class="text-center">
                     <div class="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p class="text-slate-600 dark:text-slate-400">{"Checking setup status..."}</p>
+                    <p class="text-slate-600 dark:text-slate-400">{t("loading", lang)}</p>
                 </div>
             </div>
         }
@@ -149,10 +152,10 @@ fn admin_setup_with_guard() -> Html {
                         </svg>
                     </div>
                     <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                        {"Setup Already Complete"}
+                        {t("setup_complete", lang)}
                     </h2>
                     <p class="text-slate-600 dark:text-slate-400 mb-6">
-                        {"An administrator account already exists. You can now log in with your credentials."}
+                        {t("setup_complete_desc", lang)}
                     </p>
                     <button 
                         onclick={Callback::from(|_| {
@@ -162,7 +165,7 @@ fn admin_setup_with_guard() -> Html {
                         })}
                         class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
                     >
-                        {"Go to Login"}
+                        {t("go_to_login", lang)}
                     </button>
                 </div>
             </div>
@@ -398,6 +401,7 @@ fn app() -> Html {
                                     class="w-64 pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                                 />
                             </div>
+                            <LanguageSwitcher class={""} />
                             <ThemeToggle class={""} />
                             <div class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                                 <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
