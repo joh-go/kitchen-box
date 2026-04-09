@@ -12,11 +12,17 @@ use rocket::fs::FileServer;
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::collections::HashSet;
 use tokio_postgres::NoTls;
+use std::env;
 
 #[launch]
 async fn rocket() -> _ {
+    dotenv::dotenv().ok();
+    
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+
     let (client, connection) = tokio_postgres::connect(
-        "host=localhost user=postgres password=postgres dbname=postgres",
+        &database_url,
         NoTls,
     )
     .await

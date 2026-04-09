@@ -15,4 +15,5 @@ shared-types = { path = "../shared-types" }
 jsonwebtoken = "9.2"
 bcrypt = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
+dotenv = "0.15"
 uuid = { version = "1.0", features = ["v4"] }
