@@ -8,11 +8,25 @@ mod models;
 
 use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users, images, admin};
 use rocket::http::Method;
-use rocket::fs::FileServer;
+use rocket::fs::{FileServer, NamedFile};
 use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use std::collections::HashSet;
 use tokio_postgres::NoTls;
 use std::env;
+use std::path::{Path, PathBuf};
+
+#[get("/<path..>")]
+async fn frontend_index(path: PathBuf) -> Option<NamedFile> {
+    let mut path = path.to_path_buf();
+    
+    // If the path exists as a file in the frontend/dist directory, serve it
+    // Otherwise, serve index.html for SPA routing
+    if !path.extension().is_some() {
+        path = PathBuf::from("index.html");
+    }
+    
+    NamedFile::open(Path::new("frontend/dist").join(path)).await.ok()
+}
 
 #[launch]
 async fn rocket() -> _ {
@@ -93,7 +107,9 @@ async fn rocket() -> _ {
             admin::delete_category,
             admin::check_admin_exists,
             admin::setup_initial_admin,
+            frontend_index,
         ])
         .mount("/uploads", FileServer::from("uploads"))
+        .mount("/app", FileServer::from("frontend/dist"))
         .attach(cors)
 }
