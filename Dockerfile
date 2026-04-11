@@ -7,7 +7,12 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     binaryen \
+    curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js and npm for Tailwind CSS processing
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
+    apt-get install -y nodejs
 
 # Install trunk for frontend building
 RUN cargo install trunk
@@ -35,8 +40,15 @@ RUN rm -rf frontend/src shared-types/src
 COPY frontend ./frontend
 COPY shared-types ./shared-types
 
-# Build frontend
 RUN cd frontend && trunk build --release
+
+# Install Tailwind CSS locally in frontend directory
+RUN cd frontend && npm install
+
+# Build frontend with PostCSS
+RUN cd frontend && npm run build-css
+RUN cd frontend && ls -la src/output.css
+RUN cd frontend && cp src/output.css dist/
 
 # Stage 2: Build backend
 FROM rust:1.94 as backend-builder

@@ -15,6 +15,12 @@ use tokio_postgres::NoTls;
 use std::env;
 use std::path::{Path, PathBuf};
 
+#[get("/output.css")]
+async fn css_file() -> (rocket::http::ContentType, String) {
+    let content = std::fs::read_to_string("frontend/dist/output.css").unwrap_or_default();
+    (rocket::http::ContentType::CSS, content)
+}
+
 #[get("/<path..>")]
 async fn frontend_index(path: PathBuf) -> Option<NamedFile> {
     let mut path = path.to_path_buf();
@@ -107,6 +113,7 @@ async fn rocket() -> _ {
             admin::delete_category,
             admin::check_admin_exists,
             admin::setup_initial_admin,
+            css_file,
             frontend_index,
         ])
         .mount("/uploads", FileServer::from("uploads"))
