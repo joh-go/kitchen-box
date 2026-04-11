@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  recipes:
+    container_name: recipes_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      RUST_LOG: info
+      ROCKET_ADDRESS: 0.0.0.0
+      ROCKET_PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+    volumes:
+      # Explicit host path mounts
+      - ./data/postgres:/app/var/lib/postgresql/data
+      - ./data/uploads:/app/uploads
+      - ./data/logs:/app/var/log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
