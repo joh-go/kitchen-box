@@ -49,8 +49,14 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
                     navigate.emit(Page::View(id));
                 })
             };
+            let on_add = {
+                let navigate = navigate.clone();
+                Callback::from(move |_| {
+                    navigate.emit(Page::Add);
+                })
+            };
 
-            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} refresh={0} search={search} on_search={on_search} /> }
+            html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} on_add={on_add} refresh={0} search={search} on_search={on_search} /> }
         }
         Page::Login => {
             html! { <crate::pages::login::LoginPage /> }

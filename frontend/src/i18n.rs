@@ -98,7 +98,14 @@ lazy_static! {
             h.insert(Language::German, "Administratorkonto erstellen");
             h
         });
-        
+
+        m.insert("create_administrator", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Create Administrator");
+            h.insert(Language::German, "Administrator erstellen");
+            h
+        });
+
         m.insert("passwords_do_not_match", {
             let mut h = HashMap::new();
             h.insert(Language::English, "Passwords do not match");
@@ -414,6 +421,13 @@ lazy_static! {
             let mut h = HashMap::new();
             h.insert(Language::English, "No recipes yet - start cooking!");
             h.insert(Language::German, "Noch keine Rezepte - fangen Sie an zu kochen!");
+            h
+        });
+        
+        m.insert("start_building_collection", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Start building your recipe collection by adding your first recipe.");
+            h.insert(Language::German, "Beginnen Sie Ihre Rezeptsammlung, indem Sie Ihr erstes Rezept hinzufügen.");
             h
         });
         

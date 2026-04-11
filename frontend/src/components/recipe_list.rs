@@ -11,6 +11,7 @@ use crate::language_provider::LanguageState;
 pub struct Props {
     pub on_edit: Callback<Recipe>,
     pub on_view: Callback<i32>,
+    pub on_add: Callback<()>,
     pub refresh: i32,
     pub search: String,
     pub on_search: Callback<String>,
@@ -32,6 +33,7 @@ pub fn recipe_list(props: &Props) -> Html {
 
     // accept refresh as external prop if passed in (backwards compatible)
     // We'll try to read a field named `refresh` via `js_sys` props are typed, so update Props accordingly in parent.
+    let on_add = props.on_add.clone();
 
     {
         let recipes = recipes.clone();
@@ -353,12 +355,14 @@ pub fn recipe_list(props: &Props) -> Html {
                             </svg>
                         </div>
                         <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
-                            {"No recipes yet"}
+                            {t("no_recipes_yet", lang)}
                         </h3>
                         <p class="text-slate-500 dark:text-slate-400 mb-6">
-                            {"Start building your recipe collection by adding your first recipe."}
+                            {t("start_building_collection", lang)}
                         </p>
-                        <button class="btn-primary text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2">
+                        <button
+                            onclick={Callback::from(move |_e: yew::MouseEvent| on_add.emit(()))}
+                            class="btn-primary text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
