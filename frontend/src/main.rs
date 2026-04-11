@@ -258,9 +258,9 @@ fn app() -> Html {
     let navigate = {
         let page = page.clone();
         Callback::from(move |p: Page| {
-            // Update URL based on page
+            // Update URL based on page using History API for client-side routing
             if let Some(window) = web_sys::window() {
-                let location = window.location();
+                let history = window.history().unwrap();
                 let path = match p {
                     Page::AdminUsers => "/admin/users",
                     Page::Recipes => "/admin/recipes",
@@ -274,7 +274,9 @@ fn app() -> Html {
                     Page::View(id) => &format!("/view/{}", id),
                     _ => "/",
                 };
-                let _ = location.set_pathname(path);
+                let state = wasm_bindgen::JsValue::from_str("");
+                let url = format!("{}{}", window.location().origin().unwrap_or_default(), path);
+                let _ = history.push_state_with_url(&state, &url, None);
             }
             page.set(p);
         })
