@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  recipes-app:
+    image: gitea.joes-web.de/joe/recipes-recipes:latest  # This will pull the multi-arch image from your Gitea registry
+    container_name: recipes_app_portainer
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
+      - RUST_LOG=info
+    volumes:
+      # Data persistence
+      - recipes_uploads:/app/uploads
+      - recipes_pgdata:/var/lib/postgresql/data
+      - recipes_logs:/var/log/postgresql
+    depends_on:
+      - postgres
+    networks:
+      - recipes_network
+
+  postgres:
+    image: postgres:12
+    container_name: recipes_db_portainer
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - recipes_pgdata:/var/lib/postgresql/data
+      - recipes_logs:/var/log/postgresql
+    networks:
+      - recipes_network
+
+volumes:
+  recipes_uploads:
+    driver: local
+  recipes_pgdata:
+    driver: local
+  recipes_logs:
+    driver: local
+
+networks:
+  recipes_network:
+    driver: bridge

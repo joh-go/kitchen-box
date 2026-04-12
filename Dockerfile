@@ -1,6 +1,9 @@
-# Multi-stage production Dockerfile
+# Multi-stage production Dockerfile with multi-architecture support
+ARG TARGETARCH=amd64
+ARG TARGETOS=linux
+
 # Stage 1: Build frontend
-FROM rust:1.94 as frontend-builder
+FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as frontend-builder
 
 # Install system dependencies for frontend
 RUN apt-get update && apt-get install -y \
@@ -51,7 +54,7 @@ RUN cd frontend && ls -la src/output.css
 RUN cd frontend && cp src/output.css dist/
 
 # Stage 2: Build backend
-FROM rust:1.94 as backend-builder
+FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as backend-builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -88,7 +91,7 @@ COPY frontend ./frontend
 RUN cargo build --bin backend --release
 
 # Stage 3: Production runtime
-FROM debian:12-slim
+FROM --platform=${TARGETOS}/${TARGETARCH} debian:12-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
