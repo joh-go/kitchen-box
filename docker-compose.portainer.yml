@@ -2,37 +2,19 @@ version: '3.8'
 
 services:
   recipes-app:
-    image: gitea.joes-web.de/joe/recipes-recipes:latest  # This will pull the multi-arch image from your Gitea registry
-    container_name: recipes_app_portainer
+    image: joesweb/kitchen-box:latest  # This will pull the multi-architecture image from Docker Hub
+    container_name: kitchen-box
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    networks:
+      br0:
+        ipv4_address: 192.168.17.24
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - RUST_LOG=info
+      - API_URL=kitchen-box.joes-web.de  # Override this for different deployments
     volumes:
       # Data persistence
       - recipes_uploads:/app/uploads
-      - recipes_pgdata:/var/lib/postgresql/data
+      - recipes_pgdata:/app/var/lib/postgresql/data
       - recipes_logs:/var/log/postgresql
-    depends_on:
-      - postgres
-    networks:
-      - recipes_network
-
-  postgres:
-    image: postgres:12
-    container_name: recipes_db_portainer
-    restart: unless-stopped
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - recipes_pgdata:/var/lib/postgresql/data
-      - recipes_logs:/var/log/postgresql
-    networks:
-      - recipes_network
 
 volumes:
   recipes_uploads:
@@ -43,5 +25,5 @@ volumes:
     driver: local
 
 networks:
-  recipes_network:
-    driver: bridge
+  br0:
+    external: true

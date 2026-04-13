@@ -3,7 +3,36 @@ use serde_json::json;
 use shared_types::{Category, Recipe, RecipeImage, User};
 use web_sys::window;
 
-const BASE: &str = "http://127.0.0.1:8000";
+// API URL that uses environment variable if set, otherwise dynamic detection
+fn get_base_url() -> String {
+    // Check if API_URL is set at compile time
+    if let Some(api_url) = option_env!("API_URL") {
+        api_url.to_string()
+    } else {
+        // Dynamic fallback based on current hostname
+        if let Some(window) = window() {
+            if let Ok(hostname) = window.location().hostname() {
+                match hostname.as_str() {
+                    "127.0.0.1" | "localhost" => format!("http://{}:8000", hostname),
+                    // For any IP address, use the same IP with port 8000
+                    ip if ip.parse::<std::net::IpAddr>().is_ok() => {
+                        format!("http://{}:8000", ip)
+                    }
+                    // For domain names, use https with the same domain
+                    domain if domain.contains('.') => {
+                        format!("https://{}", domain)
+                    }
+                    // Fallback to localhost
+                    _ => "http://127.0.0.1:8000".to_string(),
+                }
+            } else {
+                "http://127.0.0.1:8000".to_string()
+            }
+        } else {
+            "http://127.0.0.1:8000".to_string()
+        }
+    }
+}
 
 // Helper function to get auth token from localStorage
 fn get_auth_header() -> Option<String> {
@@ -78,7 +107,8 @@ pub fn logout() {
 }
 
 pub async fn get_recipes() -> Result<Vec<Recipe>, String> {
-    let resp = Request::get(&format!("{}/api/recipes", BASE))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/recipes", base))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -88,7 +118,8 @@ pub async fn get_recipes() -> Result<Vec<Recipe>, String> {
 
 pub async fn get_my_recipes() -> Result<Vec<Recipe>, String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let resp = Request::get(&format!("{}/api/my-recipes", BASE))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/my-recipes", base))
         .header("Authorization", &auth_header)
         .send()
         .await
@@ -98,7 +129,8 @@ pub async fn get_my_recipes() -> Result<Vec<Recipe>, String> {
 }
 
 pub async fn get_categories() -> Result<Vec<Category>, String> {
-    let resp = Request::get(&format!("{}/api/categories", BASE))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/categories", base))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -110,7 +142,8 @@ pub async fn get_categories() -> Result<Vec<Category>, String> {
 
 pub async fn create_category(name: &str) -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let request = Request::new(&format!("{}/api/categories", BASE))
+    let base = get_base_url();
+    let request = Request::new(&format!("{}/api/categories", base))
         .method(Method::POST)
         .header("Content-Type", "application/json")
         .header("Authorization", &auth_header)
@@ -131,7 +164,8 @@ pub async fn create_category(name: &str) -> Result<serde_json::Value, String> {
 }
 
 pub async fn get_recipe(id: i32) -> Result<Recipe, String> {
-    let resp = Request::get(&format!("{}/api/recipes/{}", BASE, id))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/recipes/{}", base, id))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -141,7 +175,8 @@ pub async fn get_recipe(id: i32) -> Result<Recipe, String> {
 
 pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
     let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
-    let mut request = Request::post(&format!("{}/api/recipes", BASE))
+    let base = get_base_url();
+    let mut request = Request::post(&format!("{}/api/recipes", base))
         .header("Content-Type", "application/json")
         .body(body);
     
@@ -164,7 +199,8 @@ pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
 
 pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
     let body = serde_json::to_string(recipe).map_err(|e| e.to_string())?;
-    let mut request = Request::put(&format!("{}/api/recipes/{}", BASE, id))
+    let base = get_base_url();
+    let mut request = Request::put(&format!("{}/api/recipes/{}", base, id))
         .header("Content-Type", "application/json")
         .body(body);
     
@@ -186,7 +222,8 @@ pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
 }
 
 pub async fn delete_recipe(id: i32) -> Result<(), String> {
-    let mut request = Request::delete(&format!("{}/api/recipes/{}", BASE, id));
+    let base = get_base_url();
+    let mut request = Request::delete(&format!("{}/api/recipes/{}", base, id));
     
     // Add Authorization header if token exists
     if let Some(auth_header) = get_auth_header() {
@@ -207,7 +244,8 @@ pub async fn delete_recipe(id: i32) -> Result<(), String> {
 
 pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let url = format!("{}/api/recipes/{}/categories/{}", BASE, recipe_id, category_id);
+    let base = get_base_url();
+    let url = format!("{}/api/recipes/{}/categories/{}", base, recipe_id, category_id);
     
     let resp = Request::post(&url)
     .header("Authorization", &auth_header)
@@ -224,7 +262,8 @@ pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), Str
 
 pub async fn clear_categories(recipe_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let url = format!("{}/api/recipes/{}/categories", BASE, recipe_id);
+    let base = get_base_url();
+    let url = format!("{}/api/recipes/{}/categories", base, recipe_id);
     
     let resp = Request::delete(&url)
     .header("Authorization", &auth_header)
@@ -241,7 +280,8 @@ pub async fn clear_categories(recipe_id: i32) -> Result<(), String> {
 
 // --- Users API ---
 pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
-    let resp = Request::get(&format!("{}/api/users", BASE))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/users", base))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -252,7 +292,8 @@ pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
 }
 
 pub async fn login(email: &str, password: &str) -> Result<serde_json::Value, String> {
-    let request = Request::new(&format!("{}/api/auth/login", BASE))
+    let base = get_base_url();
+    let request = Request::new(&format!("{}/api/auth/login", base))
         .method(Method::POST)
         .header("Content-Type", "application/json")
         .body(json!({
@@ -275,7 +316,8 @@ pub async fn login(email: &str, password: &str) -> Result<serde_json::Value, Str
 }
 
 pub async fn create_user(user: &User) -> Result<serde_json::Value, String> {
-    let request = Request::new(&format!("{}/api/users", BASE))
+    let base = get_base_url();
+    let request = Request::new(&format!("{}/api/users", base))
         .method(Method::POST)
         .header("Content-Type", "application/json")
         .body(json!(user).to_string());
@@ -306,7 +348,7 @@ pub async fn update_profile(name: &str, email: &str, current_password: &str, new
     }
 
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let request = Request::new(&format!("{}/api/auth/me", BASE))
+    let request = Request::new(&format!("{}/api/auth/me", get_base_url()))
         .method(Method::PUT)
         .header("Content-Type", "application/json")
         .header("Authorization", &auth_header)
@@ -327,7 +369,7 @@ pub async fn update_profile(name: &str, email: &str, current_password: &str, new
 
 pub async fn get_current_user() -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let request = Request::new(&format!("{}/api/auth/me", BASE))
+    let request = Request::new(&format!("{}/api/auth/me", get_base_url()))
         .header("Content-Type", "application/json")
         .header("Authorization", &auth_header);
 
@@ -348,7 +390,8 @@ pub async fn get_current_user() -> Result<serde_json::Value, String> {
 // --- Images API ---
 pub async fn get_recipe_images(recipe_id: i32) -> Result<Vec<RecipeImage>, String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let resp = Request::get(&format!("{}/api/recipes/{}/images", BASE, recipe_id))
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/recipes/{}/images", base, recipe_id))
         .header("Authorization", &auth_header)
         .send()
         .await
@@ -417,7 +460,8 @@ pub async fn upload_recipe_image(recipe_id: i32, file: &web_sys::File) -> Result
     let mut file_bytes = vec![0u8; uint8_array.length() as usize];
     uint8_array.copy_to(&mut file_bytes);
     
-    let request = Request::new(&format!("{}/api/recipes/{}/images", BASE, recipe_id))
+    let base = get_base_url();
+    let request = Request::new(&format!("{}/api/recipes/{}/images", base, recipe_id))
         .method(Method::POST)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/octet-stream")
@@ -439,7 +483,8 @@ pub async fn upload_recipe_image(recipe_id: i32, file: &web_sys::File) -> Result
 
 pub async fn set_primary_image(recipe_id: i32, image_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let url = format!("{}/api/recipes/{}/images/{}/primary", BASE, recipe_id, image_id);
+    let base = get_base_url();
+    let url = format!("{}/api/recipes/{}/images/{}/primary", base, recipe_id, image_id);
     
     let resp = Request::put(&url)
         .header("Authorization", &auth_header)
@@ -456,7 +501,8 @@ pub async fn set_primary_image(recipe_id: i32, image_id: i32) -> Result<(), Stri
 
 pub async fn delete_recipe_image(recipe_id: i32, image_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_else(|| "".to_string());
-    let url = format!("{}/api/recipes/{}/images/{}", BASE, recipe_id, image_id);
+    let base = get_base_url();
+    let url = format!("{}/api/recipes/{}/images/{}", base, recipe_id, image_id);
     
     let resp = Request::delete(&url)
         .header("Authorization", &auth_header)
@@ -476,7 +522,7 @@ pub async fn delete_recipe_image(recipe_id: i32, image_id: i32) -> Result<(), St
 // Get all users (admin only)
 pub async fn get_admin_users() -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_default();
-    let resp = Request::new(&format!("{}/api/admin/users", BASE))
+    let resp = Request::new(&format!("{}/api/admin/users", get_base_url()))
         .method(Method::GET)
         .header("Authorization", &auth_header)
         .send()
@@ -499,7 +545,7 @@ pub async fn create_admin_user(user_data: serde_json::Value) -> Result<serde_jso
     let auth_header = get_auth_header().unwrap_or_default();
     let body = serde_json::to_string(&user_data).map_err(|e| e.to_string())?;
     
-    let resp = Request::new(&format!("{}/api/admin/users", BASE))
+    let resp = Request::new(&format!("{}/api/admin/users", get_base_url()))
         .method(Method::POST)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/json")
@@ -524,7 +570,7 @@ pub async fn update_admin_user(user_id: i32, user_data: serde_json::Value) -> Re
     let auth_header = get_auth_header().unwrap_or_default();
     let body = serde_json::to_string(&user_data).map_err(|e| e.to_string())?;
     
-    let resp = Request::new(&format!("{}/api/admin/users/{}", BASE, user_id))
+    let resp = Request::new(&format!("{}/api/admin/users/{}", get_base_url(), user_id))
         .method(Method::PUT)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/json")
@@ -548,7 +594,7 @@ pub async fn update_admin_user(user_id: i32, user_data: serde_json::Value) -> Re
 pub async fn delete_admin_user(user_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_default();
     
-    let resp = Request::new(&format!("{}/api/admin/users/{}", BASE, user_id))
+    let resp = Request::new(&format!("{}/api/admin/users/{}", get_base_url(), user_id))
         .method(Method::DELETE)
         .header("Authorization", &auth_header)
         .send()
@@ -565,7 +611,8 @@ pub async fn delete_admin_user(user_id: i32) -> Result<(), String> {
 // Get all recipes (admin only)
 pub async fn get_admin_recipes() -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_default();
-    let resp = Request::new(&format!("{}/api/admin/recipes", BASE))
+    let base = get_base_url();
+    let resp = Request::new(&format!("{}/api/admin/recipes", base))
         .method(Method::GET)
         .header("Authorization", &auth_header)
         .send()
@@ -587,7 +634,8 @@ pub async fn get_admin_recipes() -> Result<serde_json::Value, String> {
 pub async fn delete_admin_recipe(recipe_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_default();
     
-    let resp = Request::new(&format!("{}/api/admin/recipes/{}", BASE, recipe_id))
+    let base = get_base_url();
+    let resp = Request::new(&format!("{}/api/admin/recipes/{}", base, recipe_id))
         .method(Method::DELETE)
         .header("Authorization", &auth_header)
         .send()
@@ -604,7 +652,7 @@ pub async fn delete_admin_recipe(recipe_id: i32) -> Result<(), String> {
 // Get all categories (admin only)
 pub async fn get_admin_categories() -> Result<serde_json::Value, String> {
     let auth_header = get_auth_header().unwrap_or_default();
-    let resp = Request::new(&format!("{}/api/admin/categories", BASE))
+    let resp = Request::new(&format!("{}/api/admin/categories", get_base_url()))
         .method(Method::GET)
         .header("Authorization", &auth_header)
         .send()
@@ -627,7 +675,7 @@ pub async fn create_admin_category(category_data: serde_json::Value) -> Result<s
     let auth_header = get_auth_header().unwrap_or_default();
     let body = serde_json::to_string(&category_data).map_err(|e| e.to_string())?;
     
-    let resp = Request::new(&format!("{}/api/admin/categories", BASE))
+    let resp = Request::new(&format!("{}/api/admin/categories", get_base_url()))
         .method(Method::POST)
         .header("Authorization", &auth_header)
         .header("Content-Type", "application/json")
@@ -651,7 +699,8 @@ pub async fn create_admin_category(category_data: serde_json::Value) -> Result<s
 pub async fn delete_admin_category(category_id: i32) -> Result<(), String> {
     let auth_header = get_auth_header().unwrap_or_default();
     
-    let resp = Request::new(&format!("{}/api/admin/categories/{}", BASE, category_id))
+    let base = get_base_url();
+    let resp = Request::new(&format!("{}/api/admin/categories/{}", base, category_id))
         .method(Method::DELETE)
         .header("Authorization", &auth_header)
         .send()
@@ -667,7 +716,8 @@ pub async fn delete_admin_category(category_id: i32) -> Result<(), String> {
 
 // Check if any admin users exist
 pub async fn check_admin_exists() -> Result<bool, String> {
-    let resp = Request::new(&format!("{}/api/admin/check", BASE))
+    let base = get_base_url();
+    let resp = Request::new(&format!("{}/api/admin/check", base))
         .method(Method::GET)
         .send()
         .await
@@ -694,7 +744,8 @@ pub async fn create_initial_admin(name: String, email: String, password: String)
         "is_admin": true
     });
 
-    let resp = Request::new(&format!("{}/api/admin/setup", BASE))
+    let base = get_base_url();
+    let resp = Request::new(&format!("{}/api/admin/setup", base))
         .method(Method::POST)
         .header("Content-Type", "application/json")
         .body(body.to_string())

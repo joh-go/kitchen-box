@@ -43,6 +43,8 @@ RUN rm -rf frontend/src shared-types/src
 COPY frontend ./frontend
 COPY shared-types ./shared-types
 
+ARG API_URL
+ENV API_URL=${API_URL}
 RUN cd frontend && trunk build --release
 
 # Install Tailwind CSS locally in frontend directory
