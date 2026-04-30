@@ -8,8 +8,6 @@ services:
     networks:
       br0:
         ipv4_address: 192.168.17.24
-    environment:
-      - API_URL=kitchen-box.joes-web.de  # Override this for different deployments
     volumes:
       # Data persistence
       - recipes_uploads:/app/uploads

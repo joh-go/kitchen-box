@@ -16,19 +16,10 @@ echo "🏗️  Building multi-architecture Docker images..."
 if [ ! -z "$REGISTRY" ]; then
     echo "🚀 Building and pushing multi-architecture image..."
     
-    # Get API_URL from environment (required for deployment)
-    if [ -z "$API_URL" ]; then
-        echo "Error: API_URL environment variable is required for deployment"
-        echo "Usage: API_URL=https://your-domain.com ./build-multiarch.sh"
-        exit 1
-    fi
-    echo "Using API_URL: $API_URL"
-    
     # Build and push multi-architecture image in one step
     docker buildx build \
         --platform linux/amd64,linux/arm64 \
         --tag ${REGISTRY}${IMAGE_NAME}:${TAG} \
-        --build-arg API_URL="$API_URL" \
         --push \
         -f Dockerfile \
         .

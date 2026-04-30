@@ -3,34 +3,53 @@ use serde_json::json;
 use shared_types::{Category, Recipe, RecipeImage, User};
 use web_sys::window;
 
-// API URL that uses environment variable if set, otherwise dynamic detection
+// Runtime API URL detection based on current hostname
 fn get_base_url() -> String {
-    // Check if API_URL is set at compile time
-    if let Some(api_url) = option_env!("API_URL") {
-        api_url.to_string()
-    } else {
-        // Dynamic fallback based on current hostname
-        if let Some(window) = window() {
-            if let Ok(hostname) = window.location().hostname() {
-                match hostname.as_str() {
-                    "127.0.0.1" | "localhost" => format!("http://{}:8000", hostname),
-                    // For any IP address, use the same IP with port 8000
-                    ip if ip.parse::<std::net::IpAddr>().is_ok() => {
-                        format!("http://{}:8000", ip)
-                    }
-                    // For domain names, use https with the same domain
-                    domain if domain.contains('.') => {
-                        format!("https://{}", domain)
-                    }
-                    // Fallback to localhost
-                    _ => "http://127.0.0.1:8000".to_string(),
-                }
+    // Always use runtime detection based on where the app is accessed from
+    if let Some(window) = window() {
+        if let Ok(hostname) = window.location().hostname() {
+            let protocol = window.location().protocol().unwrap_or_else(|_| "http:".into());
+            // Ensure protocol includes // for proper URL formatting
+            let protocol = if protocol.ends_with(':') {
+                format!("{}//", protocol)
             } else {
-                "http://127.0.0.1:8000".to_string()
+                protocol
+            };
+            
+            match hostname.as_str() {
+                "127.0.0.1" | "localhost" => {
+                    // For local development, always use port 8000
+                    format!("http://{}:8000", hostname)
+                }
+                // For any IP address, use the same IP with port 8000
+                ip if ip.parse::<std::net::IpAddr>().is_ok() => {
+                    format!("http://{}:8000", ip)
+                }
+                // For domain names, use the same protocol and port
+                domain => {
+                    // Get the current URL to extract port correctly
+                    if let Ok(port) = window.location().port() {
+                        match port.as_str() {
+                            "" | "80" | "443" => {
+                                // Standard ports, don't include port in URL
+                                format!("{}{}", protocol, domain)
+                            }
+                            port => {
+                                // Non-standard port, include it
+                                format!("{}{}:{}", protocol, domain, port)
+                            }
+                        }
+                    } else {
+                        // Fallback to just protocol and domain
+                        format!("{}{}", protocol, domain)
+                    }
+                }
             }
         } else {
             "http://127.0.0.1:8000".to_string()
         }
+    } else {
+        "http://127.0.0.1:8000".to_string()
     }
 }
 
