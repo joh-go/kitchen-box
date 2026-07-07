@@ -28,12 +28,17 @@ services:
       RUST_LOG: debug
       ROCKET_ADDRESS: 0.0.0.0
       ROCKET_PORT: 8000
+      FRONTEND_DIST: /app/frontend/dist
     depends_on:
       db:
         condition: service_healthy
     volumes:
+      - ./Cargo.toml:/app/Cargo.toml
+      - ./Cargo.lock:/app/Cargo.lock
       - ./backend:/app/backend
       - ./shared-types:/app/shared-types
+      - ./frontend:/app/frontend
+      - ./migrations:/app/migrations
       - ./uploads:/app/uploads
     command: cargo run --bin backend
 

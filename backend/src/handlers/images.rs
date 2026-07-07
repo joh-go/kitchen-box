@@ -1,210 +1,210 @@
-use crate::db::execute_query;
-use crate::models::RecipeImage;
 use crate::auth::AuthenticatedUser;
-use rocket::serde::json::Json;
-use rocket::{http::Status, response::status::Custom, Data, State};
+use crate::db::{DbConn, DbPool};
+use crate::models::NewImage;
+use diesel::prelude::*;
 use rocket::data::ToByteUnit;
-use tokio_postgres::Client;
+use rocket::http::Status;
+use rocket::response::status::Custom;
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, put, Data, State};
+use shared_types::RecipeImage;
 use std::fs;
 use std::path::Path;
 use uuid::Uuid;
-use chrono;
 
-#[post("/api/recipes/<recipe_id>/images", data = "<data>")]
+#[post("/recipes/<recipe_rid>/images", data = "<data>")]
 pub async fn upload_image<'r>(
-    conn: &'r State<Client>,
+    pool: &State<DbPool>,
     auth_user: AuthenticatedUser,
-    recipe_id: i32,
+    recipe_rid: i32,
     data: Data<'_>,
 ) -> Result<Json<RecipeImage>, Custom<String>> {
-    // Check if user owns the recipe
-    let ownership_check = conn
-        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&recipe_id])
-        .await
+    let mut conn = pool.inner().get().map_err(|e| Custom(Status::ServiceUnavailable, e.to_string()))?;
+
+    let owner = crate::schema::recipes::table
+        .select(crate::schema::recipes::author_id)
+        .filter(crate::schema::recipes::id.eq(recipe_rid))
+        .first::<Option<i32>>(&mut *conn)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let author_id: i32 = ownership_check.get(0);
-
-    if author_id != auth_user.user_id {
+    if owner != Some(auth_user.user_id) {
         return Err(Custom(Status::Forbidden, "You don't own this recipe".to_string()));
     }
 
-    // Generate unique filename - for now use jpg, but we should get this from the frontend
-    let file_extension = "jpg"; // TODO: Get actual file extension from frontend
+    let file_extension = "jpg";
     let uuid = Uuid::new_v4();
     let filename = format!("{}.{}", uuid, file_extension);
-    
-    // Create upload directory if it doesn't exist
-    let upload_dir = format!("uploads/recipes/{}", recipe_id);
+
+    let upload_dir = format!("uploads/recipes/{}", recipe_rid);
     fs::create_dir_all(&upload_dir)
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to create upload directory: {}", e)))?;
-    
-    // Save file to disk
+
     let file_path = format!("{}/{}", upload_dir, filename);
-    let data_slice = data.open(100.megabytes()).into_bytes().await.unwrap().into_inner();
+    let data_slice = data
+        .open(100.megabytes())
+        .into_bytes()
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, format!("Failed to read upload data: {}", e)))?
+        .into_inner();
     fs::write(&file_path, &data_slice)
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to save file: {}", e)))?;
 
-    // Get file size
     let file_size = data_slice.len() as i32;
-    
-    // Get the next position for this recipe's images
-    let position_row = conn
-        .query_one("SELECT COALESCE(MAX(position), 0) + 1 FROM images WHERE recipe_id = $1", &[&recipe_id])
-        .await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    let position: i32 = position_row.get(0);
 
-    // Insert into database
-    let row = conn
-        .query_one(
-            "INSERT INTO images (recipe_id, filename, original_filename, file_path, file_size, mime_type, alt, is_primary, position) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-             RETURNING id, filename, original_filename, file_path, file_size, mime_type, alt, is_primary, position, uploaded_at",
-            &[
-                &recipe_id,
-                &filename,
-                &format!("image.{}", file_extension),
-                &file_path,
-                &file_size,
-                &format!("image/{}", file_extension),
-                &None::<String>, // alt text
-                &false,         // is_primary (first image uploaded is not automatically primary)
-                &position,
-            ],
-        )
-        .await
+    let max_pos = crate::schema::images::table
+        .select(diesel::dsl::max(crate::schema::images::position))
+        .filter(crate::schema::images::recipe_id.eq(recipe_rid))
+        .first::<Option<i32>>(&mut *conn)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    Ok(Json(RecipeImage {
-        id: Some(row.get(0)),
-        filename: row.get(1),
-        original_filename: Some(row.get(2)),
-        file_path: row.get(3),
-        file_size: Some(row.get(4)),
-        mime_type: Some(row.get(5)),
-        alt: row.get(6),
-        is_primary: Some(row.get(7)),
-        position: Some(row.get(8)),
-        uploaded_at: Some(row.get::<_, chrono::DateTime<chrono::Utc>>(9).to_string()),
-    }))
+    let position = max_pos.unwrap_or(0) + 1;
+
+    let new_image = NewImage {
+        recipe_id: recipe_rid,
+        filename: filename.clone(),
+        original_filename: Some(format!("image.{}", file_extension)),
+        file_path: file_path.clone(),
+        file_size,
+        mime_type: Some(format!("image/{}", file_extension)),
+        alt: None,
+        is_primary: false,
+        position,
+    };
+
+    diesel::insert_into(crate::schema::images::table)
+        .values(&new_image)
+        .returning((
+            crate::schema::images::id,
+            crate::schema::images::recipe_id,
+            crate::schema::images::filename,
+            crate::schema::images::original_filename,
+            crate::schema::images::file_path,
+            crate::schema::images::file_size,
+            crate::schema::images::mime_type,
+            crate::schema::images::alt,
+            crate::schema::images::is_primary,
+            crate::schema::images::position,
+            crate::schema::images::uploaded_at,
+        ))
+        .get_result::<crate::models::Image>(&mut *conn)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+        .map(|img| {
+            Json(RecipeImage {
+                id: Some(img.id),
+                filename: img.filename,
+                original_filename: img.original_filename,
+                file_path: img.file_path,
+                file_size: img.file_size,
+                mime_type: img.mime_type,
+                alt: img.alt,
+                is_primary: img.is_primary,
+                position: img.position,
+                uploaded_at: Some(img.uploaded_at.to_string()),
+            })
+        })
 }
 
-#[get("/api/recipes/<recipe_id>/images")]
-pub async fn get_recipe_images(
-    conn: &State<Client>,
-    recipe_id: i32,
+#[get("/recipes/<recipe_rid>/images")]
+pub fn get_recipe_images(
+    mut db: DbConn,
+    recipe_rid: i32,
 ) -> Result<Json<Vec<RecipeImage>>, Custom<String>> {
-    let rows = conn
-        .query(
-            "SELECT id, filename, original_filename, file_path, file_size, mime_type, alt, is_primary, position, uploaded_at 
-             FROM images WHERE recipe_id = $1 ORDER BY position ASC, uploaded_at ASC",
-            &[&recipe_id],
-        )
-        .await
+    let rows = crate::schema::images::table
+        .filter(crate::schema::images::recipe_id.eq(recipe_rid))
+        .order((crate::schema::images::position.asc(), crate::schema::images::uploaded_at.asc()))
+        .load::<crate::models::Image>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let mut images = Vec::new();
-    for row in rows.iter() {
-        let uploaded_at: Option<String> = row.get::<_, Option<chrono::DateTime<chrono::Utc>>>(9).map(|dt| dt.to_string());
-        images.push(RecipeImage {
-            id: Some(row.get(0)),
-            filename: row.get(1),
-            original_filename: Some(row.get(2)),
-            file_path: row.get(3),
-            file_size: Some(row.get(4)),
-            mime_type: Some(row.get(5)),
-            alt: row.get(6),
-            is_primary: Some(row.get(7)),
-            position: Some(row.get(8)),
-            uploaded_at: uploaded_at,
-        });
-    }
+    let result: Vec<RecipeImage> = rows
+        .into_iter()
+        .map(|img| RecipeImage {
+            id: Some(img.id),
+            filename: img.filename,
+            original_filename: img.original_filename,
+            file_path: img.file_path,
+            file_size: img.file_size,
+            mime_type: img.mime_type,
+            alt: img.alt,
+            is_primary: img.is_primary,
+            position: img.position,
+            uploaded_at: Some(img.uploaded_at.to_string()),
+        })
+        .collect();
 
-    Ok(Json(images))
+    Ok(Json(result))
 }
 
-#[put("/api/recipes/<recipe_id>/images/<image_id>/primary")]
-pub async fn set_primary_image(
-    conn: &State<Client>,
+#[put("/recipes/<recipe_rid>/images/<image_id>/primary")]
+pub fn set_primary_image(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-    recipe_id: i32,
+    recipe_rid: i32,
     image_id: i32,
 ) -> Result<Status, Custom<String>> {
-    // Check if user owns the recipe
-    let ownership_check = conn
-        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&recipe_id])
-        .await
+    let owner = crate::schema::recipes::table
+        .select(crate::schema::recipes::author_id)
+        .filter(crate::schema::recipes::id.eq(recipe_rid))
+        .first::<Option<i32>>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let author_id:i32= ownership_check.get(0);
-
-    if author_id != auth_user.user_id {
+    if owner != Some(auth_user.user_id) {
         return Err(Custom(Status::Forbidden, "You don't own this recipe".to_string()));
     }
 
-    // Remove primary flag from all images for this recipe
-    execute_query(
-        conn,
-        "UPDATE images SET is_primary = false WHERE recipe_id = $1",
-        &[&recipe_id],
-    )
-    .await?;
+    diesel::update(crate::schema::images::table.filter(crate::schema::images::recipe_id.eq(recipe_rid)))
+        .set(crate::schema::images::is_primary.eq(false))
+        .execute(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    // Set primary flag on the selected image
-    execute_query(
-        conn,
-        "UPDATE images SET is_primary = true WHERE id = $1 AND recipe_id = $2",
-        &[&image_id, &recipe_id],
+    diesel::update(
+        crate::schema::images::table
+            .filter(crate::schema::images::id.eq(image_id))
+            .filter(crate::schema::images::recipe_id.eq(recipe_rid)),
     )
-    .await?;
+    .set(crate::schema::images::is_primary.eq(true))
+    .execute(&mut *db)
+    .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
     Ok(Status::Ok)
 }
 
-#[delete("/api/recipes/<recipe_id>/images/<image_id>")]
-pub async fn delete_image(
-    conn: &State<Client>,
+#[delete("/recipes/<recipe_rid>/images/<image_id>")]
+pub fn delete_image(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-    recipe_id: i32,
+    recipe_rid: i32,
     image_id: i32,
 ) -> Result<Status, Custom<String>> {
-    // Check if user owns the recipe
-    let ownership_check = conn
-        .query_one("SELECT author_id FROM recipes WHERE id = $1", &[&recipe_id])
-        .await
+    let owner = crate::schema::recipes::table
+        .select(crate::schema::recipes::author_id)
+        .filter(crate::schema::recipes::id.eq(recipe_rid))
+        .first::<Option<i32>>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let author_id : i32= ownership_check.get(0);
-
-    if author_id != auth_user.user_id {
+    if owner != Some(auth_user.user_id) {
         return Err(Custom(Status::Forbidden, "You don't own this recipe".to_string()));
     }
 
-    // Get file path before deleting
-    let file_row = conn
-        .query_one("SELECT file_path FROM images WHERE id = $1 AND recipe_id = $2", &[&image_id, &recipe_id])
-        .await
+    let file_path_val = crate::schema::images::table
+        .select(crate::schema::images::file_path)
+        .filter(crate::schema::images::id.eq(image_id))
+        .filter(crate::schema::images::recipe_id.eq(recipe_rid))
+        .first::<String>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let file_path: String = file_row.get(0);
-    
-    // Delete from database
-    execute_query(
-        conn,
-        "DELETE FROM images WHERE id = $1 AND recipe_id = $2",
-        &[&image_id, &recipe_id],
+    diesel::delete(
+        crate::schema::images::table
+            .filter(crate::schema::images::id.eq(image_id))
+            .filter(crate::schema::images::recipe_id.eq(recipe_rid)),
     )
-    .await?;
+    .execute(&mut *db)
+    .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    // Delete file from disk (don't fail if file doesn't exist)
-    if Path::new(&file_path).exists() {
-        if let Err(e) = fs::remove_file(&file_path) {
-            eprintln!("Warning: Failed to delete file {}: {}", file_path, e);
+    if Path::new(&file_path_val).exists() {
+        if let Err(e) = fs::remove_file(&file_path_val) {
+            eprintln!("Warning: Failed to delete file {}: {}", file_path_val, e);
         }
     }
-    
 
     Ok(Status::Ok)
 }

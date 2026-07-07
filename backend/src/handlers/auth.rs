@@ -1,31 +1,26 @@
-use rocket::serde::json::Json;
-use rocket::{State, response::status::Custom, http::Status};
-use tokio_postgres::Client;
-use crate::auth::{authenticate_user, generate_token, LoginRequest, LoginResponse, UserInfo, AuthenticatedUser};
+use crate::auth::{authenticate_user, generate_token, AuthenticatedUser};
+use crate::db::DbConn;
+use crate::models::{LoginRequest, LoginResponse, UpdateProfileRequest, UserResponse};
+use crate::schema::users::dsl::*;
 use bcrypt::{hash, DEFAULT_COST};
+use diesel::prelude::*;
+use rocket::http::Status;
+use rocket::response::status::Custom;
+use rocket::serde::json::Json;
+use rocket::{get, post, put};
 
-#[derive(Debug, serde::Deserialize)]
-pub struct UpdateProfileRequest {
-    pub name: String,
-    pub email: String,
-    pub current_password: Option<String>,
-    pub new_password: Option<String>,
-}
-
-#[post("/api/auth/login", data = "<login>")]
-pub async fn login(
-    conn: &State<Client>,
+#[post("/auth/login", format = "json", data = "<login>")]
+pub fn login(
+    mut db: DbConn,
     login: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Custom<String>> {
-    match authenticate_user(conn, &login.email, &login.password).await {
+    match authenticate_user(&mut *db, &login.email, &login.password) {
         Ok(Some(user)) => {
-            // Generate JWT token
-            let token = generate_token(user.id).map_err(|e| Custom(Status::InternalServerError, e))?;
-            
-            // Return token and user info
+            let token =
+                generate_token(user.id).map_err(|e| Custom(Status::InternalServerError, e))?;
             Ok(Json(LoginResponse {
                 token,
-                user: UserInfo {
+                user: UserResponse {
                     id: user.id,
                     name: user.name,
                     email: user.email,
@@ -38,144 +33,113 @@ pub async fn login(
     }
 }
 
-#[post("/api/auth/logout")]
-pub async fn logout() -> Result<Status, Custom<String>> {
-    // In a real implementation, you might want to:
-    // 1. Invalidate the token (blacklist it)
-    // 2. Remove the token from client-side storage
-    // For now, we'll just return success
+#[post("/auth/logout")]
+pub fn logout() -> Result<Status, Custom<String>> {
     Ok(Status::Ok)
 }
 
-#[get("/api/auth/me")]
-pub async fn get_current_user(
-    conn: &State<Client>,
+#[get("/auth/me")]
+pub fn get_current_user(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-) -> Result<Json<UserInfo>, Custom<String>> {
-    // Fetch full user info from database
-    let rows = conn
-        .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&auth_user.user_id])
-        .await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    if let Some(row) = rows.iter().next() {
-        Ok(Json(UserInfo {
-            id: row.get(0),
-            name: row.get(1),
-            email: row.get(2),
-            is_admin: row.get(3),
-        }))
-    } else {
-        Err(Custom(Status::NotFound, "User not found".to_string()))
-    }
+) -> Result<Json<UserResponse>, Custom<String>> {
+    let user = users
+        .select((id, name, email, is_admin))
+        .filter(id.eq(&auth_user.user_id))
+        .first::<(i32, String, String, bool)>(&mut *db)
+        .map_err(|e| Custom(Status::NotFound, format!("User not found: {}", e)))?;
+
+    Ok(Json(UserResponse {
+        id: user.0,
+        name: user.1,
+        email: user.2,
+        is_admin: user.3,
+    }))
 }
 
-#[put("/api/auth/me", data = "<update>")]
-pub async fn update_current_user(
-    conn: &State<Client>,
+#[put("/auth/me", format = "json", data = "<update>")]
+pub fn update_current_user(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
     update: Json<UpdateProfileRequest>,
-) -> Result<Json<UserInfo>, Custom<String>> {
-    // Fetch user's current data
-    let user_rows = conn
-        .query("SELECT name, email FROM users WHERE id = $1", &[&auth_user.user_id])
-        .await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    let (current_name, current_email): (String, String) = user_rows
-        .iter()
-        .next()
-        .map(|row| (row.get(0), row.get(1)))
-        .ok_or_else(|| Custom(Status::NotFound, "User not found".to_string()))?;
-    
-    // Use provided values or fall back to current values
+) -> Result<Json<UserResponse>, Custom<String>> {
+    let current = users
+        .select((name, email))
+        .filter(id.eq(&auth_user.user_id))
+        .first::<(String, String)>(&mut *db)
+        .map_err(|e| Custom(Status::NotFound, format!("User not found: {}", e)))?;
+
     let new_name = if update.name.trim().is_empty() {
-        current_name.clone()
+        current.0.clone()
     } else {
         update.name.clone()
     };
-    
+
     let new_email = if update.email.trim().is_empty() {
-        current_email.clone()
+        current.1.clone()
     } else {
         update.email.clone()
     };
-    
-    // If changing password, verify current password first
-    if let Some(ref current) = update.current_password {
-        if !current.trim().is_empty() {
-            if let Some(ref new) = update.new_password {
-                if !new.trim().is_empty() {
-                    // Authenticate with current password using the stored email
-                    match authenticate_user(conn, &current_email, current).await {
-                        Ok(Some(_)) => {
-                            // Current password is correct, proceed with update
-                        }
+
+    if let Some(ref current_pw) = update.current_password {
+        if !current_pw.trim().is_empty() {
+            if let Some(ref new_pw) = update.new_password {
+                if !new_pw.trim().is_empty() {
+                    match authenticate_user(&mut *db, &current.1, current_pw) {
+                        Ok(Some(_)) => {}
                         Ok(None) => {
-                            return Err(Custom(Status::Forbidden, "Current password is incorrect".to_string()));
+                            return Err(Custom(
+                                Status::Forbidden,
+                                "Current password is incorrect".to_string(),
+                            ));
                         }
                         Err(e) => {
                             return Err(Custom(Status::InternalServerError, e));
                         }
                     }
-                    
-                    // Hash new password
-                    let hashed = hash(new, DEFAULT_COST)
-                        .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-                    
-                    // Update user with new password
-                    conn.execute(
-                        "UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4",
-                        &[&new_name, &new_email, &hashed, &auth_user.user_id]
-                    ).await
-                    .map_err(|e| Custom(Status::InternalServerError, format!("Update failed: {}", e)))?;
+
+                    let hashed = hash(new_pw, DEFAULT_COST)
+                        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+                    diesel::update(users.filter(id.eq(&auth_user.user_id)))
+                        .set((name.eq(&new_name), email.eq(&new_email), password.eq(&hashed)))
+                        .execute(&mut *db)
+                        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
                 } else {
-                    // New password is empty, just update name and email
-                    conn.execute(
-                        "UPDATE users SET name = $1, email = $2 WHERE id = $3",
-                        &[&new_name, &new_email, &auth_user.user_id]
-                    ).await
-                    .map_err(|e| Custom(Status::InternalServerError, format!("Update failed: {}", e)))?;
+                    diesel::update(users.filter(id.eq(&auth_user.user_id)))
+                        .set((name.eq(&new_name), email.eq(&new_email)))
+                        .execute(&mut *db)
+                        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
                 }
             } else {
-                // No new password provided, just update name and email
-                conn.execute(
-                    "UPDATE users SET name = $1, email = $2 WHERE id = $3",
-                    &[&new_name, &new_email, &auth_user.user_id]
-                ).await
-                .map_err(|e| Custom(Status::InternalServerError, format!("Update failed: {}", e)))?;
+                diesel::update(users.filter(id.eq(&auth_user.user_id)))
+                    .set((name.eq(&new_name), email.eq(&new_email)))
+                    .execute(&mut *db)
+                    .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
             }
         } else {
-            // Current password is empty, just update name and email without password change
-            conn.execute(
-                "UPDATE users SET name = $1, email = $2 WHERE id = $3",
-                &[&new_name, &new_email, &auth_user.user_id]
-            ).await
-            .map_err(|e| Custom(Status::InternalServerError, format!("Update failed: {}", e)))?;
+            diesel::update(users.filter(id.eq(&auth_user.user_id)))
+                .set((name.eq(&new_name), email.eq(&new_email)))
+                .execute(&mut *db)
+                .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
         }
     } else {
-        // No password change, just update name and email
-        conn.execute(
-            "UPDATE users SET name = $1, email = $2 WHERE id = $3",
-            &[&new_name, &new_email, &auth_user.user_id]
-        ).await
-        .map_err(|e| Custom(Status::InternalServerError, format!("Update failed: {}", e)))?;
+        diesel::update(users.filter(id.eq(&auth_user.user_id)))
+            .set((name.eq(&new_name), email.eq(&new_email)))
+            .execute(&mut *db)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     }
-    
-    // Return updated user info
-    let rows = conn
-        .query("SELECT id, name, email, is_admin FROM users WHERE id = $1", &[&auth_user.user_id])
-        .await
+
+    let updated = users
+        .select((id, name, email, is_admin))
+        .filter(id.eq(&auth_user.user_id))
+        .first::<(i32, String, String, bool)>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    if let Some(row) = rows.iter().next() {
-        Ok(Json(UserInfo {
-            id: row.get(0),
-            name: row.get(1),
-            email: row.get(2),
-            is_admin: row.get(3),
-        }))
-    } else {
-        Err(Custom(Status::NotFound, "User not found".to_string()))
-    }
+
+    Ok(Json(UserResponse {
+        id: updated.0,
+        name: updated.1,
+        email: updated.2,
+        is_admin: updated.3,
+    }))
 }

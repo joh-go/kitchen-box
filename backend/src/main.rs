@@ -1,122 +1,121 @@
-#[macro_use]
-extern crate rocket;
-
 mod auth;
 mod db;
 mod handlers;
 mod models;
+mod schema;
 
-use handlers::{auth::login, auth::logout, auth::get_current_user, auth::update_current_user, categories, recipes, users, images, admin};
-use rocket::http::Method;
-use rocket::fs::{FileServer, NamedFile};
-use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
-use std::collections::HashSet;
-use tokio_postgres::NoTls;
-use std::env;
-use std::path::{Path, PathBuf};
+use db::init_db_pool;
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
+use rocket::fairing::AdHoc;
+use rocket::fs::FileServer;
+use rocket::http::Header;
+use rocket::{get, launch, routes};
+use std::path::PathBuf;
 
-#[get("/output.css")]
-async fn css_file() -> (rocket::http::ContentType, String) {
-    let content = std::fs::read_to_string("frontend/dist/output.css").unwrap_or_default();
-    (rocket::http::ContentType::CSS, content)
-}
-
-#[get("/<path..>")]
-async fn frontend_index(path: PathBuf) -> Option<NamedFile> {
-    let mut path = path.to_path_buf();
-    
-    // If the path exists as a file in the frontend/dist directory, serve it
-    // Otherwise, serve index.html for SPA routing
-    if !path.extension().is_some() {
-        path = PathBuf::from("index.html");
-    }
-    
-    NamedFile::open(Path::new("frontend/dist").join(path)).await.ok()
-}
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
 #[launch]
-async fn rocket() -> _ {
-    dotenv::dotenv().ok();
-    
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
+fn rocket() -> _ {
+    dotenvy::dotenv().ok();
+    env_logger::init();
 
-    let (client, connection) = tokio_postgres::connect(
-        &database_url,
-        NoTls,
-    )
-    .await
-    .expect("Failed to connect to Postgres");
+    let db_pool = init_db_pool();
 
-    tokio::spawn(async move {
-        if let Err(e) = connection.await {
-            eprintln!("Failed to connect to Postgres: {}", e);
+    let mut conn = db_pool.get().expect("Failed to get DB connection for migrations");
+    conn.run_pending_migrations(MIGRATIONS).expect("Failed to run migrations");
+    drop(conn);
+
+    let mut rocket = rocket::build().manage(db_pool);
+
+    let cors_origin: Option<&'static str> = match std::env::var("CORS_ORIGIN") {
+        Ok(v) if !v.is_empty() => Some(Box::leak(v.into_boxed_str())),
+        _ => {
+            if std::env::var("FRONTEND_DIST").is_ok() {
+                None
+            } else {
+                Some("http://127.0.0.1:8080")
+            }
         }
-    });
+    };
 
-    db::init_tables(&client)
-        .await
-        .expect("Failed to initialize database tables");
+    if let Some(origin) = cors_origin {
+        rocket = rocket.attach(AdHoc::on_response(
+            "CORS & Security Headers",
+            move |_, response| {
+                Box::pin(async move {
+                    response.set_header(Header::new("Access-Control-Allow-Origin", origin));
+                    response.set_header(Header::new(
+                        "Access-Control-Allow-Methods",
+                        "GET, POST, PUT, DELETE, OPTIONS",
+                    ));
+                    response.set_header(Header::new(
+                        "Access-Control-Allow-Headers",
+                        "Content-Type, Authorization",
+                    ));
+                    response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+                    response.set_header(Header::new("X-Content-Type-Options", "nosniff"));
+                    response.set_header(Header::new("X-Frame-Options", "DENY"));
+                })
+            },
+        ));
+    }
 
-    //db::create_default_admin(&client)
-    //    .await
-    //    .expect("Failed to create default admin user");
+    if let Ok(frontend_dir) = std::env::var("FRONTEND_DIST") {
+        let path = PathBuf::from(&frontend_dir);
+        if path.exists() {
+            rocket = rocket.mount("/", FileServer::from(path));
+            log::info!("Serving frontend from {}", frontend_dir);
+        } else {
+            log::warn!("FRONTEND_DIST directory does not exist: {}", frontend_dir);
+            rocket = rocket.mount("/", routes![index]);
+        }
+    } else {
+        rocket = rocket.mount("/", routes![index]);
+    }
 
-    let mut methods = HashSet::new();
-    methods.insert(Method::Get.into());
-    methods.insert(Method::Post.into());
-    methods.insert(Method::Put.into());
-    methods.insert(Method::Delete.into());
-    methods.insert(Method::Options.into());
+    rocket = rocket.mount("/uploads", FileServer::from("uploads").rank(0));
 
-    let cors = CorsOptions::default()
-        .allowed_origins(AllowedOrigins::all())
-        .allowed_methods(methods)
-        .allowed_headers(AllowedHeaders::all()) // Allow all headers for debugging
-        .allow_credentials(true)
-        .to_cors()
-        .expect("Error while building CORS");
+    rocket.mount(
+        "/api",
+        routes![
+            handlers::auth::login,
+            handlers::auth::logout,
+            handlers::auth::get_current_user,
+            handlers::auth::update_current_user,
+            handlers::users::add_user,
+            handlers::users::get_users,
+            handlers::users::update_user,
+            handlers::users::delete_user,
+            handlers::categories::add_category,
+            handlers::categories::get_categories,
+            handlers::recipes::add_recipe,
+            handlers::recipes::get_recipes,
+            handlers::recipes::get_my_recipes,
+            handlers::recipes::get_recipe,
+            handlers::recipes::update_recipe,
+            handlers::recipes::delete_recipe,
+            handlers::recipes::assign_category,
+            handlers::recipes::clear_categories,
+            handlers::images::upload_image,
+            handlers::images::get_recipe_images,
+            handlers::images::set_primary_image,
+            handlers::images::delete_image,
+            handlers::admin::get_all_users,
+            handlers::admin::create_user,
+            handlers::admin::update_user,
+            handlers::admin::delete_user,
+            handlers::admin::get_all_recipes,
+            handlers::admin::delete_any_recipe,
+            handlers::admin::get_all_categories,
+            handlers::admin::create_category,
+            handlers::admin::delete_category,
+            handlers::admin::check_admin_exists,
+            handlers::admin::setup_initial_admin,
+        ],
+    )
+}
 
-    rocket::build()
-        .manage(client)
-        .mount("/", routes![
-            login,
-            logout,
-            get_current_user,
-            update_current_user,
-            users::add_user,
-            users::get_users,
-            users::update_user,
-            users::delete_user,
-            categories::add_category,
-            categories::get_categories,
-            recipes::add_recipe,
-            recipes::get_recipes,
-            recipes::get_my_recipes,
-            recipes::get_recipe,
-            recipes::update_recipe,
-            recipes::delete_recipe,
-            recipes::assign_category,
-            recipes::clear_categories,
-            images::upload_image,
-            images::get_recipe_images,
-            images::set_primary_image,
-            images::delete_image,
-            admin::get_all_users,
-            admin::create_user,
-            admin::update_user,
-            admin::delete_user,
-            admin::get_all_recipes,
-            admin::delete_any_recipe,
-            admin::get_all_categories,
-            admin::create_category,
-            admin::delete_category,
-            admin::check_admin_exists,
-            admin::setup_initial_admin,
-            css_file,
-            frontend_index,
-        ])
-        .mount("/uploads", FileServer::from("uploads"))
-        .mount("/app", FileServer::from("frontend/dist"))
-        .attach(cors)
+#[get("/")]
+fn index() -> &'static str {
+    "Recipes API - Running"
 }

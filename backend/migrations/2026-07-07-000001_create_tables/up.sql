@@ -1,8 +1,10 @@
--- Up: create tables for recipes app
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  email TEXT NOT NULL
+  email TEXT NOT NULL UNIQUE,
+  password TEXT NOT NULL,
+  is_admin BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS categories (
@@ -41,9 +43,14 @@ CREATE TABLE IF NOT EXISTS recipe_categories (
 CREATE TABLE IF NOT EXISTS images (
   id SERIAL PRIMARY KEY,
   recipe_id INTEGER REFERENCES recipes(id) ON DELETE CASCADE,
-  url TEXT,
+  filename TEXT NOT NULL,
+  original_filename TEXT,
+  file_path TEXT NOT NULL,
+  file_size INTEGER,
+  mime_type TEXT,
   alt TEXT,
   is_primary BOOLEAN DEFAULT false,
+  position INTEGER DEFAULT 0,
   uploaded_at TIMESTAMPTZ DEFAULT now()
 );
 

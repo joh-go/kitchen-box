@@ -1,4 +1,3 @@
--- Down: drop tables created in up.sql (reverse order)
 DROP TABLE IF EXISTS recipe_versions;
 DROP TABLE IF EXISTS images;
 DROP TABLE IF EXISTS recipe_categories;

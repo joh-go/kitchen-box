@@ -1,10 +1,17 @@
-use rocket::serde::json::Json;
-use rocket::{State, response::status::Custom, http::Status};
-use tokio_postgres::Client;
 use crate::auth::AuthenticatedUser;
+use crate::db::DbConn;
 use bcrypt::{hash, DEFAULT_COST};
+use chrono::{DateTime, Utc};
+use diesel::prelude::*;
+use rocket::http::Status;
+use rocket::response::status::Custom;
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, put};
+use serde_json::json;
 
-#[derive(Debug, serde::Deserialize)]
+use crate::schema::{categories, images, recipes, users};
+
+#[derive(serde::Deserialize)]
 pub struct AdminUserUpdateRequest {
     pub name: Option<String>,
     pub email: Option<String>,
@@ -12,7 +19,7 @@ pub struct AdminUserUpdateRequest {
     pub is_admin: Option<bool>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(serde::Deserialize)]
 pub struct AdminUserCreateRequest {
     pub name: String,
     pub email: String,
@@ -20,8 +27,7 @@ pub struct AdminUserCreateRequest {
     pub is_admin: bool,
 }
 
-// Admin middleware to check if user is admin
-pub fn require_admin(auth_user: &AuthenticatedUser) -> Result<(), Custom<String>> {
+fn require_admin(auth_user: &AuthenticatedUser) -> Result<(), Custom<String>> {
     if auth_user.is_admin {
         Ok(())
     } else {
@@ -29,365 +35,361 @@ pub fn require_admin(auth_user: &AuthenticatedUser) -> Result<(), Custom<String>
     }
 }
 
-// Get all users (admin only)
-#[get("/api/admin/users")]
-pub async fn get_all_users(
-    conn: &State<Client>,
+#[get("/admin/users")]
+pub fn get_all_users(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    let rows = conn
-        .query(
-            "SELECT id, name, email, is_admin, created_at FROM users ORDER BY created_at DESC",
-            &[]
-        )
-        .await
+    let rows = users::table
+        .select((users::id, users::name, users::email, users::is_admin, users::created_at))
+        .order(users::created_at.desc())
+        .load::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let users: Vec<serde_json::Value> = rows.iter().map(|row| {
-        serde_json::json!({
-            "id": row.get::<_, i32>(0),
-            "name": row.get::<_, String>(1),
-            "email": row.get::<_, String>(2),
-            "is_admin": row.get::<_, bool>(3),
-            "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(4)
+    let result: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|(uid, uname, uemail, uadmin, ucreated)| {
+            json!({
+                "id": uid,
+                "name": uname,
+                "email": uemail,
+                "is_admin": uadmin,
+                "created_at": ucreated
+            })
         })
-    }).collect();
+        .collect();
 
-    Ok(Json(serde_json::json!({ "users": users })))
+    Ok(Json(json!({ "users": result })))
 }
 
-// Check if any admin users exist (no authentication required)
-#[get("/api/admin/check")]
-pub async fn check_admin_exists(
-    conn: &State<Client>,
-) -> Result<Json<serde_json::Value>, Custom<String>> {
-    let admin_count = conn
-        .query_one("SELECT COUNT(*) as count FROM users WHERE is_admin = true", &[])
-        .await
+#[get("/admin/check")]
+pub fn check_admin_exists(mut db: DbConn) -> Result<Json<serde_json::Value>, Custom<String>> {
+    let count = users::table
+        .filter(users::is_admin.eq(true))
+        .count()
+        .get_result::<i64>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    let count: i64 = admin_count.get("count");
-    
-    Ok(Json(serde_json::json!({
+
+    Ok(Json(json!({
         "admin_exists": count > 0,
         "admin_count": count
     })))
 }
 
-// Create initial admin user (no authentication required for first setup)
-#[post("/api/admin/setup", data = "<user_data>")]
-pub async fn setup_initial_admin(
-    conn: &State<Client>,
+#[post("/admin/setup", format = "json", data = "<user_data>")]
+pub fn setup_initial_admin(
+    mut db: DbConn,
     user_data: Json<AdminUserCreateRequest>,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
-    // Check if any admin already exists
-    let admin_count = conn
-        .query_one("SELECT COUNT(*) as count FROM users WHERE is_admin = true", &[])
-        .await
+    let count = users::table
+        .filter(users::is_admin.eq(true))
+        .count()
+        .get_result::<i64>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-    
-    let count: i64 = admin_count.get("count");
-    
+
     if count > 0 {
         return Err(Custom(Status::Forbidden, "Admin user already exists".to_string()));
     }
 
-    // Check if email already exists
-    let existing = conn
-        .query_one("SELECT id FROM users WHERE email = $1", &[&user_data.email])
-        .await;
+    let existing = users::table
+        .filter(users::email.eq(&user_data.email))
+        .select(users::id)
+        .first::<i32>(&mut *db)
+        .ok();
 
-    match existing {
-        Ok(_) => return Err(Custom(Status::Conflict, "Email already exists".to_string())),
-        Err(_) => {} // Email doesn't exist, continue
+    if existing.is_some() {
+        return Err(Custom(Status::Conflict, "Email already exists".to_string()));
     }
 
-    // Hash password
     let hashed_password = hash(&user_data.password, DEFAULT_COST)
-        .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-
-    // Create user
-    let row = conn
-        .query_one(
-            "INSERT INTO users (name, email, password, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name, &user_data.email, &hashed_password, &user_data.is_admin]
-        )
-        .await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    Ok(Json(serde_json::json!({
-        "id": row.get::<_, i32>(0),
-        "name": row.get::<_, String>(1),
-        "email": row.get::<_, String>(2),
-        "is_admin": row.get::<_, bool>(3),
-        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(4)
-    })))
+    diesel::insert_into(users::table)
+        .values((
+            users::name.eq(&user_data.name),
+            users::email.eq(&user_data.email),
+            users::password.eq(&hashed_password),
+            users::is_admin.eq(&user_data.is_admin),
+        ))
+        .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+        .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+        .map(|(uid, uname, uemail, uadmin, ucreated)| {
+            Json(json!({
+                "id": uid,
+                "name": uname,
+                "email": uemail,
+                "is_admin": uadmin,
+                "created_at": ucreated
+            }))
+        })
 }
 
-// Create user (admin only)
-#[post("/api/admin/users", data = "<user_data>")]
-pub async fn create_user(
-    conn: &State<Client>,
+#[post("/admin/users", format = "json", data = "<user_data>")]
+pub fn create_user(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
     user_data: Json<AdminUserCreateRequest>,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Check if email already exists
-    let existing = conn
-        .query_one("SELECT id FROM users WHERE email = $1", &[&user_data.email])
-        .await;
+    let existing = users::table
+        .filter(users::email.eq(&user_data.email))
+        .select(users::id)
+        .first::<i32>(&mut *db)
+        .ok();
 
-    match existing {
-        Ok(_) => return Err(Custom(Status::Conflict, "Email already exists".to_string())),
-        Err(_) => {} // Email doesn't exist, continue
+    if existing.is_some() {
+        return Err(Custom(Status::Conflict, "Email already exists".to_string()));
     }
 
-    // Hash password
     let hashed_password = hash(&user_data.password, DEFAULT_COST)
-        .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-
-    // Create user
-    let row = conn
-        .query_one(
-            "INSERT INTO users (name, email, password, is_admin) VALUES ($1, $2, $3, $4) RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name, &user_data.email, &hashed_password, &user_data.is_admin]
-        )
-        .await
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    Ok(Json(serde_json::json!({
-        "id": row.get::<_, i32>(0),
-        "name": row.get::<_, String>(1),
-        "email": row.get::<_, String>(2),
-        "is_admin": row.get::<_, bool>(3),
-        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(4)
-    })))
+    diesel::insert_into(users::table)
+        .values((
+            users::name.eq(&user_data.name),
+            users::email.eq(&user_data.email),
+            users::password.eq(&hashed_password),
+            users::is_admin.eq(&user_data.is_admin),
+        ))
+        .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+        .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+        .map(|(uid, uname, uemail, uadmin, ucreated)| {
+            Json(json!({
+                "id": uid,
+                "name": uname,
+                "email": uemail,
+                "is_admin": uadmin,
+                "created_at": ucreated
+            }))
+        })
 }
 
-// Update user (admin only)
-#[put("/api/admin/users/<user_id>", data = "<user_data>")]
-pub async fn update_user(
-    conn: &State<Client>,
+#[put("/admin/users/<uid>", format = "json", data = "<user_data>")]
+pub fn update_user(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-    user_id: i32,
+    uid: i32,
     user_data: Json<AdminUserUpdateRequest>,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Check if user exists
-    let existing = conn
-        .query_one("SELECT id FROM users WHERE id = $1", &[&user_id])
-        .await;
+    users::table
+        .filter(users::id.eq(uid))
+        .select(users::id)
+        .first::<i32>(&mut *db)
+        .map_err(|_| Custom(Status::NotFound, "User not found".to_string()))?;
 
-    match existing {
-        Ok(_) => {} // User exists, continue
-        Err(_) => return Err(Custom(Status::NotFound, "User not found".to_string())),
-    }
-
-    // Check email uniqueness if email is being updated
-    if let Some(ref email) = user_data.email {
-        let email_check = conn
-            .query_one("SELECT id FROM users WHERE email = $1 AND id != $2", &[&email, &user_id])
-            .await;
-
-        match email_check {
-            Ok(_) => return Err(Custom(Status::Conflict, "Email already exists".to_string())),
-            Err(_) => {} // Email is available, continue
+    if let Some(ref email_val) = user_data.email {
+        let email_taken = users::table
+            .filter(users::email.eq(email_val))
+            .filter(users::id.ne(uid))
+            .select(users::id)
+            .first::<i32>(&mut *db)
+            .ok();
+        if email_taken.is_some() {
+            return Err(Custom(Status::Conflict, "Email already exists".to_string()));
         }
     }
 
-    // Handle different update scenarios
-    let row = if user_data.name.is_some() && user_data.email.is_some() && user_data.password.is_some() && user_data.is_admin.is_some() {
-        // Update all fields
-        let hashed_password = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-        
-        conn.query_one(
-            "UPDATE users SET name = $1, email = $2, password = $3, is_admin = $4 WHERE id = $5 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name.as_ref().unwrap(), &user_data.email.as_ref().unwrap(), &hashed_password, &user_data.is_admin.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+    let result = if user_data.name.is_some()
+        && user_data.email.is_some()
+        && user_data.password.is_some()
+        && user_data.is_admin.is_some()
+    {
+        let hashed = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set((
+                users::name.eq(user_data.name.as_ref().unwrap()),
+                users::email.eq(user_data.email.as_ref().unwrap()),
+                users::password.eq(&hashed),
+                users::is_admin.eq(user_data.is_admin.as_ref().unwrap()),
+            ))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.name.is_some() && user_data.email.is_some() && user_data.is_admin.is_some() {
-        // Update name, email, and admin status
-        conn.query_one(
-            "UPDATE users SET name = $1, email = $2, is_admin = $3 WHERE id = $4 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name.as_ref().unwrap(), &user_data.email.as_ref().unwrap(), &user_data.is_admin.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set((
+                users::name.eq(user_data.name.as_ref().unwrap()),
+                users::email.eq(user_data.email.as_ref().unwrap()),
+                users::is_admin.eq(user_data.is_admin.as_ref().unwrap()),
+            ))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.name.is_some() && user_data.email.is_some() {
-        // Update name and email
-        conn.query_one(
-            "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name.as_ref().unwrap(), &user_data.email.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set((
+                users::name.eq(user_data.name.as_ref().unwrap()),
+                users::email.eq(user_data.email.as_ref().unwrap()),
+            ))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.name.is_some() && user_data.password.is_some() {
-        // Update name and password
-        let hashed_password = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-        
-        conn.query_one(
-            "UPDATE users SET name = $1, password = $2 WHERE id = $3 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name.as_ref().unwrap(), &hashed_password, &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        let hashed = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set((users::name.eq(user_data.name.as_ref().unwrap()), users::password.eq(&hashed)))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.email.is_some() && user_data.password.is_some() {
-        // Update email and password
-        let hashed_password = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-        
-        conn.query_one(
-            "UPDATE users SET email = $1, password = $2 WHERE id = $3 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.email.as_ref().unwrap(), &hashed_password, &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        let hashed = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set((users::email.eq(user_data.email.as_ref().unwrap()), users::password.eq(&hashed)))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.name.is_some() {
-        // Update only name
-        conn.query_one(
-            "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.name.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set(users::name.eq(user_data.name.as_ref().unwrap()))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.email.is_some() {
-        // Update only email
-        conn.query_one(
-            "UPDATE users SET email = $1 WHERE id = $2 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.email.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set(users::email.eq(user_data.email.as_ref().unwrap()))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.password.is_some() {
-        // Update only password
-        let hashed_password = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Password hash error: {}", e)))?;
-        
-        conn.query_one(
-            "UPDATE users SET password = $1 WHERE id = $2 RETURNING id, name, email, is_admin, created_at",
-            &[&hashed_password, &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        let hashed = hash(user_data.password.as_ref().unwrap(), DEFAULT_COST)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set(users::password.eq(&hashed))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else if user_data.is_admin.is_some() {
-        // Update only admin status
-        conn.query_one(
-            "UPDATE users SET is_admin = $1 WHERE id = $2 RETURNING id, name, email, is_admin, created_at",
-            &[&user_data.is_admin.as_ref().unwrap(), &user_id]
-        ).await.map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
+        diesel::update(users::table.filter(users::id.eq(uid)))
+            .set(users::is_admin.eq(user_data.is_admin.as_ref().unwrap()))
+            .returning((users::id, users::name, users::email, users::is_admin, users::created_at))
+            .get_result::<(i32, String, String, bool, DateTime<Utc>)>(&mut *db)
     } else {
         return Err(Custom(Status::BadRequest, "No fields to update".to_string()));
     };
 
-    Ok(Json(serde_json::json!({
-        "id": row.get::<_, i32>(0),
-        "name": row.get::<_, String>(1),
-        "email": row.get::<_, String>(2),
-        "is_admin": row.get::<_, bool>(3),
-        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(4)
-    })))
+    result
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+        .map(|(uid_res, uname, uemail, uadmin, ucreated)| {
+            Json(json!({
+                "id": uid_res,
+                "name": uname,
+                "email": uemail,
+                "is_admin": uadmin,
+                "created_at": ucreated
+            }))
+        })
 }
 
-// Delete user (admin only)
-#[delete("/api/admin/users/<user_id>")]
-pub async fn delete_user(
-    conn: &State<Client>,
+#[delete("/admin/users/<uid>")]
+pub fn delete_user(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-    user_id: i32,
+    uid: i32,
 ) -> Result<Status, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Prevent admin from deleting themselves
-    if user_id == auth_user.user_id {
+    if uid == auth_user.user_id {
         return Err(Custom(Status::BadRequest, "Cannot delete your own account".to_string()));
     }
 
-    // Check if user exists
-    let existing = conn
-        .query_one("SELECT id FROM users WHERE id = $1", &[&user_id])
-        .await;
+    users::table
+        .filter(users::id.eq(uid))
+        .select(users::id)
+        .first::<i32>(&mut *db)
+        .map_err(|_| Custom(Status::NotFound, "User not found".to_string()))?;
 
-    match existing {
-        Ok(_) => {} // User exists, continue
-        Err(_) => return Err(Custom(Status::NotFound, "User not found".to_string())),
-    }
-
-    // Delete user (cascade will handle recipes and other data)
-    conn.execute("DELETE FROM users WHERE id = $1", &[&user_id])
-        .await
+    diesel::delete(users::table.filter(users::id.eq(uid)))
+        .execute(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
     Ok(Status::Ok)
 }
 
-// Get all recipes (admin only)
-#[get("/api/admin/recipes")]
-pub async fn get_all_recipes(
-    conn: &State<Client>,
+#[get("/admin/recipes")]
+pub fn get_all_recipes(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    let rows = conn
-        .query(
-            "SELECT r.id, r.title, r.short_description, r.author_id, u.name as author_name, u.email as author_email, 
-                    r.is_public, r.created_at, r.updated_at
-             FROM recipes r 
-             LEFT JOIN users u ON r.author_id = u.id 
-             ORDER BY r.created_at DESC",
-            &[]
-        )
-        .await
+    let rows = recipes::table
+        .left_join(users::table)
+        .select((
+            recipes::id,
+            recipes::title,
+            recipes::short_description,
+            recipes::author_id,
+            users::name.nullable(),
+            users::email.nullable(),
+            recipes::is_public,
+            recipes::created_at,
+            recipes::updated_at,
+        ))
+        .order(recipes::created_at.desc())
+        .load::<(
+            i32,
+            String,
+            Option<String>,
+            Option<i32>,
+            Option<String>,
+            Option<String>,
+            Option<bool>,
+            DateTime<Utc>,
+            DateTime<Utc>,
+        )>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let recipes: Vec<serde_json::Value> = rows.iter().map(|row| {
-        serde_json::json!({
-            "id": row.get::<_, Option<i32>>(0),
-            "title": row.get::<_, String>(1),
-            "short_description": row.get::<_, Option<String>>(2),
-            "author_id": row.get::<_, Option<i32>>(3),
-            "author_name": row.get::<_, Option<String>>(4),
-            "author_email": row.get::<_, Option<String>>(5),
-            "is_public": row.get::<_, bool>(6),
-            "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(7),
-            "updated_at": row.get::<_, chrono::DateTime<chrono::Utc>>(8)
-        })
-    }).collect();
+    let result: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(
+            |(rid, rtitle, rshort, rauthor_id, rauthor_name, rauthor_email, ris_public, rcreated, rupdated)| {
+                json!({
+                    "id": rid,
+                    "title": rtitle,
+                    "short_description": rshort,
+                    "author_id": rauthor_id,
+                    "author_name": rauthor_name,
+                    "author_email": rauthor_email,
+                    "is_public": ris_public,
+                    "created_at": rcreated,
+                    "updated_at": rupdated
+                })
+            },
+        )
+        .collect();
 
-    Ok(Json(serde_json::json!({ "recipes": recipes })))
+    Ok(Json(json!({ "recipes": result })))
 }
 
-// Delete any recipe (admin only)
-#[delete("/api/admin/recipes/<recipe_id>")]
-pub async fn delete_any_recipe(
-    conn: &State<Client>,
+#[delete("/admin/recipes/<recipe_rid>")]
+pub fn delete_any_recipe(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
-    recipe_id: i32,
+    recipe_rid: i32,
 ) -> Result<Status, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Check if recipe exists
-    let existing = conn
-        .query_one("SELECT id FROM recipes WHERE id = $1", &[&recipe_id])
-        .await;
+    recipes::table
+        .filter(recipes::id.eq(recipe_rid))
+        .select(recipes::id)
+        .first::<i32>(&mut *db)
+        .map_err(|_| Custom(Status::NotFound, "Recipe not found".to_string()))?;
 
-    match existing {
-        Ok(_) => {} // Recipe exists, continue
-        Err(_) => return Err(Custom(Status::NotFound, "Recipe not found".to_string())),
-    }
-
-    // Get all image file paths before deleting the recipe
-    let image_rows = conn
-        .query("SELECT file_path FROM images WHERE recipe_id = $1", &[&recipe_id])
-        .await
+    let image_rows: Vec<String> = images::table
+        .select(images::file_path)
+        .filter(images::recipe_id.eq(recipe_rid))
+        .load::<String>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    // Collect file paths
-    let file_paths: Vec<String> = image_rows.iter()
-        .filter_map(|row| row.get::<_, Option<String>>(0))
-        .collect();
-
-    // Delete recipe (cascade will handle images, categories, etc.)
-    conn.execute("DELETE FROM recipes WHERE id = $1", &[&recipe_id])
-        .await
+    diesel::delete(recipes::table.filter(recipes::id.eq(recipe_rid)))
+        .execute(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    // Delete image files from filesystem (don't fail if files don't exist)
-    use std::path::Path;
     use std::fs;
-    
-    for file_path in file_paths {
+    use std::path::Path;
+    for file_path in image_rows {
         if Path::new(&file_path).exists() {
             if let Err(e) = fs::remove_file(&file_path) {
                 eprintln!("Warning: Failed to delete file {}: {}", file_path, e);
@@ -398,96 +400,92 @@ pub async fn delete_any_recipe(
     Ok(Status::Ok)
 }
 
-// Get all categories (admin only)
-#[get("/api/admin/categories")]
-pub async fn get_all_categories(
-    conn: &State<Client>,
+#[get("/admin/categories")]
+pub fn get_all_categories(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    let rows = conn
-        .query("SELECT id, name, created_at FROM categories ORDER BY name", &[])
-        .await
+    let rows = categories::table
+        .select((categories::id, categories::name, categories::created_at))
+        .order(categories::name.asc())
+        .load::<(i32, String, DateTime<Utc>)>(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    let categories: Vec<serde_json::Value> = rows.iter().map(|row| {
-        serde_json::json!({
-            "id": row.get::<_, i32>(0),
-            "name": row.get::<_, String>(1),
-            "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(2)
+    let result: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|(cid, cname, ccreated)| {
+            json!({
+                "id": cid,
+                "name": cname,
+                "created_at": ccreated
+            })
         })
-    }).collect();
+        .collect();
 
-    Ok(Json(serde_json::json!({ "categories": categories })))
+    Ok(Json(json!({ "categories": result })))
 }
 
-// Create category (admin only)
-#[post("/api/admin/categories", data = "<category_data>")]
-pub async fn create_category(
-    conn: &State<Client>,
+#[post("/admin/categories", format = "json", data = "<category_data>")]
+pub fn create_category(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
     category_data: Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Extract category name from request
-    let name = category_data.get("name")
+    let name_val = category_data
+        .get("name")
         .and_then(|n| n.as_str())
         .ok_or_else(|| Custom(Status::BadRequest, "Category name is required".to_string()))?;
 
-    if name.trim().is_empty() {
+    if name_val.trim().is_empty() {
         return Err(Custom(Status::BadRequest, "Category name cannot be empty".to_string()));
     }
 
-    // Check if category already exists
-    let existing = conn
-        .query_one("SELECT id FROM categories WHERE name = $1", &[&name])
-        .await;
-
-    match existing {
-        Ok(_) => return Err(Custom(Status::Conflict, "Category already exists".to_string())),
-        Err(_) => {} // Category doesn't exist, continue
+    let existing = categories::table
+        .filter(categories::name.eq(name_val))
+        .select(categories::id)
+        .first::<i32>(&mut *db)
+        .ok();
+    if existing.is_some() {
+        return Err(Custom(Status::Conflict, "Category already exists".to_string()));
     }
 
-    // Create category
-    let row = conn
-        .query_one(
-            "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id, name, created_at",
-            &[&name, &name.to_lowercase().replace(' ', "-")]
-        )
-        .await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
-
-    Ok(Json(serde_json::json!({
-        "id": row.get::<_, i32>(0),
-        "name": row.get::<_, String>(1),
-        "created_at": row.get::<_, chrono::DateTime<chrono::Utc>>(2)
-    })))
+    diesel::insert_into(categories::table)
+        .values((
+            categories::name.eq(name_val),
+            categories::slug.eq(name_val.to_lowercase().replace(' ', "-")),
+        ))
+        .returning((categories::id, categories::name, categories::created_at))
+        .get_result::<(i32, String, DateTime<Utc>)>(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+        .map(|(cid, cname, ccreated)| {
+            Json(json!({
+                "id": cid,
+                "name": cname,
+                "created_at": ccreated
+            }))
+        })
 }
 
-// Delete category (admin only)
-#[delete("/api/admin/categories/<category_id>")]
-pub async fn delete_category(
-    conn: &State<Client>,
+#[delete("/admin/categories/<category_id>")]
+pub fn delete_category(
+    mut db: DbConn,
     auth_user: AuthenticatedUser,
     category_id: i32,
 ) -> Result<Status, Custom<String>> {
     require_admin(&auth_user)?;
 
-    // Check if category exists
-    let existing = conn
-        .query_one("SELECT id FROM categories WHERE id = $1", &[&category_id])
-        .await;
+    categories::table
+        .filter(categories::id.eq(category_id))
+        .select(categories::id)
+        .first::<i32>(&mut *db)
+        .map_err(|_| Custom(Status::NotFound, "Category not found".to_string()))?;
 
-    match existing {
-        Ok(_) => {} // Category exists, continue
-        Err(_) => return Err(Custom(Status::NotFound, "Category not found".to_string())),
-    }
-
-    // Delete category (cascade will handle recipe_category associations)
-    conn.execute("DELETE FROM categories WHERE id = $1", &[&category_id])
-        .await
+    diesel::delete(categories::table.filter(categories::id.eq(category_id)))
+        .execute(&mut *db)
         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
     Ok(Status::Ok)

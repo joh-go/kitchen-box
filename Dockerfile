@@ -2,56 +2,9 @@
 ARG TARGETARCH=amd64
 ARG TARGETOS=linux
 
-# Stage 1: Build frontend
-FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as frontend-builder
-
-# Install system dependencies for frontend
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    binaryen \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js and npm for Tailwind CSS processing
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
-    apt-get install -y nodejs
-
-# Install trunk for frontend building
-RUN cargo install trunk
-
-# Install WebAssembly target for frontend compilation
-RUN rustup target add wasm32-unknown-unknown
-
-# Set working directory
-WORKDIR /app
-
-# Copy frontend files
-COPY frontend/Cargo.toml frontend/Cargo.lock ./frontend/
-COPY shared-types/Cargo.toml ./shared-types/
-
-# Create dummy source files to cache dependencies
-RUN mkdir -p frontend/src shared-types/src
-RUN echo "fn main() {}" > frontend/src/main.rs
-RUN echo "fn main() {}" > shared-types/src/lib.rs
-
-# Build frontend dependencies
-RUN cd frontend && cargo build
-RUN rm -rf frontend/src shared-types/src
-
-# Copy actual source code
-COPY frontend ./frontend
-COPY shared-types ./shared-types
-
-RUN cd frontend && trunk build --release
-
-# Install Tailwind CSS locally in frontend directory
-RUN cd frontend && npm install
-
-# Build frontend with PostCSS
-RUN cd frontend && npm run build-css
-RUN cd frontend && ls -la src/output.css
-RUN cd frontend && cp src/output.css dist/
+# Stage 1: Prepare frontend (using pre-built dist)
+FROM scratch as frontend-builder
+COPY frontend/dist /frontend/dist
 
 # Stage 2: Build backend
 FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as backend-builder
@@ -114,7 +67,7 @@ WORKDIR /app
 
 # Copy built applications from builder stages
 COPY --from=backend-builder /app/target/release/backend /app/backend
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+COPY --from=frontend-builder /frontend/dist /app/frontend/dist
 
 # Copy database migrations
 COPY backend/migrations /app/migrations

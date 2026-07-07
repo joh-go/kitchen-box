@@ -1,60 +1,86 @@
-use rocket::serde::json::Json;
-use rocket::{State, response::status::Custom, http::Status};
-use tokio_postgres::Client;
-use crate::models::User;
-use crate::db::execute_query;
+use crate::db::DbConn;
+use crate::schema::users::dsl::*;
 use bcrypt::{hash, DEFAULT_COST};
+use diesel::prelude::*;
+use rocket::http::Status;
+use rocket::response::status::Custom;
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, put};
 
-#[post("/api/users", data = "<user>")]
-pub async fn add_user(
-    conn: &State<Client>,
-    user: Json<User>
-) -> Result<Json<Vec<User>>, Custom<String>> {
-    // Hash the password before storing
-    let password = user.password.as_ref().ok_or_else(|| Custom(Status::BadRequest, "Password is required".to_string()))?;
-    let hashed_password = hash(password, DEFAULT_COST)
-        .map_err(|e| Custom(Status::InternalServerError, format!("Failed to hash password: {}", e)))?;
-    
-    execute_query(
-        conn,
-        "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
-        &[&user.name, &user.email, &hashed_password]
-    ).await?;
-    get_users(conn).await
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UserInput {
+    pub name: String,
+    pub email: String,
+    pub password: Option<String>,
 }
 
-#[get("/api/users")]
-pub async fn get_users(conn: &State<Client>) -> Result<Json<Vec<User>>, Custom<String>> {
-    get_users_from_db(conn).await.map(Json)
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct UserResponse {
+    pub id: Option<i32>,
+    pub name: String,
+    pub email: String,
 }
 
-pub async fn get_users_from_db(client: &Client) -> Result<Vec<User>, Custom<String>> {
-    let users = client
-        .query("SELECT id, name, email FROM users", &[]).await
-        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?
-        .iter()
-        .map(|row| User { id: Some(row.get(0)), name: row.get(1), email: row.get(2), password: None })
-        .collect::<Vec<User>>();
+#[post("/users", format = "json", data = "<user>")]
+pub fn add_user(mut db: DbConn, user: Json<UserInput>) -> Result<Json<Vec<UserResponse>>, Custom<String>> {
+    let pwd = user
+        .password
+        .as_ref()
+        .ok_or_else(|| Custom(Status::BadRequest, "Password is required".to_string()))?;
+    let hashed_password =
+        hash(pwd, DEFAULT_COST).map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
-    Ok(users)
+    diesel::insert_into(users)
+        .values((
+            name.eq(&user.name),
+            email.eq(&user.email),
+            password.eq(&hashed_password),
+        ))
+        .execute(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    get_users_internal(&mut *db).map(Json)
 }
 
-#[put("/api/users/<id>", data = "<user>")]
-pub async fn update_user(
-    conn: &State<Client>,
-    id: i32,
-    user: Json<User>
-) -> Result<Json<Vec<User>>, Custom<String>> {
-    execute_query(
-        conn,
-        "UPDATE users SET name = $1, email = $2 WHERE id = $3",
-        &[&user.name, &user.email, &id]
-    ).await?;
-    get_users(conn).await
+#[get("/users")]
+pub fn get_users(mut db: DbConn) -> Result<Json<Vec<UserResponse>>, Custom<String>> {
+    get_users_internal(&mut *db).map(Json)
 }
 
-#[delete("/api/users/<id>")]
-pub async fn delete_user(conn: &State<Client>, id: i32) -> Result<Status, Custom<String>> {
-    execute_query(conn, "DELETE FROM users WHERE id = $1", &[&id]).await?;
+fn get_users_internal(db: &mut diesel::PgConnection) -> Result<Vec<UserResponse>, Custom<String>> {
+    let results = users
+        .select((id, name, email))
+        .load::<(i32, String, String)>(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    Ok(results
+        .into_iter()
+        .map(|(uid, uname, uemail)| UserResponse {
+            id: Some(uid),
+            name: uname,
+            email: uemail,
+        })
+        .collect())
+}
+
+#[put("/users/<uid>", format = "json", data = "<user>")]
+pub fn update_user(
+    mut db: DbConn,
+    uid: i32,
+    user: Json<UserInput>,
+) -> Result<Json<Vec<UserResponse>>, Custom<String>> {
+    diesel::update(users.filter(id.eq(uid)))
+        .set((name.eq(&user.name), email.eq(&user.email)))
+        .execute(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    get_users_internal(&mut *db).map(Json)
+}
+
+#[delete("/users/<uid>")]
+pub fn delete_user(mut db: DbConn, uid: i32) -> Result<Status, Custom<String>> {
+    diesel::delete(users.filter(id.eq(uid)))
+        .execute(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     Ok(Status::NoContent)
 }

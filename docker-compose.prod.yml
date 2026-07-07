@@ -13,6 +13,7 @@ services:
       RUST_LOG: info
       ROCKET_ADDRESS: 0.0.0.0
       ROCKET_PORT: 8000
+      FRONTEND_DIST: /app/frontend/dist
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
     volumes:
       - recipes_data:/app/var/lib/postgresql/data
