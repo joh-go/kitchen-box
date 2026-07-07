@@ -32,7 +32,7 @@ pub enum Page {
     AdminUsers,
 }
 
-fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>, lang: Language) -> Html {
+fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>, _lang: Language) -> Html {
     match page {
         Page::Home => {
             let on_edit = {
@@ -94,7 +94,6 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             html! { <crate::pages::view::ViewRecipe id={*id} on_edit={on_edit} on_back={on_back} /> }
         }
         Page::AdminSetup => {
-            // Double-check admin existence before showing setup page
             html! { <AdminSetupWithGuard /> }
         }
         Page::AdminUsers => {
@@ -119,7 +118,7 @@ fn admin_setup_with_guard() -> Html {
     {
         let admin_exists = admin_exists.clone();
         let loading = loading.clone();
-        
+
         use_effect_with((), move |_| {
             wasm_bindgen_futures::spawn_local(async move {
                 match api::check_admin_exists().await {
@@ -128,7 +127,6 @@ fn admin_setup_with_guard() -> Html {
                         loading.set(false);
                     }
                     Err(_) => {
-                        // If check fails, assume admin exists
                         admin_exists.set(Some(true));
                         loading.set(false);
                     }
@@ -140,36 +138,31 @@ fn admin_setup_with_guard() -> Html {
 
     if *loading {
         html! {
-            <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-                <div class="text-center">
-                    <div class="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p class="text-slate-600 dark:text-slate-400">{t("loading", lang)}</p>
+            <div class="loading-page">
+                <div class="loading-page-inner">
+                    <div class="spinner"><div class="spinner-circle"></div></div>
+                    <p class="loading-page-text">{t("loading", lang)}</p>
                 </div>
             </div>
         }
     } else if let Some(true) = *admin_exists {
-        // Admin already exists, redirect to home
         html! {
-            <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center">
-                <div class="text-center max-w-md mx-auto p-6">
-                    <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="loading-page">
+                <div class="card" style="max-width: 28rem; margin: 0 auto; padding: var(--space-6); text-align: center;">
+                    <div class="flex justify-center mb-4">
+                        <svg width="2rem" height="2rem" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
                     </div>
-                    <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                        {t("setup_complete", lang)}
-                    </h2>
-                    <p class="text-slate-600 dark:text-slate-400 mb-6">
-                        {t("setup_complete_desc", lang)}
-                    </p>
-                    <button 
+                    <h2 class="section-title mb-4">{t("setup_complete", lang)}</h2>
+                    <p class="text-muted mb-6">{t("setup_complete_desc", lang)}</p>
+                    <button
                         onclick={Callback::from(|_| {
                             if let Some(window) = web_sys::window() {
                                 let _ = window.location().set_href("/");
                             }
                         })}
-                        class="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                        class="btn btn-primary"
                     >
                         {t("go_to_login", lang)}
                     </button>
@@ -177,7 +170,6 @@ fn admin_setup_with_guard() -> Html {
             </div>
         }
     } else {
-        // No admin exists, show setup
         html! { <AdminSetupPage /> }
     }
 }
@@ -190,8 +182,7 @@ fn app() -> Html {
     let admin_check_done = use_state(|| false);
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
-    // Initialize page based on current URL
+
     {
         let page = page.clone();
         use_effect_with((), move |_| {
@@ -229,12 +220,11 @@ fn app() -> Html {
             || ()
         });
     }
-    
-    // Check for admin existence on app startup
+
     {
         let admin_check_done = admin_check_done.clone();
         let page = page.clone();
-        
+
         use_effect_with(admin_check_done.clone(), move |_| {
             if !*admin_check_done {
                 wasm_bindgen_futures::spawn_local(async move {
@@ -245,7 +235,6 @@ fn app() -> Html {
                             }
                         }
                         Err(e) => {
-                            // If check fails, assume admin exists to avoid showing setup unnecessarily
                             eprintln!("Failed to check admin existence: {}", e);
                         }
                     }
@@ -258,7 +247,6 @@ fn app() -> Html {
     let navigate = {
         let page = page.clone();
         Callback::from(move |p: Page| {
-            // Update URL based on page using History API for client-side routing
             if let Some(window) = web_sys::window() {
                 let history = window.history().unwrap();
                 let path = match p {
@@ -306,222 +294,208 @@ fn app() -> Html {
         })
     };
 
-    // Clone the callback for desktop search
     let desktop_search_callback = on_search_input.clone();
 
-    // Create mobile navigation callbacks
     let mobile_nav_home = navigate.reform(|_: yew::MouseEvent| Page::Home);
     let mobile_nav_add = navigate.reform(|_: yew::MouseEvent| Page::Add);
     let mobile_nav_settings = navigate.reform(|_: yew::MouseEvent| Page::Settings);
     let mobile_nav_menu = toggle_mobile_menu.clone();
 
     html! {
-        <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div class="app-wrapper">
             // Mobile Menu Overlay
             if *mobile_menu_open {
-                <div 
-                    class="lg:hidden fixed inset-0 bg-black/50 z-40 animate-fade-in"
+                <div
+                    class="mobile-backdrop"
                     onclick={close_mobile_menu.clone()}
                 ></div>
             }
 
             // Mobile Sidebar
             if *mobile_menu_open {
-                <div class="lg:hidden fixed inset-y-0 left-0 w-72 glass z-50 mobile-menu-enter">
-                    <div class="flex flex-col h-full">
-                        // Mobile Header
-                        <div class="flex items-center justify-between p-4 border-b border-emerald-100 dark:border-slate-700">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                                    <span class="text-white text-lg">{"🍳"}</span>
-                                </div>
-                                <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200">
-                                    {t("menu", lang)}
-                                </h2>
+                <div class="mobile-menu">
+                    <div class="mobile-menu-header">
+                        <div class="mobile-menu-title">
+                            <div class="mobile-menu-title-icon">
+                                <span>{"🍳"}</span>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <ThemeToggle class={""} />
-                                <button 
-                                    onclick={close_mobile_menu.clone()}
-                                    class="touch-target p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-700 transition-colors"
-                                >
-                                    <svg class="w-5 h-5 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
+                            <h2 class="mobile-menu-title-text">
+                                {t("menu", lang)}
+                            </h2>
                         </div>
+                        <div class="mobile-menu-actions">
+                            <ThemeToggle class={""} />
+                            <button
+                                onclick={close_mobile_menu.clone()}
+                                class="mobile-menu-close"
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
 
-                        // Mobile Navigation
-                        <div class="flex-1 overflow-y-auto p-4">
-                            <Sidebar 
-                                on_navigate={navigate.clone()} 
-                                on_mobile_close={close_mobile_menu.clone()}
-                            />
-                        </div>
+                    <div class="mobile-menu-body">
+                        <Sidebar
+                            on_navigate={navigate.clone()}
+                            on_mobile_close={close_mobile_menu.clone()}
+                        />
                     </div>
                 </div>
             }
 
-            // Modern Header with Mobile Menu
-            <header class="glass sticky top-0 z-30 border-b border-emerald-100 dark:border-slate-700">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex items-center justify-between h-16 sm:h-20">
-                        // Logo and Title
-                        <div class="flex items-center space-x-3 animate-fade-in">
-                            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-                                <span class="text-white text-lg sm:text-xl">{"🍳"}</span>
-                            </div>
-                            <div>
-                                <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent">
-                                    {t("app_name", lang)}
-                                </h1>
-                                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 hidden sm:block">
-                                    {t("app_tagline", lang)}
-                                </p>
-                            </div>
+            // Header
+            <header class="header">
+                <div class="header-inner">
+                    <div class="header-logo">
+                        <div class="header-logo-icon">
+                            <span>{"🍳"}</span>
                         </div>
-
-                        // Mobile Menu Button (hidden on desktop)
-                        <button 
-                            onclick={toggle_mobile_menu}
-                            class="lg:hidden touch-target p-2 rounded-lg hover:bg-emerald-100 dark:hover:bg-slate-700 transition-colors"
-                        >
-                            <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                            </svg>
-                        </button>
-
-                        // Desktop Navigation
-                        <nav class="hidden lg:flex items-center space-x-6">
-                            <div class="relative">
-                                <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder={t("search_placeholder", lang)}
-                                    value={search_value.clone()}
-                                    oninput={Callback::from(move |e: yew::InputEvent| {
-                                        let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
-                                        desktop_search_callback.emit(input.value());
-                                    })}
-                                    class="w-64 pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                />
-                            </div>
-                            <LanguageSwitcher class={""} />
-                            <ThemeToggle class={""} />
-                            <div class="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
-                                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse-slow"></span>
-                                <span>{t("ready_to_cook", lang)}</span>
-                            </div>
-                        </nav>
+                        <div>
+                            <h1 class="header-title">
+                                {t("app_name", lang)}
+                            </h1>
+                            <p class="header-tagline">
+                                {t("app_tagline", lang)}
+                            </p>
+                        </div>
                     </div>
+
+                    // Mobile Menu Button
+                    <button
+                        onclick={toggle_mobile_menu}
+                        class="mobile-only touch-target btn-icon btn-ghost"
+                    >
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+
+                    // Desktop Navigation
+                    <nav class="header-nav">
+                        <div class="filter-search-inner">
+                            <svg class="filter-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder={t("search_placeholder", lang)}
+                                value={search_value.clone()}
+                                oninput={Callback::from(move |e: yew::InputEvent| {
+                                    let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+                                    desktop_search_callback.emit(input.value());
+                                })}
+                                class="form-input"
+                                style="width: 16rem; padding-left: 2.5rem;"
+                            />
+                        </div>
+                        <LanguageSwitcher class={""} />
+                        <ThemeToggle class={""} />
+                        <div class="header-status">
+                            <span class="header-status-dot"></span>
+                            <span>{t("ready_to_cook", lang)}</span>
+                        </div>
+                    </nav>
                 </div>
             </header>
 
             // Main Content Area
-            <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-                    // Sidebar (hidden on mobile, shown on desktop)
-                    <aside class="hidden lg:block lg:col-span-3">
-                        <div class="sticky top-24">
+            <main class="main-content">
+                <div class="main-grid">
+                    // Sidebar (desktop)
+                    <aside class="main-sidebar">
+                        <div class="sidebar-desktop">
                             <Sidebar on_navigate={navigate.clone()} />
                         </div>
                     </aside>
 
                     // Main Content
-                    <div class="lg:col-span-9">
-                        <div class="animate-fade-in">
+                    <div class="main-content-area">
+                        <div class="page-enter">
                             { render_page(&current, navigate.clone(), search_value, on_search_input, lang) }
                         </div>
                     </div>
                 </div>
             </main>
 
-            // Mobile Bottom Navigation (shown only on mobile)
-            <nav class="lg:hidden fixed bottom-0 left-0 right-0 glass border-t border-emerald-100 dark:border-slate-700 z-30">
-                <div class="grid grid-cols-4 gap-1">
-                    <button 
+            // Mobile Bottom Navigation
+            <nav class="mobile-bottom-nav">
+                <div class="mobile-bottom-nav-inner">
+                    <button
                         onclick={mobile_nav_home}
-                        class="touch-target flex flex-col items-center justify-center py-3 px-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                        class="mobile-nav-btn"
                     >
-                        <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span class="text-xs font-medium">{t("nav_home", lang)}</span>
+                        <span>{t("nav_home", lang)}</span>
                     </button>
-                    
-                    // Add Recipe - only show when logged in
+
                     {if api::is_logged_in() {
                         html! {
-                            <button 
+                            <button
                                 onclick={mobile_nav_add}
-                                class="touch-target flex flex-col items-center justify-center py-3 px-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                                class="mobile-nav-btn"
                             >
-                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
-                                <span class="text-xs font-medium">{t("nav_add", lang)}</span>
+                                <span>{t("nav_add", lang)}</span>
                             </button>
                         }
                     } else {
                         html! {
                             <div class="flex flex-col items-center justify-center py-3 px-2">
-                                <div class="w-5 h-5 mb-1"></div>
-                                <span class="text-xs font-medium"></span>
+                                <div class="w-full" style="height: 1.25rem; margin-bottom: var(--space-1);"></div>
                             </div>
                         }
                     }}
-                    
-                    // Settings - only show when logged in
+
                     {if api::is_logged_in() {
                         html! {
-                            <button 
+                            <button
                                 onclick={mobile_nav_settings}
-                                class="touch-target flex flex-col items-center justify-center py-3 px-2 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                                class="mobile-nav-btn mobile-nav-btn-inactive"
                             >
-                                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
-                                <span class="text-xs font-medium">{t("nav_settings", lang)}</span>
+                                <span>{t("nav_settings", lang)}</span>
                             </button>
                         }
                     } else {
                         html! {
                             <div class="flex flex-col items-center justify-center py-3 px-2">
-                                <div class="w-5 h-5 mb-1"></div>
-                                <span class="text-xs font-medium"></span>
+                                <div class="w-full" style="height: 1.25rem; margin-bottom: var(--space-1);"></div>
                             </div>
                         }
                     }}
-                    
-                    <button 
+
+                    <button
                         onclick={mobile_nav_menu}
-                        class="touch-target flex flex-col items-center justify-center py-3 px-2 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                        class="mobile-nav-btn mobile-nav-btn-inactive"
                     >
-                        <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
-                        <span class="text-xs font-medium">{t("menu", lang)}</span>
+                        <span>{t("menu", lang)}</span>
                     </button>
                 </div>
             </nav>
 
-            // Add padding for mobile bottom nav
-            <div class="lg:hidden h-20"></div>
+            <div class="mobile-nav-spacer"></div>
         </div>
     }
 }
 
 fn main() {
-    // Initialize theme after a short delay to ensure DOM is ready
     wasm_bindgen_futures::spawn_local(async move {
         gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
         crate::theme::init_theme();
     });
-    
+
     yew::Renderer::<AppWrapper>::new().render();
 }
 

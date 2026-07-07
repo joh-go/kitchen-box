@@ -1,10 +1,26 @@
 # Multi-stage production Dockerfile with multi-architecture support
-ARG TARGETARCH=amd64
+ARG TARGETARCH=aarch64
 ARG TARGETOS=linux
 
-# Stage 1: Prepare frontend (using pre-built dist)
-FROM scratch as frontend-builder
-COPY frontend/dist /frontend/dist
+# Stage 1: Build frontend with Trunk
+FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as frontend-builder
+
+# Install wasm target and Trunk
+RUN rustup target add wasm32-unknown-unknown && \
+    cargo install trunk
+
+WORKDIR /app/frontend
+
+# Copy frontend source
+COPY frontend/Cargo.toml frontend/Cargo.lock* ./
+COPY shared-types /app/shared-types
+COPY frontend/src ./src
+COPY frontend/index.html ./index.html
+COPY frontend/styles.css ./styles.css
+COPY frontend/Trunk.toml ./
+
+# Build WASM
+RUN trunk build --release
 
 # Stage 2: Build backend
 FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as backend-builder
@@ -67,7 +83,7 @@ WORKDIR /app
 
 # Copy built applications from builder stages
 COPY --from=backend-builder /app/target/release/backend /app/backend
-COPY --from=frontend-builder /frontend/dist /app/frontend/dist
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Copy database migrations
 COPY backend/migrations /app/migrations

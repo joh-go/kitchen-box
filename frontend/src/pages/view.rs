@@ -27,7 +27,7 @@ pub struct Props {
 pub fn view_recipe(props: &Props) -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let recipe = use_state(|| None as Option<Recipe>);
     let error = use_state(|| None as Option<String>);
     let adjusted_servings = use_state(|| None as Option<i32>);
@@ -69,7 +69,7 @@ pub fn view_recipe(props: &Props) -> Html {
         })
     };
 
-    let on_serving_change = {
+    let _on_serving_change = {
         let adjusted_servings = adjusted_servings.clone();
         Callback::from(move |e: Event| {
             let input = e.target_dyn_into::<web_sys::HtmlInputElement>().unwrap();
@@ -81,7 +81,7 @@ pub fn view_recipe(props: &Props) -> Html {
         })
     };
 
-    let reset_servings = {
+    let _reset_servings = {
         let adjusted_servings = adjusted_servings.clone();
         let recipe = recipe.clone();
         Callback::from(move |_: yew::MouseEvent| {
@@ -100,7 +100,6 @@ pub fn view_recipe(props: &Props) -> Html {
             if step_index < steps.len() {
                 steps[step_index] = !steps[step_index];
             } else {
-                // Extend the vector if needed
                 while steps.len() <= step_index {
                     steps.push(false);
                 }
@@ -110,7 +109,6 @@ pub fn view_recipe(props: &Props) -> Html {
         })
     };
 
-    // Lightbox navigation callbacks
     let open_lightbox = {
         let lightbox_open = lightbox_open.clone();
         let lightbox_index = lightbox_index.clone();
@@ -158,448 +156,374 @@ pub fn view_recipe(props: &Props) -> Html {
     };
 
     html! {
-        <div class="space-y-6">
+        <div class="recipe-detail">
             { if let Some(r) = &*recipe {
-                // Calculate adjusted ingredients outside the html! macro
                 let current_servings = (*adjusted_servings).or(r.servings).unwrap_or(1);
                 let original_servings = r.servings.unwrap_or(1);
                 let adjusted_ingredients = calculate_adjusted_ingredients(&r.ingredients, original_servings, current_servings);
-                
+
                 html! {
                     <>
-                        // Header with back and edit buttons
-                        <div class="flex items-center justify-between animate-fade-in">
+                        <div class="recipe-detail-header">
                             <button
                                 onclick={handle_back}
-                                class="touch-target flex items-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                class="recipe-detail-back"
                             >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
                                 </svg>
                                 <span>{t("back_to_recipes", lang)}</span>
                             </button>
-
-                            {if r.author_id == api::get_current_user_id() {
-                                html! {
-                                    <button
-                                        onclick={handle_edit}
-                                        class="touch-target btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all duration-200"
-                                    >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                        </svg>
-                                        {t("edit_recipe", lang)}
-                                    </button>
-                                }
-                            } else {
-                                html! {}
-                            }}
                         </div>
 
-                        // Recipe Title and Description
-                        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                            <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2">
-                                {&r.title}
-                            </h1>
-                            {if let Some(desc) = &r.short_description {
-                                html! {
-                                    <p class="text-slate-600 dark:text-slate-400">{desc}</p>
-                                }
-                            } else {
-                                html! {}
-                            }}
+                        <div class="card page-enter">
+                            <div class="card-body">
+                                <h1 class="recipe-detail-title">{&r.title}</h1>
+                                {if let Some(desc) = &r.short_description {
+                                    html! { <p class="recipe-detail-desc">{desc}</p> }
+                                } else { html!{} }}
 
-                            // Meta info
-                            <div class="flex flex-wrap gap-4 mt-4 text-sm text-slate-500 dark:text-slate-400">
-                                {if let Some(prep) = r.prep_minutes {
-                                    html! {
-                                        <div class="flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span>{t("prep_minutes", lang).replace("{}", &prep.to_string())}</span>
-                                        </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                                {if let Some(cook) = r.cook_minutes {
-                                    html! {
-                                        <div class="flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
-                                            </svg>
-                                            <span>{t("cook_minutes", lang).replace("{}", &cook.to_string())}</span>
-                                        </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                                {if let Some(servings) = r.servings {
-                                    let current_servings = (*adjusted_servings).unwrap_or(servings);
-                                    if current_servings != servings {
+                                <div class="recipe-detail-meta">
+                                    {if let Some(prep) = r.prep_minutes {
                                         html! {
-                                            <span class="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
-                                                {format!("(adjusted for {} servings)", current_servings)}
-                                            </span>
+                                            <div class="recipe-detail-meta-item">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                                </svg>
+                                                <div>
+                                                    <div class="recipe-detail-meta-label">{t("prep_time", lang)}</div>
+                                                    <div class="recipe-detail-meta-value">{format!("{} min", prep)}</div>
+                                                </div>
+                                            </div>
                                         }
-                                    } else {
-                                        html! {}
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-                                {if let Some(category) = r.categories.first() {
+                                    } else { html!{} }}
+                                    {if let Some(cook) = r.cook_minutes {
+                                        html! {
+                                            <div class="recipe-detail-meta-item">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
+                                                </svg>
+                                                <div>
+                                                    <div class="recipe-detail-meta-label">{t("cook_time", lang)}</div>
+                                                    <div class="recipe-detail-meta-value">{format!("{} min", cook)}</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    } else { html!{} }}
+                                    {if let Some(servings) = r.servings {
+                                        html! {
+                                            <div class="recipe-detail-meta-item">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                </svg>
+                                                <div>
+                                                    <div class="recipe-detail-meta-label">{t("servings", lang)}</div>
+                                                    <div class="recipe-detail-meta-value">{servings}</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    } else { html!{} }}
+                                    {if let Some(category) = r.categories.first() {
+                                        html! {
+                                            <div class="recipe-detail-meta-item">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                                                </svg>
+                                                <div>
+                                                    <div class="recipe-detail-meta-label">{t("category", lang)}</div>
+                                                    <div class="recipe-detail-meta-value">{&category.name}</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    } else { html!{} }}
+                                </div>
+
+                                {if let Some((primary_idx, primary_image)) = r.images.iter().enumerate().find(|(_, img)| img.is_primary == Some(true)) {
+                                    let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                        r.id.unwrap_or(0), primary_image.filename);
+                                    let open = open_lightbox.clone();
                                     html! {
-                                        <div class="flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                                            </svg>
-                                            <span>{format!("{}: {}", t("category", lang), &category.name)}</span>
+                                        <div class="gallery-main" onclick={Callback::from(move |_| open.emit(primary_idx))}>
+                                            <img src={image_url} alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())} />
+                                        </div>
+                                    }
+                                } else if let Some(first_image) = r.images.first() {
+                                    let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                        r.id.unwrap_or(0), first_image.filename);
+                                    let open = open_lightbox.clone();
+                                    html! {
+                                        <div class="gallery-main" onclick={Callback::from(move |_| open.emit(0))}>
+                                            <img src={image_url} alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())} />
                                         </div>
                                     }
                                 } else {
-                                    html! {}
+                                    html! {
+                                        <div class="gallery-main">
+                                            <div class="gallery-main-placeholder">{"🍳"}</div>
+                                        </div>
+                                    }
                                 }}
                             </div>
 
-                            // Primary Image
-                            {if let Some((primary_idx, primary_image)) = r.images.iter().enumerate().find(|(_, img)| img.is_primary == Some(true)) {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
-                                    r.id.unwrap_or(0), primary_image.filename);
-                                let open_lightbox = open_lightbox.clone();
-                                html! {
-                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-                                         onclick={Callback::from(move |_| open_lightbox.emit(primary_idx))}>
-                                        <img 
-                                            src={image_url}
-                                            alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="w-full h-64 md:h-80 object-cover"
-                                        />
-                                    </div>
-                                }
-                            } else if let Some(first_image) = r.images.first() {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
-                                    r.id.unwrap_or(0), first_image.filename);
-                                let open_lightbox = open_lightbox.clone();
-                                html! {
-                                    <div class="mt-6 rounded-xl overflow-hidden shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-                                         onclick={Callback::from(move |_| open_lightbox.emit(0))}>
-                                        <img 
-                                            src={image_url}
-                                            alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="w-full h-64 md:h-80 object-cover"
-                                        />
-                                    </div>
-                                }
-                            } else {
-                                html! {}
-                            }}
-                        </div>
-
-                        // Ingredients
-                        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                                    </svg>
-                                    {t("ingredients", lang)}
-                                    {if let Some(servings) = r.servings {
-                                        let current_servings = (*adjusted_servings).unwrap_or(servings);
-                                        if current_servings != servings {
-                                            html! {
-                                                <span class="text-sm text-emerald-600 dark:text-emerald-400 ml-2">
-                                                    {format!("(adjusted for {} servings)", current_servings)}
-                                                </span>
-                                            }
-                                        } else {
-                                            html! {}
-                                        }
-                                    } else {
-                                        html! {}
-                                    }}
-                                </h2>
-                                {if let Some(original_servings) = r.servings {
+                            <div class="card-body">
+                                {if r.author_id == api::get_current_user_id() {
                                     html! {
-                                        <div class="flex items-center gap-2">
-                                            <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{t("servings_label", lang)}</label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={(*adjusted_servings).unwrap_or(original_servings).to_string()}
-                                                onchange={on_serving_change}
-                                                class="w-16 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                            />
-                                            <button
-                                                onclick={reset_servings}
-                                                class="text-xs px-2 py-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                                            >
-                                                {t("reset", lang)}
+                                        <div class="flex justify-end mb-4">
+                                            <button onclick={handle_edit} class="btn btn-primary">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                                </svg>
+                                                {t("edit_recipe", lang)}
                                             </button>
                                         </div>
                                     }
-                                } else {
-                                    html! {}
-                                }}
+                                } else { html!{} }}
                             </div>
-                            <ul class="space-y-2">
-                                {adjusted_ingredients.iter().map(|(ing, adjusted_amount)| {
-                                    html! {
-                                        <li class="flex items-start gap-2 text-slate-700 dark:text-slate-300">
-                                            <span class="w-2 h-2 bg-emerald-400 rounded-full mt-2 flex-shrink-0"></span>
-                                            <span>
-                                                {if *adjusted_amount != 0.0 {
-                                                    html! { 
-                                                        <span class="font-medium">
-                                                            {format!("{:.2}", adjusted_amount).trim_end_matches(".00")}
-                                                        </span> 
-                                                    }
-                                                } else { html! {} }}
-                                                {" "}{if !ing.unit.is_empty() {
-                                                    html! { <span class="font-medium">{ing.unit.clone()}</span> }
-                                                } else { html! {} }}
-                                                {" "}{ing.name.clone()}
-                                                {if let Some(notes) = &ing.notes {
-                                                    html! { <span class="text-slate-500 dark:text-slate-400 italic">{" ("}{notes}{")"}</span> }
-                                                } else { html! {} }}
-                                            </span>
-                                        </li>
-                                    }
-                                }).collect::<Html>()}
-                            </ul>
                         </div>
 
-                        // Steps
-                        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                                </svg>
-                                {t("instructions", lang)}
-                            </h2>
-                            <div class="space-y-4">
-                                {if let Some(arr) = r.steps.as_array() {
-                                    // Ensure completed_steps vector has the right length
-                                    {
-                                        let mut steps = (*completed_steps).clone();
-                                        while steps.len() < arr.len() {
-                                            steps.push(false);
-                                        }
-                                        if steps.len() != arr.len() {
-                                            completed_steps.set(steps);
-                                        }
-                                    }
-                                    
-                                    arr.iter().filter_map(|s| s.as_str()).enumerate().map(|(idx, step_text)| {
-                                        let is_completed = if idx < (*completed_steps).len() {
-                                            (*completed_steps)[idx]
-                                        } else {
-                                            false
-                                        };
-                                        
-                                        html! {
-                                            <div 
-                                                class={if is_completed { "flex gap-4 opacity-60 cursor-pointer items-start" } else { "flex gap-4 cursor-pointer items-start" }}
-                                                onclick={
-                                                    let toggle_step = toggle_step.clone();
-                                                    Callback::from(move |_| toggle_step.emit(idx))
-                                                }
-                                            >
-                                                <div class="flex items-center gap-3">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={is_completed}
-                                                        onclick={Callback::from(|e: MouseEvent| {
-                                                            e.stop_propagation();
+                        <div class="ingredients-section">
+                            <div class="card page-enter">
+                                <div class="card-body">
+                                    <div class="ingredients-header">
+                                        <h2 class="section-title flex items-center gap-2">
+                                            <svg width="1.25rem" height="1.25rem" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                            </svg>
+                                            {t("ingredients", lang)}
+                                        </h2>
+                                        {if let Some(original_servings) = r.servings {
+                                            html! {
+                                                <div class="servings-control">
+                                                    <label class="text-sm text-muted">{t("servings_label", lang)}</label>
+                                                    <button class="servings-btn"
+                                                        onclick={Callback::from({
+                                                            let adjusted_servings = adjusted_servings.clone();
+                                                            let r = r.clone();
+                                                            move |_: yew::MouseEvent| {
+                                                                if let Some(original) = r.servings {
+                                                                    let current = *adjusted_servings;
+                                                                    let new_val = std::cmp::max(1, current.unwrap_or(original) - 1);
+                                                                    adjusted_servings.set(Some(new_val));
+                                                                }
+                                                            }
                                                         })}
-                                                        onchange={
+                                                        disabled={(*adjusted_servings).unwrap_or(original_servings) <= 1}
+                                                    >
+                                                        {"-"}
+                                                    </button>
+                                                    <span class="servings-value">{current_servings}</span>
+                                                    <button class="servings-btn"
+                                                        onclick={Callback::from({
+                                                            let adjusted_servings = adjusted_servings.clone();
+                                                            let r = r.clone();
+                                                            move |_: yew::MouseEvent| {
+                                                                if let Some(original) = r.servings {
+                                                                    let current = *adjusted_servings;
+                                                                    adjusted_servings.set(Some(current.unwrap_or(original) + 1));
+                                                                }
+                                                            }
+                                                        })}
+                                                    >
+                                                        {"+"}
+                                                    </button>
+                                                </div>
+                                            }
+                                        } else { html!{} }}
+                                    </div>
+                                    <ul class="ingredient-list">
+                                        {adjusted_ingredients.iter().map(|(ing, adjusted_amount)| {
+                                            html! {
+                                                <li class="ingredient-item">
+                                                    {if *adjusted_amount != 0.0 {
+                                                        html! { <span class="ingredient-amount">{format!("{:.2}", adjusted_amount).trim_end_matches(".00").to_string()}</span> }
+                                                    } else { html!{} }}
+                                                    {if !ing.unit.is_empty() {
+                                                        html! { <span class="ingredient-unit">{ing.unit.clone()}</span> }
+                                                    } else { html!{} }}
+                                                    <span class="ingredient-name">{ing.name.clone()}</span>
+                                                    {if let Some(notes) = &ing.notes {
+                                                        html! { <span class="ingredient-notes">{"("}{notes}{")"}</span> }
+                                                    } else { html!{} }}
+                                                </li>
+                                            }
+                                        }).collect::<Html>()}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="steps-section">
+                            <div class="card page-enter">
+                                <div class="card-body">
+                                    <h2 class="section-title flex items-center gap-2 mb-4">
+                                        <svg width="1.25rem" height="1.25rem" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                                        </svg>
+                                        {t("instructions", lang)}
+                                    </h2>
+                                    <ol class="step-list">
+                                        {if let Some(arr) = r.steps.as_array() {
+                                            {
+                                                let mut steps = (*completed_steps).clone();
+                                                while steps.len() < arr.len() {
+                                                    steps.push(false);
+                                                }
+                                                if steps.len() != arr.len() {
+                                                    completed_steps.set(steps);
+                                                }
+                                            }
+
+                                            arr.iter().filter_map(|s| s.as_str()).enumerate().map(|(idx, step_text)| {
+                                                let is_completed = if idx < (*completed_steps).len() { (*completed_steps)[idx] } else { false };
+
+                                                html! {
+                                                    <li class={classes!("step-item", is_completed.then_some("completed"))}
+                                                        onclick={
                                                             let toggle_step = toggle_step.clone();
                                                             Callback::from(move |_| toggle_step.emit(idx))
                                                         }
-                                                        class="w-5 h-5 text-emerald-600 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer transition-all duration-200 hover:border-emerald-400 dark:hover:border-emerald-500 appearance-none checked:bg-emerald-600 checked:border-emerald-600"
-                                                    />
-                                                    <span class={if is_completed { "flex-shrink-0 w-8 h-8 bg-emerald-300 text-white rounded-full flex items-center justify-center font-semibold text-sm" } else { "flex-shrink-0 w-8 h-8 bg-emerald-500 text-white rounded-full flex items-center justify-center font-semibold text-sm" }}>
-                                                        {idx + 1}
-                                                    </span>
-                                                </div>
-                                                <p class={if is_completed { "text-slate-500 dark:text-slate-400 flex-1 line-through mt-1" } else { "text-slate-700 dark:text-slate-300 flex-1 mt-1" }}>
-                                                    {step_text}
-                                                </p>
-                                            </div>
-                                        }
-                                    }).collect::<Html>()
-                                } else {
-                                    html! {}
-                                }}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={is_completed}
+                                                            onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
+                                                            onchange={
+                                                                let toggle_step = toggle_step.clone();
+                                                                Callback::from(move |_| toggle_step.emit(idx))
+                                                            }
+                                                            class="step-checkbox"
+                                                        />
+                                                        <span class="step-number">{idx + 1}</span>
+                                                        <div class="step-content">
+                                                            <p class="step-text">{step_text}</p>
+                                                        </div>
+                                                    </li>
+                                                }
+                                            }).collect::<Html>()
+                                        } else {
+                                            html! {}
+                                        }}
+                                    </ol>
+                                </div>
                             </div>
                         </div>
 
-                        // Notes
                         {if let Some(notes) = &r.notes {
                             html! {
-                                <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
-                                        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                        </svg>
-                                        {t("notes", lang)}
-                                    </h2>
-                                    <p class="text-slate-600 dark:text-slate-400 whitespace-pre-line">{notes}</p>
+                                <div class="notes-section page-enter">
+                                    <h3 class="notes-title">{t("notes", lang)}</h3>
+                                    <p class="notes-text">{notes}</p>
                                 </div>
                             }
-                        } else {
-                            html! {}
-                        }}
+                        } else { html!{} }}
 
-                        // Lightbox Modal
+                        // Lightbox
                         {if *lightbox_open && !r.images.is_empty() {
                             let current_image = &r.images[*lightbox_index];
-                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
                                 r.id.unwrap_or(0), current_image.filename);
                             let current_num = *lightbox_index + 1;
                             let total_num = r.images.len();
-                            
+
                             html! {
-                                <div 
-                                    class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-                                    onclick={close_lightbox.clone()}
-                                >
-                                    // Close button
-                                    <button 
-                                        class="absolute top-4 right-4 text-white/80 hover:text-white p-2"
+                                <div class="lightbox" onclick={close_lightbox.clone()}>
+                                    <button class="lightbox-close"
                                         onclick={Callback::from(move |e: MouseEvent| {
                                             e.stop_propagation();
                                             close_lightbox.emit(e);
                                         })}
                                     >
-                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                         </svg>
                                     </button>
-                                    
-                                    // Previous button
+
                                     {if r.images.len() > 1 {
                                         html! {
-                                            <button 
-                                                class="absolute left-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/30 rounded-full hover:bg-black/50 transition-colors"
+                                            <button class="lightbox-nav lightbox-nav-prev"
                                                 onclick={Callback::from(move |e: MouseEvent| {
                                                     e.stop_propagation();
                                                     prev_image.emit(e);
                                                 })}
                                             >
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                                                 </svg>
                                             </button>
                                         }
-                                    } else {
-                                        html! {}
-                                    }}
-                                    
-                                    // Image container
-                                    <div class="max-w-5xl max-h-[85vh] px-4" onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}>
-                                        <img 
-                                            src={image_url}
-                                            alt={current_image.alt.clone().unwrap_or_else(|| current_image.filename.clone())}
-                                            class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                                        />
-                                        <div class="text-center text-white/80 mt-4">
+                                    } else { html!{} }}
+
+                                    <div onclick={Callback::from(|e: MouseEvent| e.stop_propagation())} style="text-align: center;">
+                                        <img src={image_url} alt={current_image.alt.clone().unwrap_or_else(|| current_image.filename.clone())} />
+                                        <div style="margin-top: var(--space-4); color: rgba(255,255,255,0.8);">
                                             <span class="text-sm">{format!("{} / {}", current_num, total_num)}</span>
-                                            {if let Some(alt) = &current_image.alt {
-                                                html! { <p class="text-lg mt-1">{alt}</p> }
-                                            } else {
-                                                html! {}
-                                            }}
                                         </div>
                                     </div>
-                                    
-                                    // Next button
+
                                     {if r.images.len() > 1 {
                                         html! {
-                                            <button 
-                                                class="absolute right-4 top-1/2 -translate-y-1/2 text-white/80 hover:text-white p-3 bg-black/30 rounded-full hover:bg-black/50 transition-colors"
+                                            <button class="lightbox-nav lightbox-nav-next"
                                                 onclick={Callback::from(move |e: MouseEvent| {
                                                     e.stop_propagation();
                                                     next_image.emit(e);
                                                 })}
                                             >
-                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                                 </svg>
                                             </button>
                                         }
-                                    } else {
-                                        html! {}
-                                    }}
+                                    } else { html!{} }}
                                 </div>
                             }
-                        } else {
-                            html! {}
-                        }}
+                        } else { html!{} }}
+
+                        // Image Gallery (if more than 1 image)
                         {if r.images.len() > 1 {
                             html! {
-                                <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
-                                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                                        <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                        </svg>
-                                        {t("gallery", lang)}
-                                    </h2>
-                                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        { for r.images.iter().enumerate().map(|(idx, image)| {
-                                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
-                                                r.id.unwrap_or(0), image.filename);
-                                            let is_primary = image.is_primary.unwrap_or(false);
-                                            let open_lightbox = open_lightbox.clone();
-                                            
-                                            html! {
-                                                <div class="relative group cursor-pointer"
-                                                     onclick={Callback::from(move |_| open_lightbox.emit(idx))}>
-                                                    <div class="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden hover:opacity-90 transition-opacity">
-                                                        <img 
-                                                            src={image_url}
-                                                            alt={image.alt.clone().unwrap_or_else(|| image.filename.clone())}
-                                                            class="w-full h-full object-cover"
-                                                        />
+                                <div class="card page-enter">
+                                    <div class="card-body">
+                                        <h2 class="section-title flex items-center gap-2 mb-4">
+                                            <svg width="1.25rem" height="1.25rem" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                            {t("gallery", lang)}
+                                        </h2>
+                                        <div class="gallery-thumbs">
+                                            { for r.images.iter().enumerate().map(|(idx, image)| {
+                                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                                    r.id.unwrap_or(0), image.filename);
+                                                let is_primary = image.is_primary.unwrap_or(false);
+                                                let open = open_lightbox.clone();
+
+                                                html! {
+                                                    <div class="relative" onclick={Callback::from(move |_| open.emit(idx))}>
+                                                        <img src={image_url} alt={image.alt.clone().unwrap_or_else(|| image.filename.clone())} class={classes!("gallery-thumb", is_primary.then_some("active"))} />
                                                     </div>
-                                                    { if is_primary {
-                                                        html! {
-                                                            <div class="absolute top-2 left-2 bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
-                                                                { "Primary" }
-                                                            </div>
-                                                        }
-                                                    } else {
-                                                        html! {}
-                                                    }}
-                                                </div>
-                                            }
-                                        }) }
+                                                }
+                                            }) }
+                                        </div>
                                     </div>
                                 </div>
                             }
-                        } else {
-                            html! {}
-                        }}
+                        } else { html!{} }}
                     </>
                 }
             } else if let Some(e) = &*error {
                 html! {
-                    <div class="glass rounded-2xl p-6 shadow-lg border border-red-200 dark:border-red-800">
-                        <p class="text-red-600 dark:text-red-400">{e}</p>
-                        <button
-                            onclick={handle_back}
-                            class="mt-4 touch-target btn-primary text-white px-4 py-2 rounded-lg font-medium"
-                        >
-                            {"Go Back"}
-                        </button>
+                    <div class="alert alert-error">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="alert-content">
+                            <div>{e}</div>
+                            <button onclick={handle_back} class="btn btn-primary btn-sm mt-2">{t("back_to_recipes", lang)}</button>
+                        </div>
                     </div>
                 }
             } else {
                 html! {
-                    <div class="flex items-center justify-center py-12">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                    </div>
+                    <div class="spinner"><div class="spinner-circle"></div></div>
                 }
             }}
         </div>

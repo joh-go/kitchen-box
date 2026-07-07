@@ -21,18 +21,15 @@ pub struct Props {
 pub fn recipe_list(props: &Props) -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let recipes = use_state(|| Vec::<Recipe>::new());
     let error = use_state(|| None::<String>);
     let categories = use_state(|| Vec::<shared_types::Category>::new());
     let selected_category = use_state(|| None as Option<i32>);
     let is_logged_in = api::is_logged_in();
     let current_user_id = api::get_current_user_id();
-    // use search passed from parent for centralized header search
     let search = props.search.clone();
 
-    // accept refresh as external prop if passed in (backwards compatible)
-    // We'll try to read a field named `refresh` via `js_sys` props are typed, so update Props accordingly in parent.
     let on_add = props.on_add.clone();
 
     {
@@ -52,7 +49,6 @@ pub fn recipe_list(props: &Props) -> Html {
         });
     }
 
-    // Load categories once
     {
         let categories = categories.clone();
         use_effect_with((), move |_| {
@@ -85,22 +81,18 @@ pub fn recipe_list(props: &Props) -> Html {
     };
 
     html! {
-        <div class="space-y-6">
-            // Header Section
-            <div class="animate-fade-in">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex flex-col gap-6">
+            <div class="page-enter">
+                <div class="section-header">
                     <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {t("your_recipes", lang)}
-                        </h1>
-                        <p class="text-slate-500 dark:text-slate-400 mt-1">
+                        <h1 class="page-title">{t("your_recipes", lang)}</h1>
+                        <p class="text-sm text-muted">
                             { format!("{} {}", (*recipes).len(), t("delicious_recipes_count", lang)) }
                         </p>
                     </div>
-                    
-                    // Category Filter
-                    <div class="flex items-center gap-3">
-                        <label class="text-sm font-medium text-slate-600 dark:text-slate-400">{t("filter_by_category", lang)}</label>
+
+                    <div class="filter-bar">
+                        <label class="text-sm text-muted">{t("filter_by_category", lang)}</label>
                         <select
                             onchange={Callback::from({
                                 let selected_category = selected_category.clone();
@@ -115,23 +107,22 @@ pub fn recipe_list(props: &Props) -> Html {
                                     } else {
                                         v.parse::<i32>().ok()
                                     };
-                                    
+
                                     selected_category.set(new_selected);
                                 }
                             })}
-                            class="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            class="form-select filter-select"
                         >
                             <option value="" selected=true>{ t("all_categories", lang) }</option>
-                            { for (*categories).iter().map(|c| html!{ 
-                                <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option> 
+                            { for (*categories).iter().map(|c| html!{
+                                <option value={c.id.map(|id| id.to_string()).unwrap_or_default()}>{ &c.name }</option>
                             }) }
                         </select>
                     </div>
-                    
-                    // Mobile Search Input
-                    <div class="block lg:hidden">
-                        <div class="relative">
-                            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                    <div class="mobile-only w-full">
+                        <div class="filter-search-inner">
+                            <svg class="filter-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                             <input
@@ -145,116 +136,102 @@ pub fn recipe_list(props: &Props) -> Html {
                                         on_search.emit(input.value());
                                     })
                                 }
-                                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                class="form-input"
+                                style="padding-left: 2.5rem;"
                             />
                         </div>
                     </div>
                 </div>
             </div>
 
-            // Error State
             {
                 if let Some(e) = &*error {
                     html!{
-                        <div class="glass rounded-xl p-6 border border-red-200 dark:border-red-800 animate-fade-in">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 class="font-medium text-red-800 dark:text-red-200">{t("error_loading_recipes", lang)}</h3>
-                                    <p class="text-sm text-red-600 dark:text-red-400 mt-1">{ e }</p>
-                                </div>
+                        <div class="alert alert-error page-enter">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div class="alert-content">
+                                <div class="alert-title">{t("error_loading_recipes", lang)}</div>
+                                <div>{ e }</div>
                             </div>
                         </div>
                     }
                 } else { html!{} }
             }
 
-            // Recipe Grid
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div class="recipe-grid">
                 { for (*recipes).iter().filter(|r| {
-                    // Search filtering
-                    let search_match = if search.is_empty() { 
-                        true 
+                    let search_match = if search.is_empty() {
+                        true
                     } else {
                         let q = search.to_lowercase();
                         r.title.to_lowercase().contains(&q) || r.short_description.clone().unwrap_or_default().to_lowercase().contains(&q)
                     };
-                    
-                    // Category filtering
+
                     let category_match = if let Some(selected_id) = *selected_category {
                         r.categories.iter().any(|c| c.id == Some(selected_id))
                     } else {
-                        true // No category filter selected
+                        true
                     };
-                    
+
                     search_match && category_match
                 }).map(|r| {
                     let id = r.id.unwrap_or_default();
                     let r_clone = r.clone();
-                    
-                    // Check if recipe is owned by current user
+
                     let is_owned = if is_logged_in {
-                        r.author_id.is_some() && 
+                        r.author_id.is_some() &&
                         current_user_id.map(|uid| uid == r.author_id.unwrap_or_default()).unwrap_or(false)
                     } else {
                         false
                     };
-                    
+
                     html!{
-                        <div 
-                            class="glass rounded-2xl overflow-hidden shadow-lg border border-emerald-100 dark:border-slate-700 card-hover animate-fade-in cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 dark:hover:ring-offset-slate-900"
+                        <div
+                            class="recipe-card"
                             onclick={props.on_view.reform(move |_| id)}
                         >
-                            // Primary Image
                             {if let Some(primary_image) = r.images.iter().find(|img| img.is_primary == Some(true)) {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
                                     r.id.unwrap_or(0), primary_image.filename);
                                 html! {
-                                    <div class="w-full min-h-[200px] max-h-[300px] bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
-                                        <img 
-                                            src={image_url}
-                                            alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="max-w-full max-h-[300px] object-contain"
-                                        />
-                                    </div>
+                                    <img
+                                        src={image_url}
+                                        alt={primary_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                        class="recipe-card-image"
+                                    />
                                 }
                             } else if let Some(first_image) = r.images.first() {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
                                     r.id.unwrap_or(0), first_image.filename);
                                 html! {
-                                    <div class="w-full min-h-[200px] max-h-[300px] bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center">
-                                        <img 
-                                            src={image_url}
-                                            alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
-                                            class="max-w-full max-h-[300px] object-contain"
-                                        />
-                                    </div>
+                                    <img
+                                        src={image_url}
+                                        alt={first_image.alt.clone().unwrap_or_else(|| r.title.clone())}
+                                        class="recipe-card-image"
+                                    />
                                 }
                             } else {
-                                html! {}
+                                html! {
+                                    <div class="recipe-card-image-placeholder">{"🍳"}</div>
+                                }
                             }}
 
-                            // Recipe Content
-                            <div class="p-6">
-                                // Recipe Header
+                            <div class="recipe-card-body">
                                 <div class="flex items-start justify-between mb-4">
                                     <div class="flex-1">
-                                        <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
+                                        <h3 class="recipe-card-title">
                                             { &r.title }
                                         </h3>
-                                        <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">
+                                        <p class="recipe-card-desc">
                                             { r.short_description.clone().unwrap_or_default() }
                                         </p>
                                     </div>
-                                    
-                                    // Prep Time Badge
+
                                     if let Some(prep_time) = r.prep_minutes {
-                                        <div class="ml-4 flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-sm font-medium">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <div class="recipe-card-time">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
                                             { format!("{}m", prep_time) }
@@ -262,9 +239,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                     }
                                 </div>
 
-                                // Recipe Categories
                                 { if !r.categories.is_empty() {
-                                    // Deduplicate categories manually by ID while preserving order
                                     let mut seen_ids = Vec::new();
                                     let unique_categories: Vec<_> = r.categories.iter()
                                         .filter(|cat| {
@@ -276,7 +251,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                                     true
                                                 }
                                             } else {
-                                                true // Include categories without ID
+                                                true
                                             }
                                         })
                                         .take(3)
@@ -291,21 +266,17 @@ pub fn recipe_list(props: &Props) -> Html {
                                         })
                                         .count();
                                     let remaining_count = total_unique.saturating_sub(3);
-                                    
+
                                     html!{
-                                        <div class="flex flex-wrap gap-2 mb-4">
+                                        <div class="recipe-card-tags">
                                             { for unique_categories.iter().map(|cat| {
                                                 html!{
-                                                    <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-md text-xs font-medium">
-                                                        { &cat.name }
-                                                    </span>
+                                                    <span class="tag">{ &cat.name }</span>
                                                 }
                                             })}
                                             { if remaining_count > 0 {
                                                 html!{
-                                                    <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded-md text-xs font-medium">
-                                                        { format!("+{}", remaining_count) }
-                                                    </span>
+                                                    <span class="tag-more">{ format!("+{}", remaining_count) }</span>
                                                 }
                                             } else {
                                                 html!{}
@@ -314,24 +285,23 @@ pub fn recipe_list(props: &Props) -> Html {
                                     }
                                 } else { html!{} } }
 
-                                // Action Buttons - Only show for owned recipes
                                 {if is_owned {
                                     html! {
-                                        <div class="flex gap-3" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
-                                            <button 
-                                                class="flex-1 touch-target btn-primary text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200"
+                                        <div class="recipe-card-actions" onclick={|e: yew::MouseEvent| e.stop_propagation()}>
+                                            <button
+                                                class="btn btn-primary btn-sm"
                                                 onclick={props.on_edit.reform(move |_| r_clone.clone())}
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                                 </svg>
                                                 {"Edit"}
                                             </button>
-                                            <button 
-                                                class="touch-target bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 px-4 py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all duration-200 hover-lift"
+                                            <button
+                                                class="btn btn-danger btn-sm"
                                                 onclick={on_delete.reform(move |_| id)}
                                             >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                                 </svg>
                                                 {"Delete"}
@@ -345,25 +315,18 @@ pub fn recipe_list(props: &Props) -> Html {
                 }) }
             </div>
 
-            // Empty State
             { if (*recipes).is_empty() && error.is_none() {
                 html!{
-                    <div class="text-center py-12 animate-fade-in">
-                        <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-medium text-slate-800 dark:text-slate-200 mb-2">
-                            {t("no_recipes_yet", lang)}
-                        </h3>
-                        <p class="text-slate-500 dark:text-slate-400 mb-6">
-                            {t("start_building_collection", lang)}
-                        </p>
+                    <div class="empty-state page-enter">
+                        <svg class="empty-state-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                        <h3>{t("no_recipes_yet", lang)}</h3>
+                        <p>{t("start_building_collection", lang)}</p>
                         <button
                             onclick={Callback::from(move |_e: yew::MouseEvent| on_add.emit(()))}
-                            class="btn-primary text-white px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="btn btn-primary">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                             </svg>
                             {t("add_first_recipe", lang)}

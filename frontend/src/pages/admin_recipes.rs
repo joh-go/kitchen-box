@@ -17,29 +17,21 @@ pub struct AdminRecipe {
     pub updated_at: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum RecipeAction {
-    None,
-    Delete(i32),
-}
-
 #[function_component(AdminRecipesPage)]
 pub fn admin_recipes_page() -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let recipes = use_state(|| Vec::<AdminRecipe>::new());
     let loading = use_state(|| true);
     let error = use_state(|| None::<String>);
-    let action = use_state(|| RecipeAction::None);
     let selected_recipe = use_state(|| None::<AdminRecipe>);
 
-    // Load recipes
     {
         let recipes = recipes.clone();
         let loading = loading.clone();
         let error = error.clone();
-        
+
         use_effect_with((), move |_| {
             spawn_local(async move {
                 match api::get_admin_recipes().await {
@@ -58,13 +50,11 @@ pub fn admin_recipes_page() -> Html {
                                     updated_at: recipe.get("updated_at").and_then(|u| u.as_str()).unwrap_or("").to_string(),
                                 })
                             }).collect();
-                            
                             recipes.set(parsed_recipes);
-                            loading.set(false);
                         } else {
                             error.set(Some(t("failed_parse_recipes", lang).to_string()));
-                            loading.set(false);
                         }
+                        loading.set(false);
                     }
                     Err(e) => {
                         error.set(Some(e));
@@ -76,243 +66,126 @@ pub fn admin_recipes_page() -> Html {
         });
     }
 
-    let on_recipe_click = {
-        let action = action.clone();
-        let selected_recipe = selected_recipe.clone();
-        Callback::from(move |recipe: AdminRecipe| {
-            // Toggle selection - if clicking same recipe, deselect
-            if let Some(ref selected) = *selected_recipe {
-                if selected.id == recipe.id {
-                    selected_recipe.set(None);
-                    action.set(RecipeAction::None);
-                } else {
-                    selected_recipe.set(Some(recipe.clone()));
-                    action.set(RecipeAction::None);
-                }
-            } else {
-                selected_recipe.set(Some(recipe.clone()));
-                action.set(RecipeAction::None);
-            }
-        })
-    };
-
     let on_delete_recipe = {
         let recipes = recipes.clone();
-        let action = action.clone();
         Callback::from(move |recipe_id: i32| {
-            action.set(RecipeAction::Delete(recipe_id));
+            let recipes = recipes.clone();
+            spawn_local(async move {
+                match api::delete_admin_recipe(recipe_id).await {
+                    Ok(_) => {
+                        let updated: Vec<AdminRecipe> = (*recipes).clone().into_iter().filter(|r| r.id != Some(recipe_id)).collect();
+                        recipes.set(updated);
+                    }
+                    Err(e) => {
+                        web_sys::console::log_1(&format!("Failed to delete recipe: {}", e).into());
+                    }
+                }
+            });
         })
     };
 
-    // Handle delete action
-    {
-        let recipes = recipes.clone();
-        let action = action.clone();
-        
-        use_effect_with(action.clone(), move |action| {
-            if let RecipeAction::Delete(recipe_id) = **action {
-                let recipes = recipes.clone();
-                let action = action.clone();
-                
-                spawn_local(async move {
-                    match api::delete_admin_recipe(recipe_id).await {
-                        Ok(_) => {
-                            // Remove recipe from list
-                            let current_recipes = (*recipes).clone();
-                            let updated_recipes: Vec<AdminRecipe> = current_recipes.into_iter().filter(|r| r.id != Some(recipe_id)).collect();
-                            recipes.set(updated_recipes);
-                            action.set(RecipeAction::None);
-                        }
-                        Err(e) => {
-                            web_sys::console::log_1(&format!("Failed to delete recipe: {}", e).into());
-                        }
-                    }
-                });
-            }
-            || ()
-        });
-    }
-
     html! {
-        <div class="space-y-6">
-            // Header
-            <div class="animate-fade-in">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-200">
-                            {t("recipe_management_title", lang)}
-                        </h1>
-                        <p class="text-slate-500 dark:text-slate-400 mt-1">
-                            {t("manage_all_recipes_system", lang)}
-                        </p>
-                    </div>
+        <div class="page-enter">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="section-title">{t("recipe_management_title", lang)}</h1>
+                    <p class="text-muted">{t("manage_all_recipes_system", lang)}</p>
                 </div>
             </div>
 
-            // Loading State
             {if *loading {
-                html! {
-                    <div class="flex justify-center py-12">
-                        <div class="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                }
+                html! { <div class="spinner"><div class="spinner-circle"></div></div> }
             } else if let Some(ref error_msg) = *error {
-                html! {
-                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg">
-                        {error_msg}
-                    </div>
-                }
+                html! { <div class="alert alert-error"><div class="alert-content">{error_msg}</div></div> }
             } else {
                 html! {
-                    <>
-                        // Recipes Table
-                        <div class="glass rounded-2xl shadow-lg border border-emerald-100 dark:border-slate-700 overflow-hidden animate-fade-in">
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
-                                    <thead class="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {t("recipe_column", lang)}
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {t("author_column", lang)}
-                                            </th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                                                {t("status_column", lang)}
-                                            </th>
-                                            <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                                {t("actions_column", lang)}
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                        {for recipes.iter().map(|recipe| {
-                                            let on_delete = on_delete_recipe.clone();
-                                            let on_click = on_recipe_click.clone();
-                                            let recipe_clone = recipe.clone();
-                                            let recipe_id = recipe.id.unwrap_or(0);
-                                            let is_selected = selected_recipe.as_ref().and_then(|r| r.id).unwrap_or(0) == recipe_id;
-                                            
-                                            html! {
-                                                <>
-                                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                                        <td class="px-6 py-4 whitespace-nowrap" onclick={Callback::from(move |_| {
-                                                            on_click.emit(recipe_clone.clone());
-                                                        })}>
-                                                            <div class="flex items-center cursor-pointer">
-                                                                <div class="w-8 h-8 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex items-center justify-center mr-3">
-                                                                    <span class="text-emerald-600 dark:text-emerald-400 text-sm font-medium">
-                                                                        {&recipe.title.chars().next().unwrap_or('R').to_uppercase().to_string()}
-                                                                    </span>
-                                                                </div>
-                                                                <div>
-                                                                    <div class="text-sm font-medium text-slate-900 dark:text-slate-100">
-                                                                        {&recipe.title}
-                                                                    </div>
-                                                                    {if is_selected {
-                                                                        html! {
-                                                                            <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                                                {recipe.short_description.as_ref().unwrap_or(&t("no_description", lang).to_string())}
-                                                                            </div>
-                                                                        }
-                                                                    } else {
-                                                                        html! {}
-                                                                    }}
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                                                            <div class="text-sm text-slate-600 dark:text-slate-400">
-                                                                {recipe.author_name.as_ref().unwrap_or(&"Unknown".to_string())}
-                                                            </div>
-                                                        </td>
-                                                        <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-                                                            {if recipe.is_public {
-                                                                html! {
-                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
-                                                                        {t("public", lang)}
-                                                                    </span>
-                                                                }
-                                                            } else {
-                                                                html! {
-                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                                                                        {t("private", lang)}
-                                                                    </span>
-                                                                }
-                                                            }}
-                                                        </td>
-                                                        <td class="px-2 py-4 whitespace-nowrap text-right text-sm font-medium lg:px-6">
-                                                            <button 
-                                                                onclick={Callback::from(move |_| on_delete.emit(recipe_id))}
-                                                                class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                                title={t("delete_recipe_title", lang)}
-                                                            >
-                                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
-                                                                </svg>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    // Expanded row with recipe details
-                                                    {if is_selected {
-                                                        html! {
-                                                            <tr class="bg-slate-50 dark:bg-slate-800">
-                                                                <td colspan="4" class="px-6 py-4">
-                                                                    <div class="text-sm text-slate-600 dark:text-slate-400 space-y-2">
-                                                                        <div>
-                                                                            <span class="font-medium">{t("description_label", lang)}</span>
-                                                                            {recipe.short_description.as_ref().unwrap_or(&t("no_description_available", lang).to_string())}
-                                                                        </div>
-                                                                        <div>
-                                                                            <span class="font-medium">{t("author_label", lang)}</span>
-                                                                            {recipe.author_name.as_ref().unwrap_or(&t("unknown", lang).to_string())}
-                                                                            {if let Some(ref email) = recipe.author_email {
-                                                                                html! {
-                                                    <span class="text-slate-500 dark:text-slate-500">{" ("}{email}{")"}</span>
+                    <div class="table-container card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>{t("recipe_column", lang)}</th>
+                                    <th class="hide-mobile">{t("author_column", lang)}</th>
+                                    <th class="hide-mobile">{t("status_column", lang)}</th>
+                                    <th class="text-right">{t("actions_column", lang)}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {for (*recipes).iter().map(|recipe| {
+                                    let on_delete = on_delete_recipe.clone();
+                                    let recipe_id = recipe.id.unwrap_or(0);
+                                    let is_selected = selected_recipe.as_ref().and_then(|r| r.id).unwrap_or(0) == recipe_id;
+                                    let on_click = {
+                                        let selected_recipe = selected_recipe.clone();
+                                        let r = recipe.clone();
+                                        Callback::from(move |_| {
+                                            if let Some(ref selected) = *selected_recipe {
+                                                if selected.id == r.id {
+                                                    selected_recipe.set(None);
+                                                } else {
+                                                    selected_recipe.set(Some(r.clone()));
+                                                }
+                                            } else {
+                                                selected_recipe.set(Some(r.clone()));
+                                            }
+                                        })
+                                    };
+
+                                    html! {
+                                        <>
+                                            <tr class={if is_selected { "row-selected" } else { "" }}>
+                                                <td onclick={on_click}>
+                                                    <div class="flex items-center gap-3">
+                                                        <div class="avatar avatar-primary">
+                                                            {&recipe.title.chars().next().unwrap_or('R').to_uppercase().to_string()}
+                                                        </div>
+                                                        <div>
+                                                            <div class="text-sm font-medium">{&recipe.title}</div>
+                                                            <div class="text-xs text-muted hide-desktop">{recipe.author_name.as_ref().unwrap_or(&"Unknown".to_string())}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="hide-mobile"><span class="text-sm text-muted">{recipe.author_name.as_ref().unwrap_or(&"Unknown".to_string())}</span></td>
+                                                <td class="hide-mobile">
+                                                    {if recipe.is_public {
+                                                        html! { <span class="badge badge-success">{t("public", lang)}</span> }
+                                                    } else {
+                                                        html! { <span class="badge">{t("private", lang)}</span> }
+                                                    }}
+                                                </td>
+                                                <td class="text-right">
+                                                        <button onclick={Callback::from(move |_| on_delete.emit(recipe_id))} class="btn-icon btn-sm">
+                                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
+                                                        </svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {if is_selected {
+                                                html! {
+                                                    <tr class="table-expanded-row"><td colspan="4">
+                                                        <div class="table-expanded-content">
+                                                            <div class="table-expanded-label">{t("description_label", lang)}<span class="table-expanded-value">{recipe.short_description.as_ref().unwrap_or(&t("no_description_available", lang).to_string())}</span></div>
+                                                            <div class="table-expanded-label">{t("author_label", lang)}<span class="table-expanded-value">{recipe.author_name.as_ref().unwrap_or(&t("unknown", lang).to_string())}{if let Some(ref email) = recipe.author_email { format!(" ({})", email) } else { String::new() }}</span></div>
+                                                            <div class="table-expanded-label">{t("status_label", lang)}<span class="table-expanded-value">{if recipe.is_public { t("public", lang) } else { t("private", lang) }}</span></div>
+                                                            <div class="table-expanded-label">{t("created_label", lang)}<span class="table-expanded-value">{&recipe.created_at}</span></div>
+                                                            <div class="table-expanded-label">{t("updated_label", lang)}<span class="table-expanded-value">{&recipe.updated_at}</span></div>
+                                                        </div>
+                                                    </td></tr>
                                                 }
                                             } else {
                                                 html! {}
                                             }}
-                                                                        </div>
-                                                                        <div>
-                                                                            <span class="font-medium">{t("status_label", lang)}</span>
-                                                                            {if recipe.is_public {
-                                                                                html! {
-                                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300 lg:hidden">
-                                                                                        {t("public", lang)}
-                                                                                    </span>
-                                                                                }
-                                                                            } else {
-                                                                                html! {
-                                                                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300 lg:hidden">
-                                                                                        {t("private", lang)}
-                                                                                    </span>
-                                                                                }
-                                                                            }}
-                                                                        </div>
-                                                                        <div>
-                                                                            <span class="font-medium">{t("created_label", lang)}</span>
-                                                                            {&recipe.created_at}
-                                                                        </div>
-                                                                        <div>
-                                                                            <span class="font-medium">{t("updated_label", lang)}</span>
-                                                                            {&recipe.updated_at}
-                                                                        </div>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        }
-                                                    } else {
-                                                        html! {}
-                                                    }}
-                                                </>
-                                            }
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </>
+                                        </>
+                                    }
+                                })}
+                                {if (*recipes).is_empty() {
+                                    html! { <tr><td colspan="4" class="table-empty">{t("no_recipes", lang)}</td></tr> }
+                                } else {
+                                    html! {}
+                                }}
+                            </tbody>
+                        </table>
+                    </div>
                 }
             }}
         </div>

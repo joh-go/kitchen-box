@@ -9,7 +9,7 @@ use shared_types::User;
 pub fn users_page() -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let users = use_state(Vec::<User>::new);
     let error = use_state(|| None as Option<String>);
 
@@ -30,12 +30,14 @@ pub fn users_page() -> Html {
     }
 
     html!{
-        <div>
-            <h2 class="text-lg font-semibold mb-2">{ t("manage_users", lang) }</h2>
-            { if let Some(e) = &*error { html!{ <p class="text-red-500">{ e }</p> } } else { html!{} } }
-            <ul>
-                { for (*users).iter().map(|u| html!{ <li class="py-1">{ format!("{} <{}>", u.name, u.email) }</li> }) }
-            </ul>
+        <div class="card page-enter">
+            <div class="card-body">
+                <h2 class="section-title mb-4">{ t("manage_users", lang) }</h2>
+                { if let Some(e) = &*error { html!{ <div class="alert alert-error"><div class="alert-content">{ e }</div></div> } } else { html!{} } }
+                <div class="flex flex-col gap-2">
+                    { for (*users).iter().map(|u| html!{ <div class="flex items-center gap-3 text-sm text-muted">{ format!("{} <{}>", u.name, u.email) }</div> }) }
+                </div>
+            </div>
         </div>
     }
 }

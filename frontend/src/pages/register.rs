@@ -42,8 +42,7 @@ pub fn register() -> Html {
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
             let state = state.clone();
-            
-            // Validate passwords match
+
             if state.deref().password != state.deref().confirm_password {
                 state.set(RegisterState {
                     error: Some(t("passwords_match", lang)),
@@ -69,7 +68,6 @@ pub fn register() -> Html {
 
                 match api::create_user(&user).await {
                     Ok(_) => {
-                        // Navigate to login page would go here
                         web_sys::window().unwrap().location().set_href("/login").unwrap();
                     }
                     Err(e) => {
@@ -89,7 +87,7 @@ pub fn register() -> Html {
         Callback::from(move |e: InputEvent| {
             let input: HtmlInputElement = e.target_unchecked_into();
             let value = input.value();
-            
+
             if let Some(name) = input.get_attribute("name") {
                 match name.as_str() {
                     "name" => {
@@ -123,20 +121,19 @@ pub fn register() -> Html {
     };
 
     html! {
-        <div class="glass rounded-2xl p-6 shadow-lg border border-emerald-100 dark:border-slate-700 animate-fade-in">
+        <div class="card page-enter">
             <div class="text-center">
-                <h2 class="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2">
-                    {t("create_account", lang)}
-                </h2>
-                <p class="text-slate-600 dark:text-slate-400">
-                    {t("join_community", lang)}
-                </p>
+                <h2 class="page-title">{t("create_account", lang)}</h2>
+                <p class="text-muted">{t("join_community", lang)}</p>
             </div>
 
-            <form class="mt-8 space-y-6" onsubmit={onsubmit}>
+            <form class="flex flex-col gap-6 mt-8" onsubmit={onsubmit}>
                 {if let Some(ref error) = state.deref().error {
                     html! {
-                        <div class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md mb-4">
+                        <div class="auth-error">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
                             {error}
                         </div>
                     }
@@ -144,64 +141,56 @@ pub fn register() -> Html {
                     html! {}
                 }}
 
-                <div>
-                    <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {t("full_name", lang)}
-                    </label>
+                <div class="form-group">
+                    <label for="name" class="form-label">{t("full_name", lang)}</label>
                     <input
                         id="name"
                         name="name"
                         type="text"
                         required=true
-                        class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                        class="form-input"
                         placeholder={t("enter_full_name", lang)}
                         value={state.name.clone()}
                         oninput={oninput.clone()}
                     />
                 </div>
 
-                <div>
-                    <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {t("email_address", lang)}
-                    </label>
+                <div class="form-group">
+                    <label for="email" class="form-label">{t("email_address", lang)}</label>
                     <input
                         id="email"
                         name="email"
                         type="email"
                         required=true
-                        class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                        class="form-input"
                         placeholder={t("enter_email", lang)}
                         value={state.email.clone()}
                         oninput={oninput.clone()}
                     />
                 </div>
 
-                <div>
-                    <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {t("password", lang)}
-                    </label>
+                <div class="form-group">
+                    <label for="password" class="form-label">{t("password", lang)}</label>
                     <input
                         id="password"
                         name="password"
                         type="password"
                         required=true
-                        class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                        class="form-input"
                         placeholder={t("enter_password", lang)}
                         value={state.password.clone()}
                         oninput={oninput.clone()}
                     />
                 </div>
 
-                <div>
-                    <label for="confirm_password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                        {t("confirm_password_label", lang)}
-                    </label>
+                <div class="form-group">
+                    <label for="confirm_password" class="form-label">{t("confirm_password_label", lang)}</label>
                     <input
                         id="confirm_password"
                         name="confirm_password"
                         type="password"
                         required=true
-                        class="appearance-none rounded-md relative block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 placeholder-slate-500 dark:placeholder-slate-400 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 focus:z-10 sm:text-sm"
+                        class="form-input"
                         placeholder={t("confirm_password_placeholder", lang)}
                         value={state.confirm_password.clone()}
                         oninput={oninput}
@@ -212,15 +201,12 @@ pub fn register() -> Html {
                     <button
                         type="submit"
                         disabled={state.loading}
-                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50"
+                        class="btn btn-primary w-full"
                     >
                         {if state.loading {
                             html! {
                                 <>
-                                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0h12c6.627 0 12 5.373 12v12c0 6.627-5.373 12-12h-4zm-1 1.465L9.465 15H15v-2h-4v-2h4v-2z"></path>
-                                    </svg>
+                                    <div class="spinner spinner-sm"><div class="spinner-circle"></div></div>
                                     {t("creating_account", lang)}
                                 </>
                             }
@@ -230,13 +216,8 @@ pub fn register() -> Html {
                     </button>
                 </div>
 
-                <div class="mt-6 text-center">
-                    <div class="text-sm text-slate-600 dark:text-slate-400">
-                        {t("already_have_account", lang)}
-                        <a href="/login" class="font-medium text-emerald-600 hover:text-emerald-500">
-                            {t("login", lang)}
-                        </a>
-                    </div>
+                <div class="auth-footer">
+                    <p>{t("already_have_account", lang)} <a href="/login" class="auth-footer-link">{t("login", lang)}</a></p>
                 </div>
             </form>
         </div>

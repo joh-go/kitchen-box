@@ -44,14 +44,10 @@ pub fn set_theme(theme: &str) {
         if let Ok(Some(storage)) = window.local_storage() {
             let _ = storage.set_item("theme", theme);
         }
-        
+
         if let Some(document) = window.document() {
-            // Get the document element (html tag) specifically
             if let Some(html_elem) = document.document_element() {
-                let class_list = html_elem.class_list();
-                let _ = class_list.remove_1("light");
-                let _ = class_list.remove_1("dark");
-                let _ = class_list.add_1(theme);
+                let _ = html_elem.set_attribute("data-theme", theme);
             }
         }
     }

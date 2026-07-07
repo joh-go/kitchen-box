@@ -51,13 +51,13 @@ pub fn edit_recipe(props: &Props) -> Html {
     };
 
     html!{
-        <div>
+        <div class="recipe-form">
             { if let Some(r) = &*recipe {
                 html!{ <RecipeForm on_saved={on_saved} editing={Some(r.clone())} on_refresh={on_refresh} /> }
             } else if let Some(e) = &*error {
-                html!{ <p class="text-red-500">{ e }</p> }
+                html!{ <div class="alert alert-error"><div class="alert-content">{ e }</div></div> }
             } else {
-                html!{ <p>{ "Loading..." }</p> }
+                html!{ <div class="spinner"><div class="spinner-circle"></div></div> }
             }}
         </div>
     }

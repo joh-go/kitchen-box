@@ -15,11 +15,11 @@ pub enum SetupStep {
 pub fn admin_setup_page() -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let current_step = use_state(|| SetupStep::Welcome);
     let loading = use_state(|| false);
     let error = use_state(|| None::<String>);
-    
+
     let name = use_state(|| String::new());
     let email = use_state(|| String::new());
     let password = use_state(|| String::new());
@@ -31,8 +31,8 @@ pub fn admin_setup_page() -> Html {
             let step = (*current_step).clone();
             match step {
                 SetupStep::Welcome => current_step.set(SetupStep::CreateAdmin),
-                SetupStep::CreateAdmin => {}, // Handled by form submission
-                SetupStep::Success => {}, // Should redirect to login
+                SetupStep::CreateAdmin => {},
+                SetupStep::Success => {},
             }
         })
     };
@@ -55,7 +55,6 @@ pub fn admin_setup_page() -> Html {
             let error = error.clone();
             let current_step = current_step.clone();
 
-            // Validation
             if name.trim().is_empty() {
                 error.set(Some(t("please_enter_name", lang)));
                 return;
@@ -126,205 +125,137 @@ pub fn admin_setup_page() -> Html {
     let step = (*current_step).clone();
 
     html! {
-        <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4">
-            <div class="w-full max-w-md">
-                // Header
+        <div class="page-center">
+            <div class="setup-wizard">
                 <div class="text-center mb-8">
-                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
-                        <span class="text-white text-2xl">{"🍳"}</span>
+                    <div class="setup-wizard-icon">
+                        <span class="text-2xl">{"🍳"}</span>
                     </div>
-                    <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 dark:from-emerald-400 dark:to-emerald-300 bg-clip-text text-transparent mb-2">
-                        {t("kitchenbox_setup", lang)}
-                    </h1>
-                    <p class="text-slate-600 dark:text-slate-400">
-                        {t("setup_description", lang)}
-                    </p>
+                    <h1 class="section-title">{t("kitchenbox_setup", lang)}</h1>
+                    <p class="text-muted">{t("setup_description", lang)}</p>
                 </div>
 
-                // Progress Indicator
-                <div class="mb-8">
+                <div class="setup-steps mb-6">
                     <div class="flex items-center justify-between">
-                        <div class={if matches!(step, SetupStep::Welcome) { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-600 text-white" } else { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-200 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-300" }}>
+                        <div class={if matches!(step, SetupStep::Welcome) { "step-circle step-circle-active" } else { "step-circle step-circle-done" }}>
                             {"1"}
                         </div>
-                        <div class={if matches!(step, SetupStep::CreateAdmin) || matches!(step, SetupStep::Success) { "flex-1 h-1 mx-2 transition-colors bg-emerald-600" } else { "flex-1 h-1 mx-2 transition-colors bg-emerald-200 dark:bg-emerald-800" }}></div>
-                        <div class={if matches!(step, SetupStep::CreateAdmin) { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-600 text-white" } else { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-200 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-300" }}>
+                        <div class={if matches!(step, SetupStep::CreateAdmin) || matches!(step, SetupStep::Success) { "step-line step-line-active" } else { "step-line" }}></div>
+                        <div class={if matches!(step, SetupStep::CreateAdmin) { "step-circle step-circle-active" } else if matches!(step, SetupStep::Success) { "step-circle step-circle-done" } else { "step-circle" }}>
                             {"2"}
                         </div>
-                        <div class={if matches!(step, SetupStep::Success) { "flex-1 h-1 mx-2 transition-colors bg-emerald-600" } else { "flex-1 h-1 mx-2 transition-colors bg-emerald-200 dark:bg-emerald-800" }}></div>
-                        <div class={if matches!(step, SetupStep::Success) { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-600 text-white" } else { "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors bg-emerald-200 text-emerald-600 dark:bg-emerald-800 dark:text-emerald-300" }}>
+                        <div class={if matches!(step, SetupStep::Success) { "step-line step-line-active" } else { "step-line" }}></div>
+                        <div class={if matches!(step, SetupStep::Success) { "step-circle step-circle-done" } else { "step-circle" }}>
                             {"✓"}
                         </div>
                     </div>
                 </div>
 
-                // Content Card
-                <div class="glass rounded-2xl p-8 shadow-xl">
-                    {match step {
-                        SetupStep::Welcome => html! {
-                            <div class="text-center">
-                                <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-                                    </svg>
-                                </div>
-                                <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                                    {t("welcome_kitchenbox", lang)}
-                                </h2>
-                                <p class="text-slate-600 dark:text-slate-400 mb-6">
-                                    {t("setup_welcome_message", lang)}
-                                </p>
-                                <div class="space-y-3 text-left bg-slate-50 dark:bg-slate-800 rounded-lg p-4 mb-6">
-                                    <div class="flex items-center space-x-3">
-                                        <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("manage_users_recipes", lang)}</span>
-                                    </div>
-                                    <div class="flex items-center space-x-3">
-                                        <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("configure_system", lang)}</span>
-                                    </div>
-                                    <div class="flex items-center space-x-3">
-                                        <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        <span class="text-sm text-slate-700 dark:text-slate-300">{t("full_access_features", lang)}</span>
-                                    </div>
-                                </div>
-                                <button 
-                                    onclick={on_next}
-                                    class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
-                                >
-                                    {t("get_started", lang)}
-                                </button>
-                            </div>
-                        },
-                        SetupStep::CreateAdmin => html! {
-                            <div>
-                                <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-6 text-center">
-                                    {t("create_administrator_account", lang)}
-                                </h2>
-                                
-                                {if let Some(ref error_msg) = *error {
-                                    html! {
-                                        <div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                                            <p class="text-red-700 dark:text-red-300 text-sm">{error_msg}</p>
+                <div class="card">
+                    <div class="card-body">
+                        {match step {
+                            SetupStep::Welcome => html! {
+                                <div class="text-center">
+                                    <h2 class="section-title mb-4">{t("welcome_kitchenbox", lang)}</h2>
+                                    <p class="text-muted mb-6">{t("setup_welcome_message", lang)}</p>
+                                    <div class="setup-features mb-6">
+                                        <div class="flex items-center gap-3 text-sm text-muted mb-3">
+                                            <span class="text-success">{"✓"}</span>
+                                            <span>{t("manage_users_recipes", lang)}</span>
                                         </div>
-                                    }
-                                } else {
-                                    html! {}
-                                }}
-
-                                <form class="space-y-4">
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {t("name", lang)}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={(*name).clone()}
-                                            oninput={on_name_change}
-                                            placeholder={t("enter_your_name", lang)}
-                                            class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                            disabled={*loading}
-                                        />
+                                        <div class="flex items-center gap-3 text-sm text-muted mb-3">
+                                            <span class="text-success">{"✓"}</span>
+                                            <span>{t("configure_system", lang)}</span>
+                                        </div>
+                                        <div class="flex items-center gap-3 text-sm text-muted">
+                                            <span class="text-success">{"✓"}</span>
+                                            <span>{t("full_access_features", lang)}</span>
+                                        </div>
                                     </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {t("email_address", lang)}
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={(*email).clone()}
-                                            oninput={on_email_change}
-                                            placeholder={t("admin_example_email", lang)}
-                                            class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                            disabled={*loading}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {t("password", lang)}
-                                        </label>
-                                        <input
-                                            type="password"
-                                            value={(*password).clone()}
-                                            oninput={on_password_change}
-                                            placeholder={t("create_strong_password", lang)}
-                                            class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                            disabled={*loading}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                            {t("confirm_password", lang)}
-                                        </label>
-                                        <input
-                                            type="password"
-                                            value={(*confirm_password).clone()}
-                                            oninput={on_confirm_password_change}
-                                            placeholder={t("confirm_your_password", lang)}
-                                            class="w-full px-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                            disabled={*loading}
-                                        />
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onclick={on_create_admin}
-                                        disabled={*loading}
-                                        class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 disabled:from-slate-400 disabled:to-slate-500 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 disabled:scale-100 shadow-lg disabled:shadow-none flex items-center justify-center"
-                                    >
-                                        {if *loading {
-                                            html! {
-                                                <div class="flex items-center justify-center">
-                                                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    <span>{t("creating_admin", lang)}</span>
-                                                </div>
-                                            }
-                                        } else {
-                                            html! { <span>{t("create_administrator", lang)}</span> }
-                                        }}
-                                    </button>
-                                </form>
-                            </div>
-                        },
-                        SetupStep::Success => html! {
-                            <div class="text-center">
-                                <div class="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg class="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                    </svg>
+                                    <button onclick={on_next} class="btn-primary">{t("get_started", lang)}</button>
                                 </div>
-                                <h2 class="text-2xl font-semibold text-slate-800 dark:text-slate-200 mb-4">
-                                    {t("setup_complete", lang)}
-                                </h2>
-                                <p class="text-slate-600 dark:text-slate-400 mb-6">
-                                    {t("admin_created_success", lang)}
-                                </p>
-                                <button 
-                                    onclick={Callback::from(|_| {
-                                        // Redirect to login page
+                            },
+                            SetupStep::CreateAdmin => html! {
+                                <div>
+                                    <h2 class="section-title mb-6 text-center">{t("create_administrator_account", lang)}</h2>
+
+                                    {if let Some(ref error_msg) = *error {
+                                        html! { <div class="alert alert-error"><div class="alert-content">{error_msg}</div></div> }
+                                    } else {
+                                        html! {}
+                                    }}
+
+                                    <form>
+                                        <div class="form-group">
+                                            <label class="form-label">{t("name", lang)}</label>
+                                            <input
+                                                type="text"
+                                                value={(*name).clone()}
+                                                oninput={on_name_change}
+                                                placeholder={t("enter_your_name", lang)}
+                                                class="form-input"
+                                                disabled={*loading}
+                                            />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">{t("email_address", lang)}</label>
+                                            <input
+                                                type="email"
+                                                value={(*email).clone()}
+                                                oninput={on_email_change}
+                                                placeholder={t("admin_example_email", lang)}
+                                                class="form-input"
+                                                disabled={*loading}
+                                            />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">{t("password", lang)}</label>
+                                            <input
+                                                type="password"
+                                                value={(*password).clone()}
+                                                oninput={on_password_change}
+                                                placeholder={t("create_strong_password", lang)}
+                                                class="form-input"
+                                                disabled={*loading}
+                                            />
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">{t("confirm_password", lang)}</label>
+                                            <input
+                                                type="password"
+                                                value={(*confirm_password).clone()}
+                                                oninput={on_confirm_password_change}
+                                                placeholder={t("confirm_your_password", lang)}
+                                                class="form-input"
+                                                disabled={*loading}
+                                            />
+                                        </div>
+
+                                        <button type="button" onclick={on_create_admin} disabled={*loading} class="btn-primary w-full">
+                                            {if *loading {
+                                                html! { <><span class="spinner-spin"></span> {t("creating_admin", lang)}</> }
+                                            } else {
+                                                html! { {t("create_administrator", lang)} }
+                                            }}
+                                        </button>
+                                    </form>
+                                </div>
+                            },
+                            SetupStep::Success => html! {
+                                <div class="text-center">
+                                    <h2 class="section-title mb-4">{t("setup_complete", lang)}</h2>
+                                    <p class="text-muted mb-6">{t("admin_created_success", lang)}</p>
+                                    <button onclick={Callback::from(|_| {
                                         if let Some(window) = window() {
                                             let _ = window.location().reload();
                                         }
-                                    })}
-                                    class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition-all transform hover:scale-105 shadow-lg"
-                                >
-                                    {t("go_to_login", lang)}
-                                </button>
-                            </div>
-                        }
-                    }}
+                                    })} class="btn-primary">
+                                        {t("go_to_login", lang)}
+                                    </button>
+                                </div>
+                            }
+                        }}
+                    </div>
                 </div>
             </div>
         </div>

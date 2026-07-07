@@ -17,12 +17,11 @@ pub struct Props {
 pub fn image_manager(props: &Props) -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
-    
+
     let images = use_state(|| props.images.clone());
     let uploading = use_state(|| false);
     let error = use_state(|| None::<String>);
 
-    // Sync with props when they change (e.g., after saving/reloading recipe)
     {
         let images = images.clone();
         let props_images = props.images.clone();
@@ -78,53 +77,33 @@ pub fn image_manager(props: &Props) -> Html {
     let current_images = (*images).clone();
 
     html! {
-        <div class="space-y-4">
-            <div>
-                <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
-                    { t("images", lang) }
-                </h3>
-                
-                // Upload section
-                <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-6 text-center">
+        <div class="image-manager">
+            <h3 class="section-title mb-3">{ t("images", lang) }</h3>
+
+            <div class="image-upload-area">
+                <div class="image-upload-btn">
                     <input
                         type="file"
                         accept="image/*"
                         onchange={on_file_select}
                         disabled={props.recipe_id.is_none() || *uploading}
-                        class="hidden"
                         id="image-upload"
                     />
-                    <label 
-                        for="image-upload"
-                        class="cursor-pointer inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        { if *uploading { 
-                            t("uploading", lang)
-                        } else { 
-                            t("choose_image", lang)
-                        } }
+                    <label for="image-upload" class="btn btn-primary">
+                        { if *uploading { t("uploading", lang) } else { t("choose_image", lang) } }
                     </label>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                        { t("upload_images_description", lang) }
-                    </p>
                 </div>
-
-                // Error display
+                { if *uploading {
+                    html! { <span class="image-upload-progress">{t("uploading", lang)}</span> }
+                } else { html!{} }}
                 { if let Some(err) = (*error).clone() {
-                    html! {
-                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-md">
-                            { err }
-                        </div>
-                    }
-                } else {
-                    html! {}
-                }}
+                    html! { <span class="image-upload-error">{ err }</span> }
+                } else { html!{} }}
             </div>
 
-            // Images grid
             { if !current_images.is_empty() {
                 html! {
-                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="image-grid">
                         { for current_images.iter().map(|image| {
                             let image_id = image.id.unwrap_or(0);
                             let is_primary = image.is_primary.unwrap_or(false);
@@ -132,105 +111,85 @@ pub fn image_manager(props: &Props) -> Html {
                             let recipe_id = props.recipe_id;
                             let on_images_changed_primary = props.on_images_changed.clone();
                             let on_images_changed_delete = props.on_images_changed.clone();
-                            
-                            // Create image URL - use the correct backend port
-                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}", 
+
+                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
                                 recipe_id.unwrap_or(0), filename);
-                            
+
                             html! {
-                                <div class="relative group">
-                                    <div class="aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden">
-                                        // Try to display the actual image
-                                        <img 
-                                            src={image_url.clone()}
-                                            alt={filename.clone()}
-                                            class="w-full h-full object-cover"
-                                        />
-                                        
-                                        // Fallback placeholder if image doesn't load
-                                        <div class="w-full h-full flex items-center justify-center hidden">
-                                            <div class="text-center p-4">
-                                                <div class="text-2xl mb-2">{ "CAMERA" }</div>
-                                                <div class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                                                    { filename }
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    // Primary badge
+                                <div class="image-grid-item">
+                                    <img
+                                        src={image_url.clone()}
+                                        alt={filename.clone()}
+                                    />
                                     { if is_primary {
                                         html! {
-                                            <div class="absolute top-2 left-2 bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
-                                                { t("primary", lang) }
+                                            <div class="image-primary-badge">
+                                                <svg fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
                                             </div>
                                         }
-                                    } else {
-                                        html! {}
-                                    }}
+                                    } else { html!{} }}
 
-                                    // Action buttons
-                                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div class="flex gap-1">
-                                            { if !is_primary {
-                                                html! {
-                                                    <button
-                                                        type="button"
-                                                        onclick={Callback::from(move |_| {
-                                                            let recipe_id = recipe_id;
-                                                            let on_images_changed = on_images_changed_primary.clone();
-                                                            spawn_local(async move {
-                                                                if let Some(rid) = recipe_id {
-                                                                    if let Ok(()) = api::set_primary_image(rid, image_id).await {
-                                                                        // Refresh images by calling API again
-                                                                        if let Ok(refreshed_images) = api::get_recipe_images(rid).await {
-                                                                            on_images_changed.emit(refreshed_images);
-                                                                        }
+                                    <div class="image-grid-item-actions">
+                                        { if !is_primary {
+                                            html! {
+                                                <button
+                                                    type="button"
+                                                    onclick={Callback::from(move |_| {
+                                                        let recipe_id = recipe_id;
+                                                        let on_images_changed = on_images_changed_primary.clone();
+                                                        spawn_local(async move {
+                                                            if let Some(rid) = recipe_id {
+                                                                if let Ok(()) = api::set_primary_image(rid, image_id).await {
+                                                                    if let Ok(refreshed_images) = api::get_recipe_images(rid).await {
+                                                                        on_images_changed.emit(refreshed_images);
                                                                     }
                                                                 }
-                                                            });
-                                                        })}
-                                                        class="bg-blue-600 hover:bg-blue-700 text-white p-1 rounded text-xs"
-                                                        title={t("set_as_primary", lang)}
-                                                    >
-                                                        { "STAR" }
-                                                    </button>
-                                                }
-                                            } else {
-                                                html! {}
-                                            }}
-                                            <button
-                                                type="button"
-                                                onclick={Callback::from(move |_| {
-                                                    let recipe_id = recipe_id;
-                                                    let on_images_changed = on_images_changed_delete.clone();
-                                                    spawn_local(async move {
-                                                        if let Some(rid) = recipe_id {
-                                                            if let Ok(()) = api::delete_recipe_image(rid, image_id).await {
-                                                                // Refresh images by calling API again
-                                                                if let Ok(refreshed_images) = api::get_recipe_images(rid).await {
-                                                                    on_images_changed.emit(refreshed_images);
-                                                                }
+                                                            }
+                                                        });
+                                                    })}
+                                                    class="image-action-btn image-action-btn-primary"
+                                                    title={t("set_as_primary", lang)}
+                                                >
+                                                    <svg fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                    </svg>
+                                                </button>
+                                            }
+                                        } else { html!{} }}
+                                        <button
+                                            type="button"
+                                            onclick={Callback::from(move |_| {
+                                                let recipe_id = recipe_id;
+                                                let on_images_changed = on_images_changed_delete.clone();
+                                                spawn_local(async move {
+                                                    if let Some(rid) = recipe_id {
+                                                        if let Ok(()) = api::delete_recipe_image(rid, image_id).await {
+                                                            if let Ok(refreshed_images) = api::get_recipe_images(rid).await {
+                                                                on_images_changed.emit(refreshed_images);
                                                             }
                                                         }
-                                                    });
-                                                })}
-                                                class="bg-red-600 hover:bg-red-700 text-white p-1 rounded text-xs"
-                                                title={t("delete_image", lang)}
-                                            >
-                                                { "DELETE" }
-                                            </button>
-                                        </div>
+                                                    }
+                                                });
+                                            })}
+                                            class="image-action-btn image-action-btn-danger"
+                                            title={t("delete_image", lang)}
+                                        >
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             }
-                        })}
+                        }) }
                     </div>
                 }
             } else {
                 html! {
-                    <div class="text-center py-8 text-slate-500 dark:text-slate-400">
-                        { t("no_images_uploaded", lang) }
+                    <div class="empty-state">
+                        <p class="text-muted">{ t("no_images_uploaded", lang) }</p>
                     </div>
                 }
             }}

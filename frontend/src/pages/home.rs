@@ -9,8 +9,6 @@ pub fn home() -> Html {
     let on_add = Callback::from(|_| {});
     let on_search = Callback::from(|_value: String| {});
     html! {
-        <div>
-            <RecipeList on_edit={on_edit} on_view={on_view} on_add={on_add} refresh={0} search={String::new()} on_search={on_search} />
-        </div>
+        <RecipeList on_edit={on_edit} on_view={on_view} on_add={on_add} refresh={0} search={String::new()} on_search={on_search} />
     }
 }
