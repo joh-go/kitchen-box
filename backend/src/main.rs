@@ -9,7 +9,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use rocket::fairing::AdHoc;
 use rocket::fs::FileServer;
 use rocket::http::Header;
-use rocket::{get, launch, routes};
+use rocket::{get, launch, options, routes};
 use std::path::PathBuf;
 
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
@@ -27,7 +27,7 @@ fn rocket() -> _ {
 
     let mut rocket = rocket::build().manage(db_pool);
 
-    let cors_origin: Option<&'static str> = match std::env::var("CORS_ORIGIN") {
+    let cors_origin: Option<&'static str> = match std::env::var("CORS_ORIGINS").or_else(|_| std::env::var("CORS_ORIGIN")) {
         Ok(v) if !v.is_empty() => Some(Box::leak(v.into_boxed_str())),
         _ => {
             if std::env::var("FRONTEND_DIST").is_ok() {
@@ -59,6 +59,8 @@ fn rocket() -> _ {
             },
         ));
     }
+
+    rocket = rocket.mount("/", routes![api_cors]);
 
     if let Ok(frontend_dir) = std::env::var("FRONTEND_DIST") {
         let path = PathBuf::from(&frontend_dir);
@@ -118,4 +120,9 @@ fn rocket() -> _ {
 #[get("/")]
 fn index() -> &'static str {
     "Recipes API - Running"
+}
+
+#[options("/api/<_path..>")]
+fn api_cors(_path: std::path::PathBuf) -> rocket::http::Status {
+    rocket::http::Status::Ok
 }

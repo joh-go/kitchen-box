@@ -7,8 +7,6 @@ mod pages;
 mod theme;
 
 use components::sidebar::Sidebar;
-use components::theme_provider::ThemeToggle;
-use components::language_switcher::LanguageSwitcher;
 use i18n::{Language, t};
 use language_provider::LanguageState;
 use language_provider::LanguageProvider;
@@ -138,31 +136,30 @@ fn admin_setup_with_guard() -> Html {
 
     if *loading {
         html! {
-            <div class="loading-page">
-                <div class="loading-page-inner">
-                    <div class="spinner"><div class="spinner-circle"></div></div>
-                    <p class="loading-page-text">{t("loading", lang)}</p>
-                </div>
+            <div class="auth-page">
+                <div class="spinner"><div class="spinner-circle"></div></div>
             </div>
         }
     } else if let Some(true) = *admin_exists {
         html! {
-            <div class="loading-page">
-                <div class="card" style="max-width: 28rem; margin: 0 auto; padding: var(--space-6); text-align: center;">
-                    <div class="flex justify-center mb-4">
-                        <svg width="2rem" height="2rem" fill="none" stroke="var(--primary)" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
+            <div class="auth-page">
+                <div class="auth-card" style="text-align:center;">
+                    <div class="auth-logo">
+                        <div class="auth-logo-icon">
+                            <svg fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M21 4.5C19.9 4.15 18.7 4 17.5 4c-1.95 0-4.05.4-5.5 1.5C10.55 4.4 8.45 4 6.5 4 5.3 4 4.1 4.15 3 4.5v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05 1.1-.35 2.3-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5.1.05.15.05.25.05.25 0 .5-.25.5-.5V4.5z"/>
+                            </svg>
+                        </div>
+                        <h1>{t("setup_complete", lang)}</h1>
+                        <p>{t("setup_complete_desc", lang)}</p>
                     </div>
-                    <h2 class="section-title mb-4">{t("setup_complete", lang)}</h2>
-                    <p class="text-muted mb-6">{t("setup_complete_desc", lang)}</p>
                     <button
                         onclick={Callback::from(|_| {
                             if let Some(window) = web_sys::window() {
                                 let _ = window.location().set_href("/");
                             }
                         })}
-                        class="btn btn-primary"
+                        class="btn btn-primary w-full"
                     >
                         {t("go_to_login", lang)}
                     </button>
@@ -177,7 +174,7 @@ fn admin_setup_with_guard() -> Html {
 #[function_component(App)]
 fn app() -> Html {
     let page = use_state(|| Page::Home);
-    let mobile_menu_open = use_state(|| false);
+    let sidebar_open = use_state(|| false);
     let search = use_state(|| String::new());
     let admin_check_done = use_state(|| false);
     let lang_ctx = use_context::<LanguageState>();
@@ -270,17 +267,17 @@ fn app() -> Html {
         })
     };
 
-    let toggle_mobile_menu = {
-        let mobile_menu_open = mobile_menu_open.clone();
+    let toggle_sidebar = {
+        let sidebar_open = sidebar_open.clone();
         Callback::from(move |_| {
-            mobile_menu_open.set(!*mobile_menu_open);
+            sidebar_open.set(!*sidebar_open);
         })
     };
 
-    let close_mobile_menu = {
-        let mobile_menu_open = mobile_menu_open.clone();
+    let close_sidebar = {
+        let sidebar_open = sidebar_open.clone();
         Callback::from(move |_: yew::MouseEvent| {
-            mobile_menu_open.set(false);
+            sidebar_open.set(false);
         })
     };
 
@@ -294,88 +291,44 @@ fn app() -> Html {
         })
     };
 
-    let desktop_search_callback = on_search_input.clone();
+    // Auth pages render outside the app layout (full-screen)
+    let is_auth_page = matches!(current, Page::Login | Page::Register | Page::AdminSetup);
 
+    if is_auth_page {
+        return html! {
+            <div class="auth-page">
+                { render_page(&current, navigate.clone(), search_value, on_search_input, lang) }
+            </div>
+        };
+    }
+
+    let search_navigate = navigate.clone();
+    let search_callback_input = on_search_input.clone();
     let mobile_nav_home = navigate.reform(|_: yew::MouseEvent| Page::Home);
     let mobile_nav_add = navigate.reform(|_: yew::MouseEvent| Page::Add);
     let mobile_nav_settings = navigate.reform(|_: yew::MouseEvent| Page::Settings);
-    let mobile_nav_menu = toggle_mobile_menu.clone();
+    let mobile_sidebar_toggle = toggle_sidebar.clone();
+
+    let sidebar_class = if *sidebar_open { "sidebar open" } else { "sidebar" };
+    let backdrop_class = if *sidebar_open { "sidebar-backdrop open" } else { "sidebar-backdrop" };
 
     html! {
-        <div class="app-wrapper">
-            // Mobile Menu Overlay
-            if *mobile_menu_open {
-                <div
-                    class="mobile-backdrop"
-                    onclick={close_mobile_menu.clone()}
-                ></div>
-            }
+        <>
+            // Sidebar backdrop (mobile only)
+            <div class={backdrop_class} onclick={close_sidebar.clone()}></div>
 
-            // Mobile Sidebar
-            if *mobile_menu_open {
-                <div class="mobile-menu">
-                    <div class="mobile-menu-header">
-                        <div class="mobile-menu-title">
-                            <div class="mobile-menu-title-icon">
-                                <span>{"🍳"}</span>
-                            </div>
-                            <h2 class="mobile-menu-title-text">
-                                {t("menu", lang)}
-                            </h2>
-                        </div>
-                        <div class="mobile-menu-actions">
-                            <ThemeToggle class={""} />
-                            <button
-                                onclick={close_mobile_menu.clone()}
-                                class="mobile-menu-close"
-                            >
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+            // Sidebar (fixed, dark gradient — slides on mobile)
+            <aside class={sidebar_class}>
+                <Sidebar on_navigate={navigate.clone()} on_mobile_close={close_sidebar.clone()} />
+            </aside>
 
-                    <div class="mobile-menu-body">
-                        <Sidebar
-                            on_navigate={navigate.clone()}
-                            on_mobile_close={close_mobile_menu.clone()}
-                        />
-                    </div>
-                </div>
-            }
-
-            // Header
-            <header class="header">
-                <div class="header-inner">
-                    <div class="header-logo">
-                        <div class="header-logo-icon">
-                            <span>{"🍳"}</span>
-                        </div>
-                        <div>
-                            <h1 class="header-title">
-                                {t("app_name", lang)}
-                            </h1>
-                            <p class="header-tagline">
-                                {t("app_tagline", lang)}
-                            </p>
-                        </div>
-                    </div>
-
-                    // Mobile Menu Button
-                    <button
-                        onclick={toggle_mobile_menu}
-                        class="mobile-only touch-target btn-icon btn-ghost"
-                    >
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                    </button>
-
-                    // Desktop Navigation
-                    <nav class="header-nav">
-                        <div class="filter-search-inner">
-                            <svg class="filter-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            // Main content area
+            <main class="app-main">
+                <div class="app-content">
+                    // Search bar (visible on all pages)
+                    <div class="content-search">
+                        <div class="content-search-inner">
+                            <svg class="content-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                             </svg>
                             <input
@@ -384,48 +337,31 @@ fn app() -> Html {
                                 value={search_value.clone()}
                                 oninput={Callback::from(move |e: yew::InputEvent| {
                                     let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
-                                    desktop_search_callback.emit(input.value());
+                                    let value = input.value();
+                                    search_callback_input.emit(value);
+                                    search_navigate.emit(Page::Home);
                                 })}
-                                class="form-input"
-                                style="width: 16rem; padding-left: 2.5rem;"
+                                class="content-search-input"
                             />
                         </div>
-                        <LanguageSwitcher class={""} />
-                        <ThemeToggle class={""} />
-                        <div class="header-status">
-                            <span class="header-status-dot"></span>
-                            <span>{t("ready_to_cook", lang)}</span>
-                        </div>
-                    </nav>
-                </div>
-            </header>
-
-            // Main Content Area
-            <main class="main-content">
-                <div class="main-grid">
-                    // Sidebar (desktop)
-                    <aside class="main-sidebar">
-                        <div class="sidebar-desktop">
-                            <Sidebar on_navigate={navigate.clone()} />
-                        </div>
-                    </aside>
-
-                    // Main Content
-                    <div class="main-content-area">
-                        <div class="page-enter">
-                            { render_page(&current, navigate.clone(), search_value, on_search_input, lang) }
-                        </div>
+                    </div>
+                    <div class="page-enter">
+                        { render_page(&current, navigate, search_value, on_search_input, lang) }
                     </div>
                 </div>
             </main>
 
+            // Mobile sidebar toggle button
+            <button onclick={mobile_sidebar_toggle} class="sidebar-toggle">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+
             // Mobile Bottom Navigation
             <nav class="mobile-bottom-nav">
                 <div class="mobile-bottom-nav-inner">
-                    <button
-                        onclick={mobile_nav_home}
-                        class="mobile-nav-btn"
-                    >
+                    <button onclick={mobile_nav_home} class="mobile-nav-btn">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
@@ -434,10 +370,7 @@ fn app() -> Html {
 
                     {if api::is_logged_in() {
                         html! {
-                            <button
-                                onclick={mobile_nav_add}
-                                class="mobile-nav-btn"
-                            >
+                            <button onclick={mobile_nav_add} class="mobile-nav-btn">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                 </svg>
@@ -445,19 +378,12 @@ fn app() -> Html {
                             </button>
                         }
                     } else {
-                        html! {
-                            <div class="flex flex-col items-center justify-center py-3 px-2">
-                                <div class="w-full" style="height: 1.25rem; margin-bottom: var(--space-1);"></div>
-                            </div>
-                        }
+                        html! { <div></div> }
                     }}
 
                     {if api::is_logged_in() {
                         html! {
-                            <button
-                                onclick={mobile_nav_settings}
-                                class="mobile-nav-btn mobile-nav-btn-inactive"
-                            >
+                            <button onclick={mobile_nav_settings} class="mobile-nav-btn mobile-nav-btn-inactive">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -466,17 +392,10 @@ fn app() -> Html {
                             </button>
                         }
                     } else {
-                        html! {
-                            <div class="flex flex-col items-center justify-center py-3 px-2">
-                                <div class="w-full" style="height: 1.25rem; margin-bottom: var(--space-1);"></div>
-                            </div>
-                        }
+                        html! { <div></div> }
                     }}
 
-                    <button
-                        onclick={mobile_nav_menu}
-                        class="mobile-nav-btn mobile-nav-btn-inactive"
-                    >
+                    <button onclick={toggle_sidebar} class="mobile-nav-btn mobile-nav-btn-inactive">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
@@ -486,7 +405,7 @@ fn app() -> Html {
             </nav>
 
             <div class="mobile-nav-spacer"></div>
-        </div>
+        </>
     }
 }
 

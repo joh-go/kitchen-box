@@ -141,7 +141,7 @@ pub fn admin_categories_page() -> Html {
                             })}
                             class="form-input flex-1"
                         />
-                        <button type="submit" disabled={*creating} class="btn-primary">
+                        <button type="submit" disabled={*creating} class="btn btn-primary">
                             {if *creating {
                                 html! { <><span class="spinner-spin"></span> {t("creating_category", lang)}</> }
                             } else {

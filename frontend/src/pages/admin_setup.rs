@@ -125,11 +125,12 @@ pub fn admin_setup_page() -> Html {
     let step = (*current_step).clone();
 
     html! {
-        <div class="page-center">
-            <div class="setup-wizard">
+        <div class="setup-wizard">
                 <div class="text-center mb-8">
                     <div class="setup-wizard-icon">
-                        <span class="text-2xl">{"🍳"}</span>
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 4.5C19.9 4.15 18.7 4 17.5 4c-1.95 0-4.05.4-5.5 1.5C10.55 4.4 8.45 4 6.5 4 5.3 4 4.1 4.15 3 4.5v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05 1.1-.35 2.3-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5.1.05.15.05.25.05.25 0 .5-.25.5-.5V4.5z"/>
+                        </svg>
                     </div>
                     <h1 class="section-title">{t("kitchenbox_setup", lang)}</h1>
                     <p class="text-muted">{t("setup_description", lang)}</p>
@@ -172,7 +173,7 @@ pub fn admin_setup_page() -> Html {
                                             <span>{t("full_access_features", lang)}</span>
                                         </div>
                                     </div>
-                                    <button onclick={on_next} class="btn-primary">{t("get_started", lang)}</button>
+                                    <button onclick={on_next} class="btn btn-primary">{t("get_started", lang)}</button>
                                 </div>
                             },
                             SetupStep::CreateAdmin => html! {
@@ -231,7 +232,7 @@ pub fn admin_setup_page() -> Html {
                                             />
                                         </div>
 
-                                        <button type="button" onclick={on_create_admin} disabled={*loading} class="btn-primary w-full">
+                                        <button type="button" onclick={on_create_admin} disabled={*loading} class="btn btn-primary w-full">
                                             {if *loading {
                                                 html! { <><span class="spinner-spin"></span> {t("creating_admin", lang)}</> }
                                             } else {
@@ -249,7 +250,7 @@ pub fn admin_setup_page() -> Html {
                                         if let Some(window) = window() {
                                             let _ = window.location().reload();
                                         }
-                                    })} class="btn-primary">
+                                     })} class="btn btn-primary">
                                         {t("go_to_login", lang)}
                                     </button>
                                 </div>
@@ -258,6 +259,5 @@ pub fn admin_setup_page() -> Html {
                     </div>
                 </div>
             </div>
-        </div>
     }
 }

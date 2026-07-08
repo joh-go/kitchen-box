@@ -259,7 +259,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                 } else {
                                     html! {
                                         <div class="gallery-main">
-                                            <div class="gallery-main-placeholder">{"🍳"}</div>
+                                            <div class="gallery-main-placeholder"></div>
                                         </div>
                                     }
                                 }}

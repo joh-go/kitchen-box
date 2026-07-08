@@ -296,7 +296,7 @@ pub fn admin_users_page() -> Html {
                     <h1 class="section-title">{t("user_management_title", lang)}</h1>
                     <p class="text-muted">{t("manage_user_accounts_permissions", lang)}</p>
                 </div>
-                <button onclick={on_create_user} class="btn-primary">{t("add_user", lang)}</button>
+                <button onclick={on_create_user} class="btn btn-primary">{t("add_user", lang)}</button>
             </div>
 
             {if *loading {
@@ -419,8 +419,8 @@ pub fn admin_users_page() -> Html {
                                                     <label for="is_admin" class="form-label">{t("administrator_label", lang)}</label>
                                                 </div>
                                                 <div class="modal-footer">
-                                                    <button type="button" onclick={on_cancel_action.clone()} class="btn-secondary">{t("cancel", lang)}</button>
-                                                    <button type="submit" disabled={*form_loading} class="btn-primary">
+                                                    <button type="button" onclick={on_cancel_action.clone()} class="btn btn-ghost">{t("cancel", lang)}</button>
+                                                    <button type="submit" disabled={*form_loading} class="btn btn-primary">
                                                         {if *form_loading { t("saving", lang) } else { if matches!(*action, UserAction::Edit(_)) { t("update", lang) } else { t("create", lang) } }}
                                                     </button>
                                                 </div>
@@ -441,8 +441,8 @@ pub fn admin_users_page() -> Html {
                                             <h3 class="section-title mb-4">{t("delete_user_title", lang)}</h3>
                                             <p class="text-muted mb-6">{t("delete_user_confirmation", lang)}</p>
                                             <div class="flex justify-center gap-3">
-                                                <button onclick={on_cancel_action.clone()} class="btn-secondary">{t("cancel", lang)}</button>
-                                                <button onclick={on_confirm_delete} class="btn-danger">{t("delete", lang)}</button>
+                                                <button onclick={on_cancel_action.clone()} class="btn btn-ghost">{t("cancel", lang)}</button>
+                                                <button onclick={on_confirm_delete} class="btn btn-danger">{t("delete", lang)}</button>
                                             </div>
                                         </div>
                                     </div>

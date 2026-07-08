@@ -214,7 +214,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                 }
                             } else {
                                 html! {
-                                    <div class="recipe-card-image-placeholder">{"🍳"}</div>
+                                    <div class="recipe-card-image-placeholder"></div>
                                 }
                             }}
 
