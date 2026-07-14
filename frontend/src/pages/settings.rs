@@ -10,7 +10,6 @@ use std::ops::Deref;
 #[derive(Clone, Debug)]
 pub struct SettingsState {
     pub name: String,
-    pub email: String,
     pub current_password: String,
     pub new_password: String,
     pub confirm_password: String,
@@ -23,7 +22,6 @@ impl Default for SettingsState {
     fn default() -> Self {
         Self {
             name: api::get_current_user_name().unwrap_or_default(),
-            email: String::new(),
             current_password: String::new(),
             new_password: String::new(),
             confirm_password: String::new(),
@@ -57,10 +55,8 @@ pub fn settings() -> Html {
                     match api::get_current_user().await {
                         Ok(user) => {
                             let name = user.get("name").and_then(|n| n.as_str()).unwrap_or("").to_string();
-                            let email = user.get("email").and_then(|e| e.as_str()).unwrap_or("").to_string();
                             state.set(SettingsState {
                                 name,
-                                email,
                                 ..state.deref().clone()
                             });
                         }
@@ -106,11 +102,10 @@ pub fn settings() -> Html {
                 });
 
                 let name = state.deref().name.clone();
-                let email = state.deref().email.clone();
                 let current_password = state.deref().current_password.clone();
                 let new_password = state.deref().new_password.clone();
 
-                match api::update_profile(&name, &email, &current_password, &new_password).await {
+                match api::update_profile(&name, &current_password, &new_password).await {
                     Ok(_) => {
                         if let Some(window) = web_sys::window() {
                             if let Ok(Some(storage)) = window.local_storage() {
@@ -150,7 +145,6 @@ pub fn settings() -> Html {
             if let Some(name) = input.get_attribute("name") {
                 match name.as_str() {
                     "name" => { state.set(SettingsState { name: value, ..state.deref().clone() }); }
-                    "email" => { state.set(SettingsState { email: value, ..state.deref().clone() }); }
                     "current_password" => { state.set(SettingsState { current_password: value, ..state.deref().clone() }); }
                     "new_password" => { state.set(SettingsState { new_password: value, ..state.deref().clone() }); }
                     "confirm_password" => { state.set(SettingsState { confirm_password: value, ..state.deref().clone() }); }
@@ -192,16 +186,6 @@ pub fn settings() -> Html {
                                         class="form-input"
                                         placeholder={t("enter_display_name", lang)}
                                         value={state.name.clone()}
-                                        oninput={oninput.clone()}
-                                    />
-                                </div>
-                                <div class="form-group">
-                                    <label for="email" class="form-label">{t("email_address", lang)}</label>
-                                    <input
-                                        id="email" name="email" type="email"
-                                        class="form-input"
-                                        placeholder={t("enter_email", lang)}
-                                        value={state.email.clone()}
                                         oninput={oninput.clone()}
                                     />
                                 </div>

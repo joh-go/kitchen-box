@@ -26,7 +26,7 @@ pub struct UserResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoginRequest {
-    pub email: String,
+    pub username: String,
     pub password: String,
 }
 
@@ -39,7 +39,6 @@ pub struct LoginResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateProfileRequest {
     pub name: String,
-    pub email: String,
     pub current_password: Option<String>,
     pub new_password: Option<String>,
 }

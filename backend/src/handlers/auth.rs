@@ -14,7 +14,7 @@ pub fn login(
     mut db: DbConn,
     login: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Custom<String>> {
-    match authenticate_user(&mut *db, &login.email, &login.password) {
+    match authenticate_user(&mut *db, &login.username, &login.password) {
         Ok(Some(user)) => {
             let token =
                 generate_token(user.id).map_err(|e| Custom(Status::InternalServerError, e))?;
@@ -63,29 +63,23 @@ pub fn update_current_user(
     auth_user: AuthenticatedUser,
     update: Json<UpdateProfileRequest>,
 ) -> Result<Json<UserResponse>, Custom<String>> {
-    let current = users
-        .select((name, email))
+    let current_name = users
+        .select(name)
         .filter(id.eq(&auth_user.user_id))
-        .first::<(String, String)>(&mut *db)
+        .first::<String>(&mut *db)
         .map_err(|e| Custom(Status::NotFound, format!("User not found: {}", e)))?;
 
     let new_name = if update.name.trim().is_empty() {
-        current.0.clone()
+        current_name.clone()
     } else {
         update.name.clone()
-    };
-
-    let new_email = if update.email.trim().is_empty() {
-        current.1.clone()
-    } else {
-        update.email.clone()
     };
 
     if let Some(ref current_pw) = update.current_password {
         if !current_pw.trim().is_empty() {
             if let Some(ref new_pw) = update.new_password {
                 if !new_pw.trim().is_empty() {
-                    match authenticate_user(&mut *db, &current.1, current_pw) {
+                    match authenticate_user(&mut *db, &current_name, current_pw) {
                         Ok(Some(_)) => {}
                         Ok(None) => {
                             return Err(Custom(
@@ -102,30 +96,30 @@ pub fn update_current_user(
                         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
 
                     diesel::update(users.filter(id.eq(&auth_user.user_id)))
-                        .set((name.eq(&new_name), email.eq(&new_email), password.eq(&hashed)))
+                        .set((name.eq(&new_name), password.eq(&hashed)))
                         .execute(&mut *db)
                         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
                 } else {
                     diesel::update(users.filter(id.eq(&auth_user.user_id)))
-                        .set((name.eq(&new_name), email.eq(&new_email)))
+                        .set(name.eq(&new_name))
                         .execute(&mut *db)
                         .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
                 }
             } else {
                 diesel::update(users.filter(id.eq(&auth_user.user_id)))
-                    .set((name.eq(&new_name), email.eq(&new_email)))
+                    .set(name.eq(&new_name))
                     .execute(&mut *db)
                     .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
             }
         } else {
             diesel::update(users.filter(id.eq(&auth_user.user_id)))
-                .set((name.eq(&new_name), email.eq(&new_email)))
+                .set(name.eq(&new_name))
                 .execute(&mut *db)
                 .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
         }
     } else {
         diesel::update(users.filter(id.eq(&auth_user.user_id)))
-            .set((name.eq(&new_name), email.eq(&new_email)))
+            .set(name.eq(&new_name))
             .execute(&mut *db)
             .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
     }

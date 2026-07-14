@@ -1,5 +1,4 @@
 use yew::prelude::*;
-use wasm_bindgen_futures::spawn_local;
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -8,13 +7,23 @@ use crate::language_provider::LanguageState;
 pub struct AdminUser {
     pub id: i32,
     pub name: String,
-    pub email: String,
     pub is_admin: bool,
-    pub created_at: String,
+    pub created_at: Option<String>,
+}
+
+impl AdminUser {
+    pub fn from_value(user: &serde_json::Value) -> Option<Self> {
+        Some(Self {
+            id: user.get("id")?.as_i64()? as i32,
+            name: user.get("name")?.as_str()?.to_string(),
+            is_admin: user.get("is_admin")?.as_bool()?,
+            created_at: user.get("created_at").and_then(|c| c.as_str()).map(|s| s.to_string()),
+        })
+    }
 }
 
 #[derive(Clone, Debug)]
-pub enum UserAction {
+enum UserAction {
     None,
     Create,
     Edit(i32),
@@ -26,434 +35,331 @@ pub fn admin_users_page() -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
 
-    let users = use_state(|| Vec::<AdminUser>::new());
+    let users = use_state(Vec::<AdminUser>::new);
     let loading = use_state(|| true);
-    let error = use_state(|| None::<String>);
     let action = use_state(|| UserAction::None);
-    let show_create_form = use_state(|| false);
-    let selected_user = use_state(|| None::<AdminUser>);
-
     let form_name = use_state(|| String::new());
-    let form_email = use_state(|| String::new());
     let form_password = use_state(|| String::new());
     let form_is_admin = use_state(|| false);
-    let form_loading = use_state(|| false);
     let form_error = use_state(|| None::<String>);
+    let form_loading = use_state(|| false);
 
+    // Load users
     {
         let users = users.clone();
         let loading = loading.clone();
-        let error = error.clone();
-
         use_effect_with((), move |_| {
-            spawn_local(async move {
+            let users = users.clone();
+            let loading = loading.clone();
+            wasm_bindgen_futures::spawn_local(async move {
                 match api::get_admin_users().await {
-                    Ok(response) => {
-                        if let Some(users_data) = response.get("users").and_then(|u| u.as_array()) {
-                            let parsed_users: Vec<AdminUser> = users_data.iter().filter_map(|user| {
-                                Some(AdminUser {
-                                    id: user.get("id")?.as_i64()? as i32,
-                                    name: user.get("name")?.as_str()?.to_string(),
-                                    email: user.get("email")?.as_str()?.to_string(),
-                                    is_admin: user.get("is_admin")?.as_bool().unwrap_or(false),
-                                    created_at: user.get("created_at")?.as_str()?.to_string(),
-                                })
-                            }).collect();
-                            users.set(parsed_users);
-                        } else {
-                            error.set(Some(t("failed_parse_users", lang).to_string()));
+                    Ok(data) => {
+                        if let Some(arr) = data.as_array() {
+                            let list: Vec<AdminUser> = arr.iter().filter_map(AdminUser::from_value).collect();
+                            users.set(list);
                         }
                         loading.set(false);
                     }
-                    Err(e) => {
-                        error.set(Some(e));
-                        loading.set(false);
-                    }
+                    Err(_) => { loading.set(false); }
                 }
             });
             || ()
         });
     }
 
-    let on_create_user = {
-        let show_create_form = show_create_form.clone();
-        let action = action.clone();
+    let refresh = {
+        let users = users.clone();
+        let loading = loading.clone();
         Callback::from(move |_| {
-            show_create_form.set(true);
+            let users = users.clone();
+            let loading = loading.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                loading.set(true);
+                match api::get_admin_users().await {
+                    Ok(data) => {
+                        if let Some(arr) = data.as_array() {
+                            let list: Vec<AdminUser> = arr.iter().filter_map(AdminUser::from_value).collect();
+                            users.set(list);
+                        }
+                        loading.set(false);
+                    }
+                    Err(_) => { loading.set(false); }
+                }
+            });
+        })
+    };
+
+    let open_create = {
+        let action = action.clone();
+        let form_name = form_name.clone();
+        let form_password = form_password.clone();
+        let form_is_admin = form_is_admin.clone();
+        let form_error = form_error.clone();
+        Callback::from(move |_| {
+            form_name.set(String::new());
+            form_password.set(String::new());
+            form_is_admin.set(false);
+            form_error.set(None);
             action.set(UserAction::Create);
         })
     };
 
-    let on_user_click = {
-        let selected_user = selected_user.clone();
-        Callback::from(move |user: AdminUser| {
-            if let Some(ref selected) = *selected_user {
-                if selected.id == user.id {
-                    selected_user.set(None);
-                } else {
-                    selected_user.set(Some(user.clone()));
-                }
-            } else {
-                selected_user.set(Some(user.clone()));
-            }
-        })
-    };
-
-    let on_edit_user = {
+    let open_edit = {
         let action = action.clone();
-        let show_create_form = show_create_form.clone();
-        let users = users.clone();
         let form_name = form_name.clone();
-        let form_email = form_email.clone();
         let form_password = form_password.clone();
         let form_is_admin = form_is_admin.clone();
         let form_error = form_error.clone();
+        let users2 = users.clone();
         Callback::from(move |user_id: i32| {
-            if let Some(user) = (*users).iter().find(|u| u.id == user_id) {
+            if let Some(user) = (*users2).iter().find(|u| u.id == user_id) {
                 form_name.set(user.name.clone());
-                form_email.set(user.email.clone());
                 form_password.set(String::new());
                 form_is_admin.set(user.is_admin);
                 form_error.set(None);
                 action.set(UserAction::Edit(user_id));
-                show_create_form.set(true);
             }
         })
     };
 
-    let on_delete_user = {
+    let submit_form = {
         let action = action.clone();
-        Callback::from(move |user_id: i32| {
-            action.set(UserAction::Delete(user_id));
-        })
-    };
-
-    let on_cancel_action = {
-        let action = action.clone();
-        let show_create_form = show_create_form.clone();
         let form_name = form_name.clone();
-        let form_email = form_email.clone();
-        let form_password = form_password.clone();
-        let form_is_admin = form_is_admin.clone();
-        let form_error = form_error.clone();
-
-        Callback::from(move |_| {
-            action.set(UserAction::None);
-            show_create_form.set(false);
-            form_name.set(String::new());
-            form_email.set(String::new());
-            form_password.set(String::new());
-            form_is_admin.set(false);
-            form_error.set(None);
-        })
-    };
-
-    let on_form_submit = {
-        let form_name = form_name.clone();
-        let form_email = form_email.clone();
         let form_password = form_password.clone();
         let form_is_admin = form_is_admin.clone();
         let form_loading = form_loading.clone();
         let form_error = form_error.clone();
-        let users = users.clone();
-        let action = action.clone();
-        let show_create_form = show_create_form.clone();
-
-        Callback::from(move |e: SubmitEvent| {
-            e.prevent_default();
-
+        let refresh = refresh.clone();
+        Callback::from(move |_| {
             let name = (*form_name).clone();
-            let email = (*form_email).clone();
             let password = (*form_password).clone();
             let is_admin = *form_is_admin;
-            let current_action = (*action).clone();
 
             if name.trim().is_empty() {
                 form_error.set(Some(t("name_required", lang).to_string()));
-                return;
-            }
-            if email.trim().is_empty() {
-                form_error.set(Some(t("email_required", lang).to_string()));
-                return;
-            }
-            if password.trim().is_empty() && matches!(current_action, UserAction::Create) {
-                form_error.set(Some(t("password_required_new_users", lang).to_string()));
                 return;
             }
 
             form_loading.set(true);
             form_error.set(None);
 
-            let users_clone = users.clone();
-            let action_clone = action.clone();
-            let show_create_form_clone = show_create_form.clone();
-            let form_loading_clone = form_loading.clone();
-            let form_name_clone = form_name.clone();
-            let form_email_clone = form_email.clone();
-            let form_password_clone = form_password.clone();
-            let form_is_admin_clone = form_is_admin.clone();
-            let form_error_clone = form_error.clone();
+            let action = action.clone();
+            let form_name = form_name.clone();
+            let form_password = form_password.clone();
+            let form_is_admin = form_is_admin.clone();
+            let form_loading = form_loading.clone();
+            let form_error2 = form_error.clone();
+            let refresh = refresh.clone();
 
-            spawn_local(async move {
-                let result = match current_action {
+            wasm_bindgen_futures::spawn_local(async move {
+                match (*action).clone() {
                     UserAction::Create => {
                         let user_data = serde_json::json!({
                             "name": name,
-                            "email": email,
                             "password": password,
-                            "is_admin": is_admin
+                            "is_admin": is_admin,
                         });
-                        api::create_admin_user(user_data).await
+                        match api::create_admin_user(user_data).await {
+                            Ok(_) => {
+                                form_name.set(String::new());
+                                form_password.set(String::new());
+                                form_is_admin.set(false);
+                                form_loading.set(false);
+                                action.set(UserAction::None);
+                                refresh.emit(());
+                            }
+                            Err(e) => { form_error2.set(Some(e)); form_loading.set(false); }
+                        }
                     }
                     UserAction::Edit(user_id) => {
-                        if password.is_empty() {
-                            let user_data = serde_json::json!({
-                                "name": Some(name),
-                                "email": Some(email),
-                                "password": None::<String>,
-                                "is_admin": Some(is_admin)
-                            });
-                            api::update_admin_user(user_id, user_data).await
-                        } else {
-                            let user_data = serde_json::json!({
-                                "name": Some(name),
-                                "email": Some(email),
-                                "password": Some(password),
-                                "is_admin": Some(is_admin)
-                            });
-                            api::update_admin_user(user_id, user_data).await
-                        }
-                    }
-                    _ => Err(t("invalid_action", lang).to_string()),
-                };
-
-                match result {
-                    Ok(_) => {
-                        match api::get_admin_users().await {
-                            Ok(response) => {
-                                if let Some(users_data) = response.get("users").and_then(|u| u.as_array()) {
-                                    let parsed_users: Vec<AdminUser> = users_data.iter().filter_map(|user| {
-                                        Some(AdminUser {
-                                            id: user.get("id")?.as_i64()? as i32,
-                                            name: user.get("name")?.as_str()?.to_string(),
-                                            email: user.get("email")?.as_str()?.to_string(),
-                                            is_admin: user.get("is_admin")?.as_bool().unwrap_or(false),
-                                            created_at: user.get("created_at")?.as_str()?.to_string(),
-                                        })
-                                    }).collect();
-                                    users_clone.set(parsed_users);
-                                }
+                        let user_data = serde_json::json!({
+                            "name": name,
+                            "is_admin": is_admin,
+                            "password": if password.is_empty() { serde_json::Value::Null } else { serde_json::Value::String(password) },
+                        });
+                        match api::update_admin_user(user_id, user_data).await {
+                            Ok(_) => {
+                                form_name.set(String::new());
+                                form_password.set(String::new());
+                                form_is_admin.set(false);
+                                form_loading.set(false);
+                                action.set(UserAction::None);
+                                refresh.emit(());
                             }
-                            Err(_) => {}
+                            Err(e) => { form_error2.set(Some(e)); form_loading.set(false); }
                         }
-
-                        action_clone.set(UserAction::None);
-                        show_create_form_clone.set(false);
-                        form_name_clone.set(String::new());
-                        form_email_clone.set(String::new());
-                        form_password_clone.set(String::new());
-                        form_is_admin_clone.set(false);
-                        form_loading_clone.set(false);
                     }
-                    Err(e) => {
-                        form_error_clone.set(Some(e));
-                        form_loading_clone.set(false);
-                    }
+                    _ => {}
                 }
             });
         })
     };
 
-    let on_confirm_delete = {
-        let users = users.clone();
+    let confirm_delete = {
         let action = action.clone();
-        let user_id = if let UserAction::Delete(id) = *action { id } else { 0 };
-
-        Callback::from(move |_| {
-            let users = users.clone();
+        let refresh = refresh.clone();
+        Callback::from(move |user_id: i32| {
             let action = action.clone();
-            let user_id = user_id;
-
-            spawn_local(async move {
-                match api::delete_admin_user(user_id).await {
-                    Ok(_) => {
-                        let updated: Vec<AdminUser> = (*users).clone().into_iter().filter(|u| u.id != user_id).collect();
-                        users.set(updated);
-                        action.set(UserAction::None);
-                    }
-                    Err(e) => {
-                        web_sys::console::log_1(&format!("Failed to delete user: {}", e).into());
-                    }
-                }
+            let refresh = refresh.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let _ = api::delete_admin_user(user_id).await;
+                action.set(UserAction::None);
+                refresh.emit(());
             });
         })
     };
 
     html! {
-        <div class="page-enter">
-            <div class="flex items-center justify-between mb-6">
-                <div>
-                    <h1 class="section-title">{t("user_management_title", lang)}</h1>
-                    <p class="text-muted">{t("manage_user_accounts_permissions", lang)}</p>
-                </div>
-                <button onclick={on_create_user} class="btn btn-primary">{t("add_user", lang)}</button>
+        <div class="page" style="padding: var(--space-6);">
+            <div class="section-header">
+                <h1 class="section-title">{t("user_management_title", lang)}</h1>
+                <button class="btn btn-primary btn-sm" onclick={open_create}>{t("add_user", lang)}</button>
             </div>
 
             {if *loading {
-                html! { <div class="spinner"><div class="spinner-circle"></div></div> }
-            } else if let Some(ref error_msg) = *error {
-                html! { <div class="alert alert-error"><div class="alert-content">{error_msg}</div></div> }
+                html! {
+                    <div class="card" style="padding: var(--space-6);">
+                        {for (0..3).map(|_| html! {
+                            <div class="skeleton" style="height: 40px; margin-bottom: 8px;" />
+                        })}
+                    </div>
+                }
             } else {
                 html! {
-                    <>
-                        <div class="table-container card">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>{t("user_column", lang)}</th>
-                                        <th class="hide-mobile">{t("role_column", lang)}</th>
-                                        <th class="text-right">{t("actions_column", lang)}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {for (*users).iter().map(|user| {
-                                        let on_edit = on_edit_user.clone();
-                                        let on_delete = on_delete_user.clone();
-                                        let on_click = on_user_click.clone();
-                                        let user_clone = user.clone();
-                                        let user_id = user.id;
-                                        let is_selected = selected_user.as_ref().map(|u| u.id).unwrap_or(0) == user_id;
-
-                                        html! {
-                                            <>
-                                                <tr class={if is_selected { "row-selected" } else { "" }}>
-                                                    <td onclick={Callback::from(move |_| on_click.emit(user_clone.clone()))}>
-                                                        <div class="flex items-center gap-3">
-                                                            <div class="avatar avatar-primary">
-                                                                {&user.name.chars().next().unwrap_or('U').to_uppercase().to_string()}
-                                                            </div>
-                                                            <div>
-                                                                <div class="text-sm font-medium">{&user.name}</div>
-                                                                <div class="text-xs text-muted hide-desktop">{if user.is_admin { t("admin", lang) } else { t("user", lang) }}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td class="hide-mobile">
-                                                        {if user.is_admin {
-                                                            html! { <span class="badge badge-success">{t("admin", lang)}</span> }
-                                                        } else {
-                                                            html! { <span class="badge">{t("user", lang)}</span> }
-                                                        }}
-                                                    </td>
-                                                    <td class="text-right">
-                                                        <button onclick={Callback::from(move |_| on_edit.emit(user_id))} class="btn-icon btn-sm mr-2">
-                                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-11h-1z"></path>
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11l3 3L22 9l-3-3"></path>
-                                                            </svg>
-                                                        </button>
-                                                        <button onclick={Callback::from(move |_| on_delete.emit(user_id))} class="btn-icon btn-sm">
-                                                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
-                                                            </svg>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                                {if is_selected {
-                                                    html! {
-                                                        <tr class="table-expanded-row"><td colspan="3">
-                                                            <div class="table-expanded-content">
-                                                                <div class="table-expanded-label">{"Email: "}<span class="table-expanded-value">{&user.email}</span></div>
-                                                                <div class="table-expanded-label">{"Created: "}<span class="table-expanded-value">{&user.created_at}</span></div>
-                                                            </div>
-                                                        </td></tr>
-                                                    }
+                    <div class="table-container">
+                        <table class="table-card-view">
+                            <thead>
+                                <tr>
+                                    <th>{t("name", lang)}</th>
+                                    <th>{t("role_column", lang)}</th>
+                                    <th>{t("actions_column", lang)}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {for users.iter().map(|user| {
+                                    let user_id = user.id;
+                                    let on_edit = open_edit.clone();
+                                    let on_delete = {
+                                        let action = action.clone();
+                                        Callback::from(move |_| action.set(UserAction::Delete(user_id)))
+                                    };
+                                    html! {
+                                        <tr>
+                                            <td data-label={t("name", lang)} style="font-weight: 500;">
+                                                <span>{&user.name}</span>
+                                            </td>
+                                            <td data-label={t("role_column", lang)}>
+                                                {if user.is_admin {
+                                                    html! { <span class="badge badge-primary">{t("admin", lang)}</span> }
                                                 } else {
-                                                    html! {}
+                                                    html! { <span class="badge badge-default">{t("user", lang)}</span> }
                                                 }}
-                                            </>
-                                        }
-                                    })}
-                                    {if (*users).is_empty() {
-                                        html! { <tr><td colspan="3" class="table-empty">{t("no_users", lang)}</td></tr> }
-                                    } else {
-                                        html! {}
-                                    }}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {if *show_create_form {
-                            html! {
-                                <div class="modal-overlay">
-                                    <div class="modal modal-sm">
-                                        <div class="modal-header">
-                                            <h3 class="modal-title">{if matches!(*action, UserAction::Edit(_)) { t("edit_user_title", lang) } else { t("create_user_title", lang) }}</h3>
-                                            <button onclick={on_cancel_action.clone()} class="modal-close">
-                                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <div class="modal-body">
-                                            {if let Some(ref error_msg) = *form_error {
-                                                html! { <div class="alert alert-error mb-4"><div class="alert-content">{error_msg}</div></div> }
-                                            } else {
-                                                html! {}
-                                            }}
-                                            <form onsubmit={on_form_submit.clone()}>
-                                                <div class="form-group">
-                                                    <label class="form-label">{t("name", lang)}</label>
-                                                    <input type="text" value={(*form_name).clone()} oninput={Callback::from(move |e: yew::InputEvent| { let input = e.target_unchecked_into::<web_sys::HtmlInputElement>(); form_name.set(input.value()); })} class="form-input" required=true />
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="form-label">{t("email", lang)}</label>
-                                                    <input type="email" value={(*form_email).clone()} oninput={Callback::from(move |e: yew::InputEvent| { let input = e.target_unchecked_into::<web_sys::HtmlInputElement>(); form_email.set(input.value()); })} class="form-input" required=true />
-                                                </div>
-                                                <div class="form-group">
-                                                    <label class="form-label">{t("password", lang)}</label>
-                                                    <input type="password" value={(*form_password).clone()} oninput={Callback::from(move |e: yew::InputEvent| { let input = e.target_unchecked_into::<web_sys::HtmlInputElement>(); form_password.set(input.value()); })} class="form-input" required={matches!(*action, UserAction::Create)} />
-                                                </div>
-                                                <div class="form-group flex-row">
-                                                    <input type="checkbox" id="is_admin" checked={*form_is_admin} onchange={Callback::from(move |e: yew::Event| { let input = e.target_unchecked_into::<web_sys::HtmlInputElement>(); form_is_admin.set(input.checked()); })} />
-                                                    <label for="is_admin" class="form-label">{t("administrator_label", lang)}</label>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" onclick={on_cancel_action.clone()} class="btn btn-ghost">{t("cancel", lang)}</button>
-                                                    <button type="submit" disabled={*form_loading} class="btn btn-primary">
-                                                        {if *form_loading { t("saving", lang) } else { if matches!(*action, UserAction::Edit(_)) { t("update", lang) } else { t("create", lang) } }}
+                                            </td>
+                                            <td data-label={t("actions_column", lang)}>
+                                                <div style="display: flex; gap: 0.5rem;">
+                                                    <button class="btn btn-sm btn-outline" onclick={let uid = user_id; move |_| on_edit.emit(uid)}>
+                                                        {t("edit", lang)}
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" onclick={on_delete}>
+                                                        {t("delete", lang)}
                                                     </button>
                                                 </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        } else {
-                            html! {}
-                        }}
-
-                        {if let UserAction::Delete(_user_id) = *action {
-                            html! {
-                                <div class="modal-overlay">
-                                    <div class="modal modal-sm">
-                                        <div class="modal-body text-center">
-                                            <h3 class="section-title mb-4">{t("delete_user_title", lang)}</h3>
-                                            <p class="text-muted mb-6">{t("delete_user_confirmation", lang)}</p>
-                                            <div class="flex justify-center gap-3">
-                                                <button onclick={on_cancel_action.clone()} class="btn btn-ghost">{t("cancel", lang)}</button>
-                                                <button onclick={on_confirm_delete} class="btn btn-danger">{t("delete", lang)}</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        } else {
-                            html! {}
-                        }}
-                    </>
+                                            </td>
+                                        </tr>
+                                    }
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 }
             }}
+
+            // Create/Edit Modal
+            {if matches!(*action, UserAction::Create | UserAction::Edit(_)) {
+                let is_edit = matches!(*action, UserAction::Edit(_));
+                html! {
+                    <div class="modal-overlay" onclick={let a = action.clone(); Callback::from(move |_: MouseEvent| a.set(UserAction::None))}>
+                        <div class="modal" onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}>
+                            <div class="modal-header">
+                                <h3 class="modal-title">
+                                    {if is_edit { t("edit_user_title", lang) } else { t("create_user_title", lang) }}
+                                </h3></div>
+                            <div class="modal-body">
+                                {if let Some(ref err) = &*form_error {
+                                    html! {
+                                        <div class="alert alert-error" style="margin-bottom: 1rem;">
+                                            <span>{err}</span>
+                                        </div>
+                                    }
+                                } else { html! {} }}
+
+                                <div class="form-group">
+                                    <label class="form-label">{t("name", lang)}</label>
+                                    <input type="text" class="form-input" value={(*form_name).clone()}
+                                        oninput={let s = form_name.clone(); Callback::from(move |e: InputEvent| {
+                                            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
+                                            s.set(input.value());
+                                        })}
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">{t("password", lang)}</label>
+                                    <input type="password" class="form-input" value={(*form_password).clone()}
+                                        placeholder={if is_edit { t("leave_blank_keep_password", lang) } else { t("enter_password", lang) }}
+                                        oninput={let s = form_password.clone(); Callback::from(move |e: InputEvent| {
+                                            let input: web_sys::HtmlInputElement = e.target_unchecked_into();
+                                            s.set(input.value());
+                                        })}
+                                    />
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                    <label class="toggle">
+                                        <input type="checkbox" checked={*form_is_admin}
+                                            onchange={let s = form_is_admin.clone(); Callback::from(move |e: Event| {
+                                                let input: web_sys::HtmlInputElement = e.target_unchecked_into();
+                                                s.set(input.checked());
+                                            })}
+                                        />
+                                        <span class="toggle-slider"></span>
+                                        <span style="font-size: 0.875rem; font-weight: 500; color: var(--gray-700);">{t("administrator_label", lang)}</span>
+                                    </label>
+                                </div>
+                                <div class="form-actions" style="margin-top: 0;">
+                                    <button class="btn btn-ghost" onclick={let a = action.clone(); Callback::from(move |_: MouseEvent| a.set(UserAction::None))}>{t("cancel", lang)}</button>
+                                    <button class="btn btn-primary" onclick={submit_form} disabled={*form_loading}>
+                                        {if *form_loading { t("saving", lang) } else if is_edit { t("save", lang) } else { t("create_user_title", lang) }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            } else { html! {} }}
+
+            // Delete Confirmation Modal
+            {if let UserAction::Delete(user_id) = (*action).clone() {
+                let user_name = users.iter().find(|u| u.id == user_id).map(|u| u.name.clone()).unwrap_or_default();
+                html! {
+                    <div class="modal-overlay" onclick={let a = action.clone(); Callback::from(move |_: MouseEvent| a.set(UserAction::None))}>
+                        <div class="modal" onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}>
+                            <div class="modal-body" style="text-align: center;">
+                                <h3 class="modal-title" style="margin-bottom: 1rem;">{t("delete_user_title", lang)}</h3>
+                                <p style="margin-bottom: 1.5rem; color: var(--gray-600); font-size: 0.9375rem;">
+                                    {if user_name.is_empty() {
+                                        html! { t("delete_user_confirmation", lang) }
+                                    } else {
+                                        html! { format!("{} {}", t("delete_user_confirmation", lang), user_name) }
+                                    }}
+                                </p>
+                                <div class="form-actions" style="margin-top: 0; justify-content: center;">
+                                    <button class="btn btn-ghost" onclick={let a = action.clone(); Callback::from(move |_: MouseEvent| a.set(UserAction::None))}>{t("cancel", lang)}</button>
+                                    <button class="btn btn-danger" onclick={let id = user_id; move |_| confirm_delete.emit(id)}>{t("delete", lang)}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            } else { html! {} }}
         </div>
     }
 }

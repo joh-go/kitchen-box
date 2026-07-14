@@ -174,8 +174,8 @@ pub fn sidebar(props: &Props) -> Html {
 
             <div class="sidebar-footer">
                 <div class="flex items-center gap-3 mb-3" style="padding: 0 var(--space-1);">
-                    <LanguageSwitcher class={None::<String>} />
-                    <ThemeToggle class={""} />
+                    <LanguageSwitcher />
+                    <ThemeToggle />
                 </div>
                 {if is_logged_in {
                     html! {

@@ -55,73 +55,37 @@ fn get_base_url() -> String {
 
 // Helper function to get auth token from localStorage
 fn get_auth_header() -> Option<String> {
-    if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(token)) = storage.get_item("auth_token") {
-                return Some(format!("Bearer {}", token));
-            }
-        }
-    }
-    None
+    let auth = home_hub_shared::Auth::restore();
+    auth.token.map(|t| format!("Bearer {}", t))
 }
 
 // Helper function to check if user is logged in
 pub fn is_logged_in() -> bool {
-    if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            return storage.get_item("auth_token").is_ok_and(|t| t.is_some());
-        }
-    }
-    false
+    home_hub_shared::Auth::restore().is_authenticated()
 }
 
 // Helper function to get current user's ID from localStorage
 pub fn get_current_user_id() -> Option<i32> {
-    if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(id_str)) = storage.get_item("user_id") {
-                return id_str.parse::<i32>().ok();
-            }
-        }
-    }
-    None
+    let auth = home_hub_shared::Auth::restore();
+    auth.user_id.and_then(|id| id.parse::<i32>().ok())
 }
 
 // Helper function to get current user's admin status
 pub fn is_current_user_admin() -> bool {
-    if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(is_admin_str)) = storage.get_item("user_is_admin") {
-                return is_admin_str == "true";
-            }
-        }
-    }
-    false
+    home_hub_shared::Auth::restore().is_admin
 }
 
 // Helper function to get current user's name
 pub fn get_current_user_name() -> Option<String> {
-    if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            if let Ok(Some(name)) = storage.get_item("user_name") {
-                return Some(name);
-            }
-        }
-    }
-    None
+    home_hub_shared::Auth::restore().username
 }
 
 // Logout function
 pub fn logout() {
+    let mut auth = home_hub_shared::Auth::restore();
+    auth.logout();
     if let Some(window) = window() {
-        if let Ok(Some(storage)) = window.local_storage() {
-            let _ = storage.remove_item("auth_token");
-            let _ = storage.remove_item("user_email");
-            let _ = storage.remove_item("user_name");
-            let _ = storage.remove_item("user_id");
-            // Redirect to home page
-            let _ = window.location().set_href("/");
-        }
+        let _ = window.location().set_href("/");
     }
 }
 
@@ -178,7 +142,7 @@ pub async fn create_category(name: &str) -> Result<serde_json::Value, String> {
             .await
             .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
-        Err(format!("Category creation failed: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Category creation failed: {}", resp.status())))
     }
 }
 
@@ -212,7 +176,7 @@ pub async fn create_recipe(recipe: &Recipe) -> Result<Recipe, String> {
     if resp.ok() {
         resp.json::<Recipe>().await.map_err(|e| e.to_string())
     } else {
-        Err(format!("Server error: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Server error: {}", resp.status())))
     }
 }
 
@@ -236,7 +200,7 @@ pub async fn update_recipe(id: i32, recipe: &Recipe) -> Result<Recipe, String> {
     if resp.ok() {
         resp.json::<Recipe>().await.map_err(|e| e.to_string())
     } else {
-        Err(format!("Server error: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Server error: {}", resp.status())))
     }
 }
 
@@ -257,7 +221,7 @@ pub async fn delete_recipe(id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Server error: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Server error: {}", resp.status())))
     }
 }
 
@@ -275,7 +239,7 @@ pub async fn assign_category(recipe_id: i32, category_id: i32) -> Result<(), Str
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Server error: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Server error: {}", resp.status())))
     }
 }
 
@@ -293,7 +257,7 @@ pub async fn clear_categories(recipe_id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Server error: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Server error: {}", resp.status())))
     }
 }
 
@@ -310,13 +274,13 @@ pub async fn get_users() -> Result<Vec<shared_types::User>, String> {
         .map_err(|e| e.to_string())
 }
 
-pub async fn login(email: &str, password: &str) -> Result<serde_json::Value, String> {
+pub async fn login(username: &str, password: &str) -> Result<serde_json::Value, String> {
     let base = get_base_url();
     let request = Request::new(&format!("{}/api/auth/login", base))
         .method(Method::POST)
         .header("Content-Type", "application/json")
         .body(json!({
-            "email": email,
+            "username": username,
             "password": password
         }).to_string());
 
@@ -330,7 +294,7 @@ pub async fn login(email: &str, password: &str) -> Result<serde_json::Value, Str
             .await
             .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
-        Err(format!("Login failed: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Login failed: {}", resp.status())))
     }
 }
 
@@ -351,14 +315,13 @@ pub async fn create_user(user: &User) -> Result<serde_json::Value, String> {
             .await
             .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
-        Err(format!("User creation failed: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("User creation failed: {}", resp.status())))
     }
 }
 
-pub async fn update_profile(name: &str, email: &str, current_password: &str, new_password: &str) -> Result<(), String> {
+pub async fn update_profile(name: &str, current_password: &str, new_password: &str) -> Result<(), String> {
     let mut body = json!({
-        "name": name,
-        "email": email
+        "name": name
     });
     
     if !current_password.is_empty() && !new_password.is_empty() {
@@ -382,7 +345,7 @@ pub async fn update_profile(name: &str, email: &str, current_password: &str, new
         Ok(())
     } else {
         let error_text = resp.text().await.unwrap_or_else(|_| "Update failed".to_string());
-        Err(format!("Profile update failed: {}", error_text))
+        Err(home_hub_shared::check_auth_error(format!("Profile update failed: {}", error_text)))
     }
 }
 
@@ -402,7 +365,7 @@ pub async fn get_current_user() -> Result<serde_json::Value, String> {
             .await
             .map_err(|e| format!("JSON parsing error: {}", e))
     } else {
-        Err(format!("Failed to get user: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to get user: {}", resp.status())))
     }
 }
 
@@ -496,7 +459,7 @@ pub async fn upload_recipe_image(recipe_id: i32, file: &web_sys::File) -> Result
     if resp.ok() {
         resp.json::<RecipeImage>().await.map_err(|e| e.to_string())
     } else {
-        Err(format!("Image upload failed: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Image upload failed: {}", resp.status())))
     }
 }
 
@@ -514,7 +477,7 @@ pub async fn set_primary_image(recipe_id: i32, image_id: i32) -> Result<(), Stri
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Failed to set primary image: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to set primary image: {}", resp.status())))
     }
 }
 
@@ -532,7 +495,7 @@ pub async fn delete_recipe_image(recipe_id: i32, image_id: i32) -> Result<(), St
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Failed to delete image: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to delete image: {}", resp.status())))
     }
 }
 
@@ -555,7 +518,7 @@ pub async fn get_admin_users() -> Result<serde_json::Value, String> {
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to get users: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to get users: {}", resp.status())))
     }
 }
 
@@ -580,7 +543,7 @@ pub async fn create_admin_user(user_data: serde_json::Value) -> Result<serde_jso
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to create user: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to create user: {}", resp.status())))
     }
 }
 
@@ -605,7 +568,7 @@ pub async fn update_admin_user(user_id: i32, user_data: serde_json::Value) -> Re
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to update user: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to update user: {}", resp.status())))
     }
 }
 
@@ -623,7 +586,7 @@ pub async fn delete_admin_user(user_id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Failed to delete user: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to delete user: {}", resp.status())))
     }
 }
 
@@ -645,7 +608,7 @@ pub async fn get_admin_recipes() -> Result<serde_json::Value, String> {
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to get recipes: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to get recipes: {}", resp.status())))
     }
 }
 
@@ -664,7 +627,7 @@ pub async fn delete_admin_recipe(recipe_id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Failed to delete recipe: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to delete recipe: {}", resp.status())))
     }
 }
 
@@ -685,7 +648,7 @@ pub async fn get_admin_categories() -> Result<serde_json::Value, String> {
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to get categories: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to get categories: {}", resp.status())))
     }
 }
 
@@ -710,7 +673,7 @@ pub async fn create_admin_category(category_data: serde_json::Value) -> Result<s
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(response)
     } else {
-        Err(format!("Failed to create category: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to create category: {}", resp.status())))
     }
 }
 
@@ -729,7 +692,7 @@ pub async fn delete_admin_category(category_id: i32) -> Result<(), String> {
     if resp.ok() {
         Ok(())
     } else {
-        Err(format!("Failed to delete category: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to delete category: {}", resp.status())))
     }
 }
 
@@ -750,7 +713,7 @@ pub async fn check_admin_exists() -> Result<bool, String> {
         
         Ok(response["admin_exists"].as_bool().unwrap_or(false))
     } else {
-        Err(format!("Failed to check admin status: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to check admin status: {}", resp.status())))
     }
 }
 
@@ -779,6 +742,6 @@ pub async fn create_initial_admin(name: String, email: String, password: String)
             .map_err(|e| format!("Failed to parse response: {}", e))?;
         Ok(user)
     } else {
-        Err(format!("Failed to create admin: {}", resp.status()))
+        Err(home_hub_shared::check_auth_error(format!("Failed to create admin: {}", resp.status())))
     }
 }

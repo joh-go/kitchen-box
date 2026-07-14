@@ -105,11 +105,12 @@ pub fn generate_token(user_id: i32) -> Result<String, String> {
 
 pub fn authenticate_user(
     conn: &mut diesel::PgConnection,
-    email_input: &str,
+    login_input: &str,
     password_input: &str,
 ) -> Result<Option<UserInfo>, String> {
+    // Try email first, then username
     let user = users
-        .filter(email.eq(email_input))
+        .filter(email.eq(login_input).or(name.eq(login_input)))
         .select((id, name, email, password, is_admin))
         .first::<(i32, String, String, String, bool)>(conn)
         .ok();

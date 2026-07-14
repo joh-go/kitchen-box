@@ -18,3 +18,4 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 shared-types = { path = "../shared-types" }
 lazy_static = "1.4"
+home-hub-shared = { path = "../../shared" }

@@ -1,33 +1,7 @@
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum Language {
-    English,
-    German,
-}
-
-impl Language {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Language::English => "en",
-            Language::German => "de",
-        }
-    }
-    
-    pub fn display_name(&self) -> &'static str {
-        match self {
-            Language::English => "English",
-            Language::German => "Deutsch",
-        }
-    }
-}
-
-impl Default for Language {
-    fn default() -> Self {
-        Language::English
-    }
-}
+pub use home_hub_shared::Language;
 
 lazy_static! {
     static ref TRANSLATIONS: HashMap<&'static str, HashMap<Language, &'static str>> = {
