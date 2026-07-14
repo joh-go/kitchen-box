@@ -2,6 +2,8 @@ use yew::prelude::*;
 use yew::{function_component, html, use_state, use_effect_with};
 use web_sys::HtmlInputElement;
 use wasm_bindgen_futures::spawn_local;
+use home_hub_shared::components::Modal;
+use home_hub_shared::icons::{Icon, IconComponent};
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -32,11 +34,23 @@ impl Default for SettingsState {
     }
 }
 
+#[derive(Clone, PartialEq)]
+enum AdminSection {
+    Overview,
+    Users,
+    Recipes,
+    Categories,
+}
+
 #[function_component(SettingsPage)]
 pub fn settings() -> Html {
     let state = use_state(SettingsState::default);
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
+    let selected_tab = use_state(|| "profile".to_string());
+    let admin_section = use_state(|| AdminSection::Overview);
+    let confirm_delete = use_state(|| false);
+    let delete_loading = use_state(|| false);
 
     let set_lang = {
         let lang_ctx = lang_ctx.clone();
@@ -154,48 +168,112 @@ pub fn settings() -> Html {
         })
     };
 
+    // Delete account handler
+    let delete_account = {
+        let delete_loading = delete_loading.clone();
+        let confirm_delete = confirm_delete.clone();
+        let add_toast = Callback::from(move |msg: String| {
+            web_sys::console::log_1(&msg.into());
+        });
+
+        Callback::from(move |_| {
+            let user_id = api::get_current_user_id().unwrap_or(0);
+            if user_id == 0 {
+                return;
+            }
+
+            delete_loading.set(true);
+
+            let delete_loading = delete_loading.clone();
+            let confirm_delete = confirm_delete.clone();
+
+            spawn_local(async move {
+                match api::delete_my_account(user_id).await {
+                    Ok(_) => {
+                        home_hub_shared::check_auth_error("401".to_string());
+                    }
+                    Err(e) => {
+                        delete_loading.set(false);
+                        confirm_delete.set(false);
+                        web_sys::console::log_1(&format!("Fehler: {}", e).into());
+                    }
+                }
+            });
+        })
+    };
+
     html! {
-        <div class="settings-section">
-            <div class="page-enter">
-                <h1 class="page-title">{t("account_settings", lang)}</h1>
-                <p class="text-muted">{t("manage_profile_password", lang)}</p>
+        <div class="page settings-page">
+            <div class="page-header">
+                <h1>{t("account_settings", lang)}</h1>
             </div>
 
-            <div class="settings-card page-enter">
-                <div class="settings-card-body">
-                    <form class="flex flex-col gap-6" onsubmit={onsubmit}>
+            <div class="chart-tabs">
+                <button class={if *selected_tab == "profile" { "active" } else { "" }}
+                    onclick={let s = selected_tab.clone(); Callback::from(move |_| s.set("profile".to_string()))}>
+                    {"Profil"}
+                </button>
+                <button class={if *selected_tab == "admin" { "active" } else { "" }}
+                    onclick={let s = selected_tab.clone(); let a = admin_section.clone(); Callback::from(move |_| { s.set("admin".to_string()); a.set(AdminSection::Overview); })}>
+                    {"Admin"}
+                </button>
+            </div>
+
+            {if *selected_tab == "profile" {
+                html! {
+                    <>
                         {if let Some(ref error) = state.deref().error {
                             html! {
-                                <div class="settings-message settings-message-error">{error}</div>
+                                <div class="alert alert-error" style="margin-bottom: 1rem;">
+                                    <span>{error}</span>
+                                </div>
                             }
                         } else { html!{} }}
 
                         {if let Some(ref success) = state.deref().success {
                             html! {
-                                <div class="settings-message settings-message-success">{success}</div>
+                                <div class="alert alert-success" style="margin-bottom: 1rem;">
+                                    <span>{success}</span>
+                                </div>
                             }
                         } else { html!{} }}
 
-                        <div>
-                            <h3 class="section-title mb-4">{t("profile_information", lang)}</h3>
-                            <div class="flex flex-col gap-4">
-                                <div class="form-group">
-                                    <label for="name" class="form-label">{t("display_name", lang)}</label>
-                                    <input
-                                        id="name" name="name" type="text"
-                                        class="form-input"
-                                        placeholder={t("enter_display_name", lang)}
-                                        value={state.name.clone()}
-                                        oninput={oninput.clone()}
-                                    />
-                                </div>
+                        <div class="card-section">
+                            <h2>{t("profile_information", lang)}</h2>
+                            <div class="form-group">
+                                <label class="form-label" for="name">{t("display_name", lang)}</label>
+                                <input id="name" name="name" type="text" class="form-input"
+                                    value={state.name.clone()}
+                                    oninput={oninput.clone()}
+                                />
+                            </div>
+                            <div class="form-actions" style="margin-top: 0; border: none;">
+                                <button class="btn btn-primary" onclick={let st = state.clone(); let s2 = state.clone(); Callback::from(move |_: MouseEvent| {
+                                    let name = (*st).name.clone();
+                                    if name.trim().is_empty() { return; }
+                                    let s2 = s2.clone();
+                                    spawn_local(async move {
+                                        match api::update_profile(&name, "", "").await {
+                                            Ok(_) => {
+                                                if let Some(window) = web_sys::window() {
+                                                    if let Ok(Some(storage)) = window.local_storage() {
+                                                        let _ = storage.set_item("user_name", &name);
+                                                    }
+                                                }
+                                                s2.set(SettingsState { success: Some(t("profile_updated", lang)), ..(*s2).clone() });
+                                            }
+                                            Err(e) => { s2.set(SettingsState { error: Some(e), ..(*s2).clone() }); }
+                                        }
+                                    });
+                                })}>
+                                    {"Ändern"}
+                                </button>
                             </div>
                         </div>
 
-                        <div style="border-top: 1px solid var(--gray-200); padding-top: var(--space-6);">
-                            <h3 class="section-title mb-4">{t("language", lang)}</h3>
+                        <div class="card-section">
+                            <h2>{t("language", lang)}</h2>
                             <div class="form-group">
-                                <label class="form-label">{t("language", lang)}</label>
                                 <select class="form-select"
                                     onchange={{
                                         let set_lang = set_lang.clone();
@@ -215,89 +293,156 @@ pub fn settings() -> Html {
                             </div>
                         </div>
 
-                        <div style="border-top: 1px solid var(--gray-200); padding-top: var(--space-6);">
-                            <h3 class="section-title mb-4">{t("change_password", lang)}</h3>
-                            <div class="flex flex-col gap-4">
-                                <div class="form-group">
-                                    <label for="current_password" class="form-label">{t("current_password_label", lang)}</label>
-                                    <input id="current_password" name="current_password" type="password" class="form-input"
-                                        placeholder={t("enter_current_password", lang)}
-                                        value={state.current_password.clone()} oninput={oninput.clone()} />
-                                </div>
-                                <div class="form-group">
-                                    <label for="new_password" class="form-label">{t("new_password_label", lang)}</label>
-                                    <input id="new_password" name="new_password" type="password" class="form-input"
-                                        placeholder={t("enter_new_password", lang)}
-                                        value={state.new_password.clone()} oninput={oninput.clone()} />
-                                </div>
-                                <div class="form-group">
-                                    <label for="confirm_password" class="form-label">{t("confirm_new_password", lang)}</label>
-                                    <input id="confirm_password" name="confirm_password" type="password" class="form-input"
-                                        placeholder={t("confirm_new_password", lang)}
-                                        value={state.confirm_password.clone()} oninput={oninput} />
-                                </div>
+                        <div class="card-section">
+                            <h2>{t("change_password", lang)}</h2>
+                            <div class="form-group">
+                                <label class="form-label" for="current_password">{t("current_password", lang)}</label>
+                                <input id="current_password" name="current_password" type="password" class="form-input"
+                                    placeholder={t("current_password", lang)}
+                                    value={state.current_password.clone()} oninput={oninput.clone()} />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="new_password">{t("new_password", lang)}</label>
+                                <input id="new_password" name="new_password" type="password" class="form-input"
+                                    placeholder={t("new_password", lang)}
+                                    value={state.new_password.clone()} oninput={oninput.clone()} />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="confirm_password">{t("confirm_password", lang)}</label>
+                                <input id="confirm_password" name="confirm_password" type="password" class="form-input"
+                                    placeholder={t("confirm_password", lang)}
+                                    value={state.confirm_password.clone()} oninput={oninput} />
+                            </div>
+                            <div class="form-actions" style="margin-top: 0; border: none;">
+                                <button class="btn btn-primary" onclick={let st = state.clone(); let s2 = state.clone(); Callback::from(move |_: MouseEvent| {
+                                    let s = (*st).clone();
+                                    if !s.new_password.is_empty() {
+                                        if s.new_password != s.confirm_password {
+                                            s2.set(SettingsState { error: Some(t("passwords_do_not_match", lang)), ..s });
+                                            return;
+                                        }
+                                        if s.current_password.is_empty() {
+                                            s2.set(SettingsState { error: Some(t("current_password_required", lang)), ..s });
+                                            return;
+                                        }
+                                    }
+                                    s2.set(SettingsState { loading: true, error: None, success: None, ..(*st).clone() });
+                                    let name = (*st).name.clone();
+                                    let cp = (*st).current_password.clone();
+                                    let np = (*st).new_password.clone();
+                                    let s2 = s2.clone();
+                                    spawn_local(async move {
+                                        match api::update_profile(&name, &cp, &np).await {
+                                            Ok(_) => {
+                                                s2.set(SettingsState {
+                                                    loading: false, success: Some(t("profile_updated", lang)),
+                                                    current_password: String::new(), new_password: String::new(), confirm_password: String::new(),
+                                                    ..(*s2).clone()
+                                                });
+                                            }
+                                            Err(e) => { s2.set(SettingsState { loading: false, error: Some(e), ..(*s2).clone() }); }
+                                        }
+                                    });
+                                })}>
+                                    {"Passwort ändern"}
+                                </button>
                             </div>
                         </div>
 
-                        <div class="flex justify-end">
-                            <button type="submit" disabled={state.loading} class="btn btn-primary">
-                                {if state.loading {
-                                    html! { <>{t("saving", lang)}</> }
-                                } else {
-                                    html! {t("save_changes", lang)}
-                                }}
+                        <div class="card-section danger-zone">
+                            <h2>{"Konto löschen"}</h2>
+                            <p style="margin-bottom: 1rem; color: var(--gray-600); font-size: 0.9375rem; line-height: 1.5;">
+                                {"Wenn Sie Ihr Konto löschen, werden alle Ihre Daten unwiderruflich entfernt."}
+                            </p>
+                            <button class="btn btn-danger" onclick={let c = confirm_delete.clone(); Callback::from(move |_: MouseEvent| c.set(true))}>
+                                <IconComponent kind={Icon::Delete} size={18} color="#ffffff" />
+                                {" Konto löschen"}
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
-
-            {if api::is_current_user_admin() {
+                    </>
+                }
+            } else if *admin_section == AdminSection::Overview {
                 html! {
-                    <div class="settings-card page-enter">
-                        <div class="settings-card-header">
-                            <h3>{t("admin_panel", lang)}</h3>
-                        </div>
-                        <div class="settings-card-body">
-                            <div class="settings-admin-grid">
-                                <div class="card" style="padding: var(--space-4);">
-                                    <h4 class="font-mono text-sm text-muted mb-2">{t("user_management_title", lang)}</h4>
-                                    <p class="text-sm text-muted mb-3">{t("user_management", lang)}</p>
-                                    <button onclick={Callback::from(|_| { if let Some(w) = web_sys::window() { let _ = w.location().set_href("/admin/users"); } })}
-                                        class="btn btn-primary btn-sm w-full">{t("manage_users", lang)}</button>
-                                </div>
-                                <div class="card" style="padding: var(--space-4);">
-                                    <h4 class="font-mono text-sm text-muted mb-2">{t("recipe_management", lang)}</h4>
-                                    <p class="text-sm text-muted mb-3">{t("view_delete_recipes", lang)}</p>
-                                    <button onclick={Callback::from(|_| { if let Some(w) = web_sys::window() { let _ = w.location().set_href("/admin/recipes"); } })}
-                                        class="btn btn-primary btn-sm w-full">{t("manage_recipes", lang)}</button>
-                                </div>
-                                <div class="card" style="padding: var(--space-4);">
-                                    <h4 class="font-mono text-sm text-muted mb-2">{t("category_management", lang)}</h4>
-                                    <p class="text-sm text-muted mb-3">{t("manage_categories", lang)}</p>
-                                    <button onclick={Callback::from(|_| { if let Some(w) = web_sys::window() { let _ = w.location().set_href("/admin/categories"); } })}
-                                        class="btn btn-primary btn-sm w-full">{t("manage_categories_button", lang)}</button>
-                                </div>
-                                <div class="card" style="padding: var(--space-4);">
-                                    <h4 class="font-mono text-sm text-muted mb-2">{t("system_statistics", lang)}</h4>
-                                    <p class="text-sm text-muted mb-3">{t("view_system_stats", lang)}</p>
-                                    <button class="btn btn-primary btn-sm w-full">{t("view_stats", lang)}</button>
-                                </div>
+                    <div class="card-section">
+                        <h2>{"Admin Panel"}</h2>
+                        <div class="settings-admin-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                            <div class="card" style="padding: 1rem; cursor: pointer;" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Users))}>
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">{t("user_management_title", lang)}</h4>
+                                <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">{t("user_management", lang)}</p>
+                                <span class="btn btn-primary btn-sm w-full" style="display: inline-block; text-align: center;">{t("manage_users", lang)}</span>
                             </div>
-
-                            <div class="alert alert-warning mt-4">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                                </svg>
-                                <div class="alert-content">
-                                    <div class="alert-title">{t("admin_privileges", lang)}</div>
-                                    <div>{t("admin_privileges_desc", lang)}</div>
-                                </div>
+                            <div class="card" style="padding: 1rem; cursor: pointer;" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Recipes))}>
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">{t("recipe_management", lang)}</h4>
+                                <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">{"Rezepte verwalten"}</p>
+                                <span class="btn btn-primary btn-sm w-full" style="display: inline-block; text-align: center;">{t("manage_recipes", lang)}</span>
+                            </div>
+                            <div class="card" style="padding: 1rem; cursor: pointer;" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Categories))}>
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">{t("category_management", lang)}</h4>
+                                <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">{"Kategorien verwalten"}</p>
+                                <span class="btn btn-primary btn-sm w-full" style="display: inline-block; text-align: center;">{t("manage_categories_button", lang)}</span>
                             </div>
                         </div>
                     </div>
                 }
-            } else { html!{} }}
+            } else if *admin_section == AdminSection::Users {
+                html! {
+                    <div class="card-section">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                            <button class="btn btn-ghost btn-sm" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Overview))}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                                {" Zurück"}
+                            </button>
+                            <h2 style="margin: 0;">{t("user_management_title", lang)}</h2>
+                        </div>
+                        <crate::pages::admin_users::AdminUsersPage />
+                    </div>
+                }
+            } else if *admin_section == AdminSection::Recipes {
+                html! {
+                    <div class="card-section">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                            <button class="btn btn-ghost btn-sm" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Overview))}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                                {" Zurück"}
+                            </button>
+                            <h2 style="margin: 0;">{t("recipe_management_title", lang)}</h2>
+                        </div>
+                        <crate::pages::admin_recipes::AdminRecipesPage />
+                    </div>
+                }
+            } else if *admin_section == AdminSection::Categories {
+                html! {
+                    <div class="card-section">
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                            <button class="btn btn-ghost btn-sm" onclick={let a = admin_section.clone(); Callback::from(move |_: MouseEvent| a.set(AdminSection::Overview))}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                                {" Zurück"}
+                            </button>
+                            <h2 style="margin: 0;">{t("category_management_title", lang)}</h2>
+                        </div>
+                        <crate::pages::admin_categories::AdminCategoriesPage />
+                    </div>
+                }
+            } else {
+                html! {}
+            }}
+
+            <Modal
+                title="Konto löschen?"
+                show={*confirm_delete}
+                on_close={let c = confirm_delete.clone(); Callback::from(move |_: ()| c.set(false))}
+            >
+                <p style="margin: 0 0 1.5rem; color: var(--gray-600); font-size: 0.9375rem; line-height: 1.5;">
+                    {"Soll Ihr Konto wirklich gelöscht werden? Alle Ihre Daten werden unwiderruflich entfernt."}
+                </p>
+                <div class="form-actions" style="margin-top: 0;">
+                    <button class="btn btn-ghost" onclick={let c = confirm_delete.clone(); Callback::from(move |_: MouseEvent| c.set(false))}>{"Abbrechen"}</button>
+                    <button class="btn btn-danger" onclick={delete_account} disabled={*delete_loading}>
+                        <IconComponent kind={Icon::Delete} size={18} color="#ffffff" />
+                        {if *delete_loading { "Lösche..." } else { "Ja, Konto löschen" }}
+                    </button>
+                </div>
+            </Modal>
         </div>
     }
 }

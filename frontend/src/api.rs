@@ -745,3 +745,18 @@ pub async fn create_initial_admin(name: String, email: String, password: String)
         Err(home_hub_shared::check_auth_error(format!("Failed to create admin: {}", resp.status())))
     }
 }
+
+// Delete own user account
+pub async fn delete_my_account(user_id: i32) -> Result<String, String> {
+    let base = get_base_url();
+    let resp = Request::delete(&format!("{}/api/users/{}", base, user_id))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        resp.text().await.map_err(|_| "Read error".to_string())
+    } else {
+        Err(home_hub_shared::check_auth_error(format!("Failed to delete account: {}", resp.status())))
+    }
+}

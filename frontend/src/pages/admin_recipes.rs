@@ -1,5 +1,6 @@
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
+use home_hub_shared::icons::{Icon, IconComponent};
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -153,10 +154,9 @@ pub fn admin_recipes_page() -> Html {
                                                     }}
                                                 </td>
                                                 <td class="text-right">
-                                                        <button onclick={Callback::from(move |_| on_delete.emit(recipe_id))} class="btn-icon btn-sm">
-                                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6M4 7h16"></path>
-                                                        </svg>
+                                                    <button onclick={Callback::from(move |_| on_delete.emit(recipe_id))} class="btn btn-sm btn-danger">
+                                                        <IconComponent kind={Icon::Delete} size={14} color="#ffffff" />
+                                                        <span>{t("delete", lang)}</span>
                                                     </button>
                                                 </td>
                                             </tr>

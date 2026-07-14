@@ -1,4 +1,5 @@
 use yew::prelude::*;
+use home_hub_shared::icons::{Icon, IconComponent};
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -210,10 +211,13 @@ pub fn admin_users_page() -> Html {
     };
 
     html! {
-        <div class="page" style="padding: var(--space-6);">
+        <>
             <div class="section-header">
                 <h1 class="section-title">{t("user_management_title", lang)}</h1>
-                <button class="btn btn-primary btn-sm" onclick={open_create}>{t("add_user", lang)}</button>
+                <button class="btn btn-primary btn-sm" onclick={open_create}>
+                    <IconComponent kind={Icon::User} size={16} color="#ffffff" />
+                    <span>{t("add_user", lang)}</span>
+                </button>
             </div>
 
             {if *loading {
@@ -261,7 +265,8 @@ pub fn admin_users_page() -> Html {
                                                         {t("edit", lang)}
                                                     </button>
                                                     <button class="btn btn-sm btn-danger" onclick={on_delete}>
-                                                        {t("delete", lang)}
+                                                        <IconComponent kind={Icon::Delete} size={14} color="#ffffff" />
+                                                        <span>{t("delete", lang)}</span>
                                                     </button>
                                                 </div>
                                             </td>
@@ -353,13 +358,15 @@ pub fn admin_users_page() -> Html {
                                 </p>
                                 <div class="form-actions" style="margin-top: 0; justify-content: center;">
                                     <button class="btn btn-ghost" onclick={let a = action.clone(); Callback::from(move |_: MouseEvent| a.set(UserAction::None))}>{t("cancel", lang)}</button>
-                                    <button class="btn btn-danger" onclick={let id = user_id; move |_| confirm_delete.emit(id)}>{t("delete", lang)}</button>
+                                    <button class="btn btn-danger" onclick={let id = user_id; move |_| confirm_delete.emit(id)}>
+                                        <IconComponent kind={Icon::Delete} size={16} color="#ffffff" />
+                                        <span>{t("delete", lang)}</span></button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 }
             } else { html! {} }}
-        </div>
+        </>
     }
 }

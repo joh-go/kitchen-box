@@ -325,26 +325,32 @@ fn app() -> Html {
             // Main content area
             <main class="app-main">
                 <div class="app-content">
-                    // Search bar (visible on all pages)
-                    <div class="content-search">
-                        <div class="content-search-inner">
-                            <svg class="content-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                            </svg>
-                            <input
-                                type="text"
-                                placeholder={t("search_placeholder", lang)}
-                                value={search_value.clone()}
-                                oninput={Callback::from(move |e: yew::InputEvent| {
-                                    let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
-                                    let value = input.value();
-                                    search_callback_input.emit(value);
-                                    search_navigate.emit(Page::Home);
-                                })}
-                                class="content-search-input"
-                            />
-                        </div>
-                    </div>
+                    // Search bar (visible only on Home page)
+                    {if current == Page::Home {
+                        html! {
+                            <div class="content-search">
+                                <div class="content-search-inner">
+                                    <svg class="content-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        placeholder={t("search_placeholder", lang)}
+                                        value={search_value.clone()}
+                                        oninput={Callback::from(move |e: yew::InputEvent| {
+                                            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+                                            let value = input.value();
+                                            search_callback_input.emit(value);
+                                            search_navigate.emit(Page::Home);
+                                        })}
+                                        class="content-search-input"
+                                    />
+                                </div>
+                            </div>
+                        }
+                    } else {
+                        html! {}
+                    }}
                     <div class="page-enter">
                         { render_page(&current, navigate, search_value, on_search_input, lang) }
                     </div>
