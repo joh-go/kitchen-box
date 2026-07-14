@@ -113,6 +113,8 @@ fn rocket() -> _ {
             handlers::admin::delete_category,
             handlers::admin::check_admin_exists,
             handlers::admin::setup_initial_admin,
+            handlers::prefs::get_prefs,
+            handlers::prefs::save_prefs,
         ],
     )
 }

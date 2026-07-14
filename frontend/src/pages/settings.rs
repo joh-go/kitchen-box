@@ -2,6 +2,7 @@ use yew::prelude::*;
 use yew::{function_component, html, use_state, use_effect_with};
 use web_sys::HtmlInputElement;
 use wasm_bindgen_futures::spawn_local;
+use home_hub_shared::components::settings::{AppearanceSection, DangerZone, PasswordSection, ProfileSection};
 use home_hub_shared::components::Modal;
 use home_hub_shared::icons::{Icon, IconComponent};
 use crate::api;
@@ -213,6 +214,10 @@ pub fn settings() -> Html {
                     onclick={let s = selected_tab.clone(); Callback::from(move |_| s.set("profile".to_string()))}>
                     {"Profil"}
                 </button>
+                <button class={if *selected_tab == "appearance" { "active" } else { "" }}
+                    onclick={let s = selected_tab.clone(); Callback::from(move |_| s.set("appearance".to_string()))}>
+                    {"Darstellung"}
+                </button>
                 <button class={if *selected_tab == "admin" { "active" } else { "" }}
                     onclick={let s = selected_tab.clone(); let a = admin_section.clone(); Callback::from(move |_| { s.set("admin".to_string()); a.set(AdminSection::Overview); })}>
                     {"Admin"}
@@ -222,54 +227,27 @@ pub fn settings() -> Html {
             {if *selected_tab == "profile" {
                 html! {
                     <>
-                        {if let Some(ref error) = state.deref().error {
-                            html! {
-                                <div class="alert alert-error" style="margin-bottom: 1rem;">
-                                    <span>{error}</span>
-                                </div>
-                            }
-                        } else { html!{} }}
-
-                        {if let Some(ref success) = state.deref().success {
-                            html! {
-                                <div class="alert alert-success" style="margin-bottom: 1rem;">
-                                    <span>{success}</span>
-                                </div>
-                            }
-                        } else { html!{} }}
-
-                        <div class="card-section">
-                            <h2>{t("profile_information", lang)}</h2>
-                            <div class="form-group">
-                                <label class="form-label" for="name">{t("display_name", lang)}</label>
-                                <input id="name" name="name" type="text" class="form-input"
-                                    value={state.name.clone()}
-                                    oninput={oninput.clone()}
-                                />
-                            </div>
-                            <div class="form-actions" style="margin-top: 0; border: none;">
-                                <button class="btn btn-primary" onclick={let st = state.clone(); let s2 = state.clone(); Callback::from(move |_: MouseEvent| {
-                                    let name = (*st).name.clone();
-                                    if name.trim().is_empty() { return; }
-                                    let s2 = s2.clone();
-                                    spawn_local(async move {
-                                        match api::update_profile(&name, "", "").await {
-                                            Ok(_) => {
-                                                if let Some(window) = web_sys::window() {
-                                                    if let Ok(Some(storage)) = window.local_storage() {
-                                                        let _ = storage.set_item("user_name", &name);
-                                                    }
+                        <ProfileSection
+                            current_name={(*state).name.clone()}
+                            on_save={let st = state.clone(); Callback::from(move |new_name: String| {
+                                if new_name.trim().is_empty() { return; }
+                                let st = st.clone();
+                                spawn_local(async move {
+                                    match api::update_profile(&new_name, "", "").await {
+                                        Ok(_) => {
+                                            if let Some(window) = web_sys::window() {
+                                                if let Ok(Some(storage)) = window.local_storage() {
+                                                    let _ = storage.set_item("user_name", &new_name);
                                                 }
-                                                s2.set(SettingsState { success: Some(t("profile_updated", lang)), ..(*s2).clone() });
                                             }
-                                            Err(e) => { s2.set(SettingsState { error: Some(e), ..(*s2).clone() }); }
+                                            st.set(SettingsState { success: Some(t("profile_updated", lang)), ..(*st).clone() });
                                         }
-                                    });
-                                })}>
-                                    {"Ändern"}
-                                </button>
-                            </div>
-                        </div>
+                                        Err(e) => { st.set(SettingsState { error: Some(e), ..(*st).clone() }); }
+                                    }
+                                });
+                            })}
+                            saving={false}
+                        />
 
                         <div class="card-section">
                             <h2>{t("language", lang)}</h2>
@@ -293,73 +271,67 @@ pub fn settings() -> Html {
                             </div>
                         </div>
 
-                        <div class="card-section">
-                            <h2>{t("change_password", lang)}</h2>
-                            <div class="form-group">
-                                <label class="form-label" for="current_password">{t("current_password", lang)}</label>
-                                <input id="current_password" name="current_password" type="password" class="form-input"
-                                    placeholder={t("current_password", lang)}
-                                    value={state.current_password.clone()} oninput={oninput.clone()} />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="new_password">{t("new_password", lang)}</label>
-                                <input id="new_password" name="new_password" type="password" class="form-input"
-                                    placeholder={t("new_password", lang)}
-                                    value={state.new_password.clone()} oninput={oninput.clone()} />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="confirm_password">{t("confirm_password", lang)}</label>
-                                <input id="confirm_password" name="confirm_password" type="password" class="form-input"
-                                    placeholder={t("confirm_password", lang)}
-                                    value={state.confirm_password.clone()} oninput={oninput} />
-                            </div>
-                            <div class="form-actions" style="margin-top: 0; border: none;">
-                                <button class="btn btn-primary" onclick={let st = state.clone(); let s2 = state.clone(); Callback::from(move |_: MouseEvent| {
-                                    let s = (*st).clone();
-                                    if !s.new_password.is_empty() {
-                                        if s.new_password != s.confirm_password {
-                                            s2.set(SettingsState { error: Some(t("passwords_do_not_match", lang)), ..s });
-                                            return;
+                        <PasswordSection
+                            on_save={let st = state.clone(); Callback::from(move |(current, new_pw, confirm): (String, String, String)| {
+                                if new_pw != confirm {
+                                    st.set(SettingsState { error: Some(t("passwords_do_not_match", lang)), ..(*st).clone() });
+                                    return;
+                                }
+                                if current.is_empty() {
+                                    st.set(SettingsState { error: Some(t("current_password_required", lang)), ..(*st).clone() });
+                                    return;
+                                }
+                                let name = (*st).name.clone();
+                                let st = st.clone();
+                                spawn_local(async move {
+                                    match api::update_profile(&name, &current, &new_pw).await {
+                                        Ok(_) => {
+                                            st.set(SettingsState {
+                                                loading: false,
+                                                success: Some(t("profile_updated", lang)),
+                                                current_password: String::new(),
+                                                new_password: String::new(),
+                                                confirm_password: String::new(),
+                                                ..(*st).clone()
+                                            });
                                         }
-                                        if s.current_password.is_empty() {
-                                            s2.set(SettingsState { error: Some(t("current_password_required", lang)), ..s });
-                                            return;
-                                        }
+                                        Err(e) => { st.set(SettingsState { loading: false, error: Some(e), ..(*st).clone() }); }
                                     }
-                                    s2.set(SettingsState { loading: true, error: None, success: None, ..(*st).clone() });
-                                    let name = (*st).name.clone();
-                                    let cp = (*st).current_password.clone();
-                                    let np = (*st).new_password.clone();
-                                    let s2 = s2.clone();
+                                });
+                            })}
+                            saving={false}
+                        />
+
+                        <DangerZone
+                            on_delete={
+                                let dl = delete_loading.clone();
+                                Callback::from(move |_: ()| {
+                                    let user_id = api::get_current_user_id().unwrap_or(0);
+                                    if user_id == 0 { return; }
+                                    dl.set(true);
+                                    let dl2 = dl.clone();
                                     spawn_local(async move {
-                                        match api::update_profile(&name, &cp, &np).await {
-                                            Ok(_) => {
-                                                s2.set(SettingsState {
-                                                    loading: false, success: Some(t("profile_updated", lang)),
-                                                    current_password: String::new(), new_password: String::new(), confirm_password: String::new(),
-                                                    ..(*s2).clone()
-                                                });
-                                            }
-                                            Err(e) => { s2.set(SettingsState { loading: false, error: Some(e), ..(*s2).clone() }); }
+                                        match api::delete_my_account(user_id).await {
+                                            Ok(_) => { home_hub_shared::check_auth_error("401".to_string()); }
+                                            Err(e) => { dl2.set(false); web_sys::console::log_1(&format!("Fehler: {}", e).into()); }
                                         }
                                     });
-                                })}>
-                                    {"Passwort ändern"}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="card-section danger-zone">
-                            <h2>{"Konto löschen"}</h2>
-                            <p style="margin-bottom: 1rem; color: var(--gray-600); font-size: 0.9375rem; line-height: 1.5;">
-                                {"Wenn Sie Ihr Konto löschen, werden alle Ihre Daten unwiderruflich entfernt."}
-                            </p>
-                            <button class="btn btn-danger" onclick={let c = confirm_delete.clone(); Callback::from(move |_: MouseEvent| c.set(true))}>
-                                <IconComponent kind={Icon::Delete} size={18} color="#ffffff" />
-                                {" Konto löschen"}
-                            </button>
-                        </div>
+                                })
+                            }
+                            delete_label={"Konto löschen".to_string()}
+                            confirm_title={"Konto löschen?".to_string()}
+                            confirm_message={"Wenn Sie Ihr Konto löschen, werden alle Ihre Daten unwiderruflich entfernt.".to_string()}
+                            deleting={*delete_loading}
+                        />
                     </>
+                }
+            } else if *selected_tab == "appearance" {
+                html! {
+                    <AppearanceSection
+                        prefs={home_hub_shared::prefs::UserPrefs::default()}
+                        on_prefs_change={Callback::from(|_: home_hub_shared::prefs::UserPrefs| {})}
+                        lang_ctx={lang_ctx.clone()}
+                    />
                 }
             } else if *admin_section == AdminSection::Overview {
                 html! {

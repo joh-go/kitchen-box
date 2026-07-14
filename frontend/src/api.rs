@@ -760,3 +760,21 @@ pub async fn delete_my_account(user_id: i32) -> Result<String, String> {
         Err(home_hub_shared::check_auth_error(format!("Failed to delete account: {}", resp.status())))
     }
 }
+
+// Save user preferences (theme, primary_color)
+pub async fn save_prefs(prefs_json: &str) -> Result<String, String> {
+    let base = get_base_url();
+    let mut req = Request::put(&format!("{}/api/prefs", base))
+        .header("Content-Type", "application/json")
+        .body(json!({"prefs": prefs_json}).to_string());
+    if let Some(auth) = get_auth_header() {
+        req = req.header("Authorization", &auth);
+    }
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        resp.text().await.map_err(|_| "Read error".to_string())
+    } else {
+        Err(home_hub_shared::check_auth_error(format!("Failed to save prefs: {}", resp.status())))
+    }
+}

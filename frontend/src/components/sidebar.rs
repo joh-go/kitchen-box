@@ -6,13 +6,15 @@ use crate::i18n::t;
 use crate::language_provider::LanguageState;
 use crate::i18n::Language;
 use crate::components::language_switcher::LanguageSwitcher;
-use crate::components::theme_provider::ThemeToggle;
+use home_hub_shared::components::ThemeToggle;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
     pub on_navigate: Callback<crate::Page>,
     #[prop_or(Callback::from(|_: yew::MouseEvent| ()))]
     pub on_mobile_close: Callback<yew::MouseEvent>,
+    #[prop_or_default]
+    pub on_theme_toggle: Option<Callback<String>>,
 }
 
 #[function_component(Sidebar)]
@@ -135,7 +137,7 @@ pub fn sidebar(props: &Props) -> Html {
                 <div class="sidebar-footer">
                     <div class="sidebar-footer-controls">
                         <LanguageSwitcher />
-                        <ThemeToggle />
+                        <ThemeToggle on_toggle={props.on_theme_toggle.clone()} />
                     </div>
                     {if is_logged_in {
                         html! {

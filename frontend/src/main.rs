@@ -319,7 +319,15 @@ fn app() -> Html {
 
             // Sidebar (fixed, dark gradient — slides on mobile)
             <aside class={sidebar_class}>
-                <Sidebar on_navigate={navigate.clone()} on_mobile_close={close_sidebar.clone()} />
+                <Sidebar on_navigate={navigate.clone()} on_mobile_close={close_sidebar.clone()}
+                    on_theme_toggle={Some(Callback::from(move |theme: String| {
+                        let pj = serde_json::json!({"theme": theme, "primary_color": "#2563eb"});
+                        let pj_str = serde_json::to_string(&pj).unwrap_or_default();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let _ = api::save_prefs(&pj_str).await;
+                        });
+                    }))}
+                />
             </aside>
 
             // Main content area
