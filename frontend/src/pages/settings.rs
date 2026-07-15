@@ -3,6 +3,7 @@ use yew::{function_component, html, use_state, use_effect_with};
 use web_sys::HtmlInputElement;
 use wasm_bindgen_futures::spawn_local;
 use home_hub_shared::components::settings::{AppearanceSection, DangerZone, PasswordSection, ProfileSection};
+use home_hub_shared::prefs::UserPrefs;
 use home_hub_shared::components::Modal;
 use home_hub_shared::icons::{Icon, IconComponent};
 use crate::api;
@@ -43,8 +44,16 @@ enum AdminSection {
     Categories,
 }
 
+#[derive(Properties, Clone, PartialEq)]
+pub struct Props {
+    #[prop_or_default]
+    pub theme_revision: u32,
+    #[prop_or_default]
+    pub on_theme_changed: Callback<()>,
+}
+
 #[function_component(SettingsPage)]
-pub fn settings() -> Html {
+pub fn settings(props: &Props) -> Html {
     let state = use_state(SettingsState::default);
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
@@ -52,6 +61,16 @@ pub fn settings() -> Html {
     let admin_section = use_state(|| AdminSection::Overview);
     let confirm_delete = use_state(|| false);
     let delete_loading = use_state(|| false);
+    let user_prefs = use_state(|| UserPrefs::load());
+
+    {
+        let up = user_prefs.clone();
+        let rev = props.theme_revision;
+        use_effect_with(rev, move |_| {
+            up.set(UserPrefs::load());
+            || ()
+        });
+    }
 
     let set_lang = {
         let lang_ctx = lang_ctx.clone();
@@ -328,8 +347,15 @@ pub fn settings() -> Html {
             } else if *selected_tab == "appearance" {
                 html! {
                     <AppearanceSection
-                        prefs={home_hub_shared::prefs::UserPrefs::default()}
-                        on_prefs_change={Callback::from(|_: home_hub_shared::prefs::UserPrefs| {})}
+                        prefs={(*user_prefs).clone()}
+                        on_prefs_change={let up = user_prefs.clone(); let oc = props.on_theme_changed.clone(); Callback::from(move |p: UserPrefs| {
+                            let old_theme = up.theme.clone();
+                            let theme_changed = p.theme != old_theme;
+                            up.set(p);
+                            if theme_changed {
+                                oc.emit(());
+                            }
+                        })}
                         lang_ctx={lang_ctx.clone()}
                     />
                 }

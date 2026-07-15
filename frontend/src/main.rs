@@ -30,7 +30,7 @@ pub enum Page {
     AdminUsers,
 }
 
-fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>, _lang: Language) -> Html {
+fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search: Callback<String>, _lang: Language, theme_revision: u32, on_theme_changed: Callback<()>) -> Html {
     match page {
         Page::Home => {
             let on_edit = {
@@ -75,7 +75,7 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             html! { <crate::pages::edit::EditRecipe id={*id} on_saved={on_saved} /> }
         }
         Page::Users => html! { <crate::pages::users::UsersPage /> },
-        Page::Settings => html! { <crate::pages::settings::SettingsPage /> },
+        Page::Settings => html! { <crate::pages::settings::SettingsPage theme_revision={theme_revision} on_theme_changed={on_theme_changed} /> },
         Page::View(id) => {
             let on_edit = {
                 let navigate = navigate.clone();
@@ -177,6 +177,7 @@ fn app() -> Html {
     let sidebar_open = use_state(|| false);
     let search = use_state(|| String::new());
     let admin_check_done = use_state(|| false);
+    let theme_revision = use_state(|| 0u32);
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
 
@@ -267,6 +268,13 @@ fn app() -> Html {
         })
     };
 
+    let inc_revision = {
+        let tr = theme_revision.clone();
+        Callback::from(move |_: ()| {
+            tr.set(*tr + 1);
+        })
+    };
+
     let toggle_sidebar = {
         let sidebar_open = sidebar_open.clone();
         Callback::from(move |_| {
@@ -297,7 +305,7 @@ fn app() -> Html {
     if is_auth_page {
         return html! {
             <div class="auth-page">
-                { render_page(&current, navigate.clone(), search_value, on_search_input, lang) }
+                { render_page(&current, navigate.clone(), search_value, on_search_input, lang, *theme_revision, inc_revision.clone()) }
             </div>
         };
     }
@@ -320,13 +328,21 @@ fn app() -> Html {
             // Sidebar (fixed, dark gradient — slides on mobile)
             <aside class={sidebar_class}>
                 <Sidebar on_navigate={navigate.clone()} on_mobile_close={close_sidebar.clone()}
-                    on_theme_toggle={Some(Callback::from(move |theme: String| {
-                        let pj = serde_json::json!({"theme": theme, "primary_color": "#2563eb"});
-                        let pj_str = serde_json::to_string(&pj).unwrap_or_default();
-                        wasm_bindgen_futures::spawn_local(async move {
-                            let _ = api::save_prefs(&pj_str).await;
-                        });
-                    }))}
+                    theme_revision={*theme_revision}
+                    on_theme_toggle={Some({
+                        let inc = inc_revision.clone();
+                        Callback::from(move |theme: String| {
+                            let mut prefs = home_hub_shared::prefs::UserPrefs::load();
+                            prefs.theme = theme.clone();
+                            prefs.save_to_local();
+                            inc.emit(());
+                            let pj = serde_json::json!({"theme": theme, "primary_color": prefs.primary_color});
+                            let pj_str = serde_json::to_string(&pj).unwrap_or_default();
+                            wasm_bindgen_futures::spawn_local(async move {
+                                let _ = api::save_prefs(&pj_str).await;
+                            });
+                        })
+                    })}
                 />
             </aside>
 
@@ -360,7 +376,7 @@ fn app() -> Html {
                         html! {}
                     }}
                     <div class="page-enter">
-                        { render_page(&current, navigate, search_value, on_search_input, lang) }
+                        { render_page(&current, navigate, search_value, on_search_input, lang, *theme_revision, inc_revision.clone()) }
                     </div>
                 </div>
             </main>

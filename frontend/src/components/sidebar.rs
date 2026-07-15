@@ -15,6 +15,8 @@ pub struct Props {
     pub on_mobile_close: Callback<yew::MouseEvent>,
     #[prop_or_default]
     pub on_theme_toggle: Option<Callback<String>>,
+    #[prop_or_default]
+    pub theme_revision: u32,
 }
 
 #[function_component(Sidebar)]
