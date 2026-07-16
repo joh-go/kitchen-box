@@ -1,0 +1,25 @@
+services:
+  kitchen-box:
+    build:
+      context: ..
+      dockerfile: kitchen-box/Dockerfile
+    image: joesweb/kitchen-box:latest
+    container_name: kitchen-box-test
+    ports:
+      - "8003:8000"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      JWT_SECRET: test-secret-change-in-production
+    volumes:
+      - kitchen_box_test_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  kitchen_box_test_data:

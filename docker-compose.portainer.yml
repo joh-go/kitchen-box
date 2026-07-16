@@ -1,26 +1,24 @@
-version: '3.8'
-
 services:
-  recipes-app:
-    image: joesweb/kitchen-box:latest  # This will pull the multi-architecture image from Docker Hub
+  kitchen-box:
+    image: joesweb/kitchen-box:latest
     container_name: kitchen-box
     restart: unless-stopped
     networks:
       br0:
         ipv4_address: 192.168.17.24
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
     volumes:
-      # Data persistence
-      - recipes_uploads:/app/uploads
-      - recipes_pgdata:/app/var/lib/postgresql/data
-      - recipes_logs:/var/log/postgresql
+      - kitchen_box_uploads:/app/uploads
+      - kitchen_box_pgdata:/var/lib/postgresql/data
+      - kitchen_box_logs:/var/log/postgresql
 
 volumes:
-  recipes_uploads:
-    driver: local
-  recipes_pgdata:
-    driver: local
-  recipes_logs:
-    driver: local
+  kitchen_box_uploads:
+  kitchen_box_pgdata:
+  kitchen_box_logs:
 
 networks:
   br0:

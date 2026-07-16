@@ -3,54 +3,13 @@ use serde_json::json;
 use shared_types::{Category, Recipe, RecipeImage, User};
 use web_sys::window;
 
-// Runtime API URL detection based on current hostname
+const API_BASE: &str = match option_env!("API_BASE") {
+    Some(base) => base,
+    None => "http://127.0.0.1:8000",
+};
+
 fn get_base_url() -> String {
-    // Always use runtime detection based on where the app is accessed from
-    if let Some(window) = window() {
-        if let Ok(hostname) = window.location().hostname() {
-            let protocol = window.location().protocol().unwrap_or_else(|_| "http:".into());
-            // Ensure protocol includes // for proper URL formatting
-            let protocol = if protocol.ends_with(':') {
-                format!("{}//", protocol)
-            } else {
-                protocol
-            };
-            
-            match hostname.as_str() {
-                "127.0.0.1" | "localhost" => {
-                    // For local development, always use port 8000
-                    format!("http://{}:8000", hostname)
-                }
-                // For any IP address, use the same IP with port 8000
-                ip if ip.parse::<std::net::IpAddr>().is_ok() => {
-                    format!("http://{}:8000", ip)
-                }
-                // For domain names, use the same protocol and port
-                domain => {
-                    // Get the current URL to extract port correctly
-                    if let Ok(port) = window.location().port() {
-                        match port.as_str() {
-                            "" | "80" | "443" => {
-                                // Standard ports, don't include port in URL
-                                format!("{}{}", protocol, domain)
-                            }
-                            port => {
-                                // Non-standard port, include it
-                                format!("{}{}:{}", protocol, domain, port)
-                            }
-                        }
-                    } else {
-                        // Fallback to just protocol and domain
-                        format!("{}{}", protocol, domain)
-                    }
-                }
-            }
-        } else {
-            "http://127.0.0.1:8000".to_string()
-        }
-    } else {
-        "http://127.0.0.1:8000".to_string()
-    }
+    API_BASE.to_string()
 }
 
 // Helper function to get auth token from localStorage

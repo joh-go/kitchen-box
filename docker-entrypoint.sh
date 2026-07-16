@@ -1,60 +1,49 @@
 #!/bin/bash
-
 set -e
 
-# Function to wait for PostgreSQL to be ready
-wait_for_postgres() {
-    echo "Waiting for PostgreSQL to be ready..."
-    
-    # Start PostgreSQL in background
-    pg_ctl -D /app/var/lib/postgresql/data -l /app/var/log/postgresql.log start
-    
-    # Wait for PostgreSQL to be ready
-    while ! pg_isready -h localhost -p 5432 -U postgres; do
-        echo "PostgreSQL is not ready yet. Waiting..."
-        sleep 2
-    done
-    
-    echo "PostgreSQL is ready!"
-}
+# --- PostgreSQL setup ---
+PGDATA="${PGDATA:-/var/lib/postgresql/data}"
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
 
-# Initialize PostgreSQL if not already done
-if [ ! -f "/etc/postgresql/15/main/postgresql.conf" ]; then
-    echo "Initializing PostgreSQL database..."
-    # Initialize database cluster using Debian's method
-    sudo -u postgres pg_createcluster 15 main
-    
-    echo "PostgreSQL initialized successfully!"
-else
-    echo "PostgreSQL cluster already exists, starting..."
+PG_BINDIR=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | head -1)
+[ -n "$PG_BINDIR" ] || { echo "ERROR: PostgreSQL not found"; exit 1; }
+
+PATH="$PG_BINDIR:$PATH"
+
+mkdir -p /var/run/postgresql /var/log/postgresql
+sudo chown postgres:postgres /var/run/postgresql /var/log/postgresql
+sudo chown -R postgres:postgres "$PGDATA"
+
+if ! sudo -u postgres env "PATH=$PATH" test -f "$PGDATA/PG_VERSION" 2>/dev/null; then
+    echo "==> Initializing PostgreSQL..."
+    sudo -u postgres env "PATH=$PATH" initdb -D "$PGDATA"
 fi
 
-# Start PostgreSQL cluster (or restart if already running)
-sudo -u postgres pg_ctlcluster 15 main start
+sudo tee "$PGDATA/pg_hba.conf" > /dev/null <<-EOF
+local all all trust
+host all all 127.0.0.1/32 trust
+host all all ::1/128 trust
+EOF
 
-# Wait for PostgreSQL to be ready
-while ! pg_isready -h localhost -p 5432 -U postgres; do
-    echo "PostgreSQL is not ready yet. Waiting..."
-    sleep 2
+if ! sudo -u postgres env "PATH=$PATH" pg_isready -q 2>/dev/null; then
+    echo "==> Starting PostgreSQL..."
+    sudo -u postgres env "PATH=$PATH" pg_ctl -D "$PGDATA" -l /var/log/postgresql/startup.log -w start
+fi
+
+for i in $(seq 1 15); do
+    if sudo -u postgres env "PATH=$PATH" pg_isready -q 2>/dev/null; then break; fi
+    echo "    Waiting for PostgreSQL... ($i/15)"
+    sleep 1
 done
 
-echo "PostgreSQL is ready!"
+sudo -u postgres env "PATH=$PATH" psql -c "ALTER USER $POSTGRES_USER WITH PASSWORD '$POSTGRES_PASSWORD'" 2>/dev/null || true
 
-# Set password for postgres user (after PostgreSQL is running)
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';" || echo "Password already set"
-
-# Set environment variables for the backend
-export DATABASE_URL="postgres://postgres:postgres@localhost:5432/postgres"
-export RUST_LOG=info
+export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/postgres"
 export ROCKET_ADDRESS=0.0.0.0
 export ROCKET_PORT=8000
+export ROCKET_SECRET_KEY="${ROCKET_SECRET_KEY:-$(head -c 32 /dev/urandom | base64 | tr -d '\n')}"
 
-# Run database migrations if they exist
-if [ -d "/app/migrations" ]; then
-    echo "Running database migrations..."
-    # Note: You might need to add migration logic here
-    echo "Migrations completed!"
-fi
-
-echo "Starting the backend application..."
+# Migrations are embedded in the binary (diesel embed_migrations)
+echo "==> Starting Kitchen Box backend..."
 exec /app/backend

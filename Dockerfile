@@ -1,36 +1,57 @@
-# Multi-stage production Dockerfile
-# Build: docker build -t kitchen-box -f Dockerfile ..
+# syntax=docker/dockerfile:1
 ARG TARGETARCH=aarch64
 ARG TARGETOS=linux
 
-# Stage 1: Build frontend with Trunk
-FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as frontend-builder
+# ============================================================
+# Stage 1: Frontend builder (Yew WASM via Trunk)
+# ============================================================
+FROM --platform=${TARGETOS}/${TARGETARCH} rust:1-slim-bookworm AS frontend-builder
 
-RUN rustup target add wasm32-unknown-unknown && \
-    cargo install trunk
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo install wasm-bindgen-cli --version 0.2.108 --root /usr/local
 
 WORKDIR /app
 
-# Copy shared library (parent context)
 COPY shared /app/shared
 
-# Copy kitchen-box workspace
 COPY kitchen-box/Cargo.toml kitchen-box/Cargo.lock* /app/kitchen-box/
+COPY kitchen-box/backend/Cargo.toml /app/kitchen-box/backend/Cargo.toml
 COPY kitchen-box/frontend /app/kitchen-box/frontend
 COPY kitchen-box/shared-types /app/kitchen-box/shared-types
 
+RUN mkdir -p /app/kitchen-box/backend/src && echo "fn main() {}" > /app/kitchen-box/backend/src/main.rs
+
 WORKDIR /app/kitchen-box/frontend
-RUN trunk build --release
 
-# Stage 2: Build backend
-FROM --platform=${TARGETOS}/${TARGETARCH} rust:1.94 as backend-builder
+ENV API_BASE=""
+RUN cargo build --target wasm32-unknown-unknown --release
 
-RUN apt-get update && apt-get install -y \
-    pkg-config libssl-dev postgresql-client && rm -rf /var/lib/apt/lists/*
+RUN rm -rf dist && \
+    mkdir -p dist && \
+    wasm-bindgen --target web --out-dir dist --out-name frontend \
+        /app/kitchen-box/target/wasm32-unknown-unknown/release/frontend.wasm --no-typescript && \
+    cp styles.css dist/ && \
+    cp app.css dist/ && \
+    sed -e 's/data-trunk rel="css"/rel="stylesheet"/g' \
+        -e 's|</body>|<script type="module">import init from "./frontend.js";init();</script></body>|' \
+        index.html > dist/index.html
+
+# ============================================================
+# Stage 2: Backend builder (Rust/Rocket)
+# ============================================================
+FROM --platform=${TARGETOS}/${TARGETARCH} rust:1-slim-bookworm AS backend-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config libssl-dev libpq-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/kitchen-box
 
-COPY kitchen-box/Cargo.toml kitchen-box/Cargo.lock ./
+COPY shared /app/shared
+
+COPY kitchen-box/Cargo.toml kitchen-box/Cargo.lock* ./
 COPY kitchen-box/backend/Cargo.toml ./backend/
 COPY kitchen-box/shared-types/Cargo.toml ./shared-types/
 COPY kitchen-box/frontend/Cargo.toml ./frontend/
@@ -39,23 +60,26 @@ RUN mkdir -p backend/src shared-types/src frontend/src
 RUN echo "fn main() {}" > backend/src/main.rs
 RUN echo "fn main() {}" > shared-types/src/lib.rs
 RUN echo "fn main() {}" > frontend/src/main.rs
-RUN cargo build --bin backend
-RUN rm -rf backend/src shared-types/src frontend/src
+RUN cargo build -p backend --release 2>/dev/null || true
+RUN rm -f backend/src/main.rs shared-types/src/lib.rs frontend/src/main.rs
 
 COPY kitchen-box/backend ./backend
 COPY kitchen-box/shared-types ./shared-types
-COPY kitchen-box/frontend ./frontend
-RUN cargo build --bin backend --release
+COPY --from=frontend-builder /app/kitchen-box/frontend/dist ./frontend/dist
+RUN mkdir -p frontend/src && echo "fn main() {}" > frontend/src/main.rs
+RUN find backend/src shared-types/src -name '*.rs' -exec touch {} + && cargo build -p backend --release
 
-# Stage 3: Production runtime
-FROM --platform=${TARGETOS}/${TARGETARCH} debian:12-slim
+# ============================================================
+# Stage 3: Runtime
+# ============================================================
+FROM --platform=${TARGETOS}/${TARGETARCH} debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y \
-    postgresql postgresql-client ca-certificates netcat-traditional curl sudo \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    postgresql postgresql-client ca-certificates curl sudo \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 appuser
-RUN echo "appuser ALL=(postgres) NOPASSWD: /usr/bin/pg_createcluster, /usr/bin/pg_ctlcluster, /usr/bin/pg_isready, /usr/bin/psql" >> /etc/sudoers
+RUN echo "appuser ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 WORKDIR /app
 
@@ -63,16 +87,19 @@ COPY --from=backend-builder /app/kitchen-box/target/release/backend /app/backend
 COPY --from=frontend-builder /app/kitchen-box/frontend/dist /app/frontend/dist
 COPY kitchen-box/backend/migrations /app/migrations
 
-RUN mkdir -p /app/uploads /app/var/lib/postgresql/data /app/var/run/postgresql
-RUN chown -R appuser:appuser /app
+RUN mkdir -p /app/uploads
+COPY kitchen-box/docker-entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh && chown -R appuser:appuser /app
 
 USER appuser
-EXPOSE 8000
 
-COPY kitchen-box/docker-entrypoint.sh /app/docker-entrypoint.sh
+ENV FRONTEND_DIST=/app/frontend/dist
+ENV ROCKET_ADDRESS=0.0.0.0
+ENV ROCKET_PORT=8000
+
+EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["postgres"]
+ENTRYPOINT ["/app/entrypoint.sh"]
