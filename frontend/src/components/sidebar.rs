@@ -85,9 +85,7 @@ pub fn sidebar(props: &Props) -> Html {
                 <div class="sidebar-header">
                     <div class="sidebar-logo">
                         <div class="sidebar-logo-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M21 4.5C19.9 4.15 18.7 4 17.5 4c-1.95 0-4.05.4-5.5 1.5C10.55 4.4 8.45 4 6.5 4 5.3 4 4.1 4.15 3 4.5v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05 1.1-.35 2.3-.5 3.5-.5 1.95 0 4.05.4 5.5 1.5 1.45-1.1 3.55-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5.1.05.15.05.25.05.25 0 .5-.25.5-.5V4.5z"/>
-                            </svg>
+                            <IconComponent kind={Icon::CookingPot} size={20} color="#ffffff" />
                         </div>
                         <span class="sidebar-logo-text">{t("app_name", lang)}</span>
                     </div>

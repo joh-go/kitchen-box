@@ -35,6 +35,7 @@ RUN rm -rf dist && \
         /app/kitchen-box/target/wasm32-unknown-unknown/release/frontend.wasm --no-typescript && \
     cp styles.css dist/ && \
     cp app.css dist/ && \
+    cp public/favicon.svg dist/ && \
     sed -e 's/data-trunk rel="css"/rel="stylesheet"/g' \
         -e 's|</body>|<script type="module">import init from "./frontend.js";init();</script></body>|' \
         index.html > dist/index.html
