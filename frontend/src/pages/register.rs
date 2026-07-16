@@ -6,12 +6,18 @@ use crate::i18n::t;
 use crate::language_provider::LanguageState;
 use shared_types::User;
 
+#[derive(Properties, PartialEq)]
+pub struct Props {
+    pub on_navigate: Callback<crate::Page>,
+}
+
 #[function_component(RegisterPage)]
-pub fn register_page() -> Html {
+pub fn register_page(props: &Props) -> Html {
     let state = use_state(|| RegisterState::default());
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(crate::i18n::Language::English);
 
+    let on_navigate = props.on_navigate.clone();
     let onsubmit = {
         let state = state.clone();
         Callback::from(move |e: SubmitEvent| {
@@ -42,6 +48,7 @@ pub fn register_page() -> Html {
             let s2 = state.clone();
             let u = username.clone();
             let p = password.clone();
+            let nav = on_navigate.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
                 let user = User {
@@ -52,7 +59,7 @@ pub fn register_page() -> Html {
                 };
                 match api::create_user(&user).await {
                     Ok(_) => {
-                        web_sys::window().unwrap().location().set_href("/login").unwrap();
+                        nav.emit(crate::Page::Login);
                     }
                     Err(e) => {
                         let mut err_state = (*s2).clone();

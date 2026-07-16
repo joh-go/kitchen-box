@@ -57,10 +57,10 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             html! { <crate::components::recipe_list::RecipeList on_edit={on_edit} on_view={on_view} on_add={on_add} refresh={0} search={search} on_search={on_search} /> }
         }
         Page::Login => {
-            html! { <crate::pages::login::LoginPage /> }
+            html! { <crate::pages::login::LoginPage on_navigate={navigate.clone()} /> }
         }
         Page::Register => {
-            html! { <crate::pages::register::RegisterPage /> }
+            html! { <crate::pages::register::RegisterPage on_navigate={navigate.clone()} /> }
         }
         Page::Add => {
             html! { <crate::components::recipe_form::RecipeForm on_saved={Callback::from(move |_| navigate.emit(Page::Home))} editing={None} /> }
@@ -92,7 +92,7 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
             html! { <crate::pages::view::ViewRecipe id={*id} on_edit={on_edit} on_back={on_back} /> }
         }
         Page::AdminSetup => {
-            html! { <AdminSetupWithGuard /> }
+            html! { <AdminSetupWithGuard on_navigate={navigate.clone()} /> }
         }
         Page::AdminUsers => {
             html! { <crate::pages::admin_users::AdminUsersPage /> }
@@ -106,8 +106,13 @@ fn render_page(page: &Page, navigate: Callback<Page>, search: String, on_search:
     }
 }
 
+#[derive(Properties, PartialEq)]
+struct AdminSetupGuardProps {
+    pub on_navigate: Callback<Page>,
+}
+
 #[function_component(AdminSetupWithGuard)]
-fn admin_setup_with_guard() -> Html {
+fn admin_setup_with_guard(props: &AdminSetupGuardProps) -> Html {
     let admin_exists = use_state(|| None::<bool>);
     let loading = use_state(|| true);
     let lang_ctx = use_context::<LanguageState>();
@@ -154,10 +159,9 @@ fn admin_setup_with_guard() -> Html {
                         <p>{t("setup_complete_desc", lang)}</p>
                     </div>
                     <button
-                        onclick={Callback::from(|_| {
-                            if let Some(window) = web_sys::window() {
-                                let _ = window.location().set_href("/");
-                            }
+                        onclick={Callback::from({
+                            let nav = props.on_navigate.clone();
+                            move |_| nav.emit(Page::Home)
                         })}
                         class="btn btn-primary w-full"
                     >
@@ -167,7 +171,7 @@ fn admin_setup_with_guard() -> Html {
             </div>
         }
     } else {
-        html! { <AdminSetupPage /> }
+        html! { <AdminSetupPage on_navigate={props.on_navigate.clone()} /> }
     }
 }
 

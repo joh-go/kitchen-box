@@ -4,8 +4,13 @@ use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
 
+#[derive(Properties, PartialEq)]
+pub struct Props {
+    pub on_navigate: Callback<crate::Page>,
+}
+
 #[function_component(AdminSetupPage)]
-pub fn admin_setup_page() -> Html {
+pub fn admin_setup_page(props: &Props) -> Html {
     let lang_ctx = use_context::<LanguageState>();
     let lang = lang_ctx.as_ref().map(|c| c.language).unwrap_or(Language::English);
 
@@ -14,6 +19,7 @@ pub fn admin_setup_page() -> Html {
     let username = use_state(|| String::new());
     let password = use_state(|| String::new());
     let confirm_password = use_state(|| String::new());
+    let on_navigate = props.on_navigate.clone();
 
     let on_create_admin = {
         let loading = loading.clone();
@@ -41,13 +47,12 @@ pub fn admin_setup_page() -> Html {
 
             let loading = loading.clone();
             let error = error.clone();
+            let nav = on_navigate.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
                 match api::create_initial_admin(u, String::new(), p).await {
                     Ok(_) => {
-                        if let Some(window) = web_sys::window() {
-                            let _ = window.location().set_href("/login");
-                        }
+                        nav.emit(crate::Page::Login);
                     }
                     Err(e) => {
                         error.set(Some(e));

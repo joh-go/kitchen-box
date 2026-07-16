@@ -5,6 +5,11 @@ use crate::api;
 use crate::i18n::t;
 use crate::language_provider::LanguageState;
 
+#[derive(Properties, PartialEq)]
+pub struct Props {
+    pub on_navigate: Callback<crate::Page>,
+}
+
 #[derive(Clone)]
 struct LoginState {
     username: String,
@@ -14,7 +19,7 @@ struct LoginState {
 }
 
 #[function_component(LoginPage)]
-pub fn login_page() -> Html {
+pub fn login_page(props: &Props) -> Html {
     let state = use_state(|| LoginState {
         username: String::new(),
         password: String::new(),
@@ -26,7 +31,7 @@ pub fn login_page() -> Html {
 
     let onsubmit = {
         let state = state.clone();
-        let lang = lang.clone();
+        let nav = props.on_navigate.clone();
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
             let current = (*state).clone();
@@ -51,9 +56,10 @@ pub fn login_page() -> Html {
             let l2 = lang.clone();
             let username2 = username.clone();
             let password2 = password.clone();
+            let nav2 = nav.clone();
 
             wasm_bindgen_futures::spawn_local(async move {
-                on_login_response(&username2, &password2, s2, l2).await;
+                on_login_response(&username2, &password2, s2, l2, nav2).await;
             });
         })
     };
@@ -129,6 +135,7 @@ async fn on_login_response(
     password: &str,
     state: yew::UseStateHandle<LoginState>,
     lang: crate::i18n::Language,
+    on_navigate: Callback<crate::Page>,
 ) {
     match api::login(username, password).await {
         Ok(response) => {
@@ -142,7 +149,7 @@ async fn on_login_response(
             if let (Some(uid), Some(name), Some(tok)) = (user_id, display_name, token) {
                 let mut auth = home_hub_shared::Auth::new();
                 auth.login(name.clone(), uid, tok.clone(), is_admin);
-                web_sys::window().unwrap().location().set_href("/").unwrap();
+                on_navigate.emit(crate::Page::Home);
             } else if !has_token {
                 let mut s = (*state).clone();
                 s.loading = false;
