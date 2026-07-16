@@ -112,7 +112,7 @@ pub fn image_manager(props: &Props) -> Html {
                             let on_images_changed_primary = props.on_images_changed.clone();
                             let on_images_changed_delete = props.on_images_changed.clone();
 
-                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                            let image_url = format!("/uploads/recipes/{}/{}",
                                 recipe_id.unwrap_or(0), filename);
 
                             html! {

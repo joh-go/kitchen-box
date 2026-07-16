@@ -193,7 +193,7 @@ pub fn recipe_list(props: &Props) -> Html {
                             onclick={props.on_view.reform(move |_| id)}
                         >
                             {if let Some(primary_image) = r.images.iter().find(|img| img.is_primary == Some(true)) {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                let image_url = format!("/uploads/recipes/{}/{}",
                                     r.id.unwrap_or(0), primary_image.filename);
                                 html! {
                                     <img
@@ -203,7 +203,7 @@ pub fn recipe_list(props: &Props) -> Html {
                                     />
                                 }
                             } else if let Some(first_image) = r.images.first() {
-                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                let image_url = format!("/uploads/recipes/{}/{}",
                                     r.id.unwrap_or(0), first_image.filename);
                                 html! {
                                     <img

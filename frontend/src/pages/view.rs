@@ -239,7 +239,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                 </div>
 
                                 {if let Some((primary_idx, primary_image)) = r.images.iter().enumerate().find(|(_, img)| img.is_primary == Some(true)) {
-                                    let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                    let image_url = format!("/uploads/recipes/{}/{}",
                                         r.id.unwrap_or(0), primary_image.filename);
                                     let open = open_lightbox.clone();
                                     html! {
@@ -248,7 +248,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         </div>
                                     }
                                 } else if let Some(first_image) = r.images.first() {
-                                    let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                    let image_url = format!("/uploads/recipes/{}/{}",
                                         r.id.unwrap_or(0), first_image.filename);
                                     let open = open_lightbox.clone();
                                     html! {
@@ -420,7 +420,7 @@ pub fn view_recipe(props: &Props) -> Html {
                         // Lightbox
                         {if *lightbox_open && !r.images.is_empty() {
                             let current_image = &r.images[*lightbox_index];
-                            let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                            let image_url = format!("/uploads/recipes/{}/{}",
                                 r.id.unwrap_or(0), current_image.filename);
                             let current_num = *lightbox_index + 1;
                             let total_num = r.images.len();
@@ -491,7 +491,7 @@ pub fn view_recipe(props: &Props) -> Html {
                                         </h2>
                                         <div class="gallery-thumbs">
                                             { for r.images.iter().enumerate().map(|(idx, image)| {
-                                                let image_url = format!("http://127.0.0.1:8000/uploads/recipes/{}/{}",
+                                                let image_url = format!("/uploads/recipes/{}/{}",
                                                     r.id.unwrap_or(0), image.filename);
                                                 let is_primary = image.is_primary.unwrap_or(false);
                                                 let open = open_lightbox.clone();
