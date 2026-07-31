@@ -354,7 +354,119 @@ lazy_static! {
             h.insert(Language::German, "Rezept bearbeiten");
             h
         });
-        
+
+        m.insert("export_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Export All");
+            h.insert(Language::German, "Alle exportieren");
+            h
+        });
+
+        m.insert("import_recipes", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Import");
+            h.insert(Language::German, "Importieren");
+            h
+        });
+
+        m.insert("import_preview_title", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Import Preview");
+            h.insert(Language::German, "Importvorschau");
+            h
+        });
+
+        m.insert("import_confirm", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Import");
+            h.insert(Language::German, "Importiere");
+            h
+        });
+
+        m.insert("import_confirm_one", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Import Recipe");
+            h.insert(Language::German, "Rezept importieren");
+            h
+        });
+
+        m.insert("import_complete", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Import Complete");
+            h.insert(Language::German, "Import abgeschlossen");
+            h
+        });
+
+        m.insert("imported", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Imported");
+            h.insert(Language::German, "Importiert");
+            h
+        });
+
+        m.insert("skipped", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Skipped");
+            h.insert(Language::German, "Übersprungen");
+            h
+        });
+
+        m.insert("importing", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Importing...");
+            h.insert(Language::German, "Importiere...");
+            h
+        });
+
+        m.insert("file", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "File");
+            h.insert(Language::German, "Datei");
+            h
+        });
+
+        m.insert("found", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "found");
+            h.insert(Language::German, "gefunden");
+            h
+        });
+
+        m.insert("select_all", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Select All");
+            h.insert(Language::German, "Alle auswählen");
+            h
+        });
+
+        m.insert("deselect_all", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Deselect All");
+            h.insert(Language::German, "Alle abwählen");
+            h
+        });
+
+        m.insert("selected", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "selected");
+            h.insert(Language::German, "ausgewählt");
+            h
+        });
+
+        m.insert("categories", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Categories");
+            h.insert(Language::German, "Kategorien");
+            h
+        });
+
+        m.insert("error_loading", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Error");
+            h.insert(Language::German, "Fehler");
+            h
+        });
+
         m.insert("recipe_add_ingredient", {
             let mut h = HashMap::new();
             h.insert(Language::English, "Add Ingredient");

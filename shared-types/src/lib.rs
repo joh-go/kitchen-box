@@ -69,3 +69,41 @@ pub struct NewRecipeImage {
     pub is_primary: bool,
     pub position: i32,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct RecipesExport {
+    pub version: String,
+    pub exported_at: String,
+    pub source: String,
+    pub recipes: Vec<RecipeExportItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct RecipeExportItem {
+    pub title: String,
+    pub short_description: Option<String>,
+    pub ingredients: Vec<Ingredient>,
+    pub steps: serde_json::Value,
+    pub prep_minutes: Option<i32>,
+    pub cook_minutes: Option<i32>,
+    pub servings: Option<i32>,
+    pub notes: Option<String>,
+    pub is_public: Option<bool>,
+    pub categories: Vec<String>,
+    pub images: Vec<ImageExportItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ImageExportItem {
+    pub original_filename: Option<String>,
+    pub alt: Option<String>,
+    pub is_primary: Option<bool>,
+    pub position: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ImportResult {
+    pub created: i32,
+    pub skipped: i32,
+    pub errors: Vec<String>,
+}

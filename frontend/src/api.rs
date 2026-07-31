@@ -1,6 +1,6 @@
 use gloo::net::http::{Request, Method};
 use serde_json::json;
-use shared_types::{Category, Recipe, RecipeImage, User};
+use shared_types::{Category, ImportResult, Recipe, RecipeImage, RecipesExport, User};
 use web_sys::window;
 
 const API_BASE: &str = match option_env!("API_BASE") {
@@ -735,5 +735,40 @@ pub async fn save_prefs(prefs_json: &str) -> Result<String, String> {
         resp.text().await.map_err(|_| "Read error".to_string())
     } else {
         Err(home_hub_shared::check_auth_error(format!("Failed to save prefs: {}", resp.status())))
+    }
+}
+
+pub async fn export_recipes() -> Result<RecipesExport, String> {
+    let base = get_base_url();
+    let resp = Request::get(&format!("{}/api/recipes/export", base))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    resp.json::<RecipesExport>()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+pub async fn import_recipes(payload: &RecipesExport) -> Result<ImportResult, String> {
+    let body = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+    let base = get_base_url();
+    let mut request = Request::post(&format!("{}/api/recipes/import", base))
+        .header("Content-Type", "application/json")
+        .body(body);
+
+    if let Some(auth_header) = get_auth_header() {
+        request = request.header("Authorization", &auth_header);
+    }
+
+    let resp = request
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if resp.ok() {
+        resp.json::<ImportResult>().await.map_err(|e| e.to_string())
+    } else {
+        Err(home_hub_shared::check_auth_error(format!("Import failed: {}", resp.status())))
     }
 }

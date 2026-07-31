@@ -1,8 +1,8 @@
 use yew::prelude::*;
 use yew::{platform::spawn_local, Callback, Properties};
-use web_sys::{Event, HtmlSelectElement};
+use web_sys::{Event, HtmlSelectElement, HtmlInputElement, Blob, Url, HtmlAnchorElement};
 use wasm_bindgen::JsCast;
-use shared_types::{Recipe};
+use shared_types::{ImportResult, Recipe, RecipesExport};
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -17,6 +17,33 @@ pub struct Props {
     pub on_search: Callback<String>,
 }
 
+#[derive(Clone, PartialEq)]
+enum ImportState {
+    Idle,
+    Previewing { data: RecipesExport, file_name: String, selected: Vec<bool> },
+    Done(ImportResult),
+    Error(String),
+}
+
+fn download_json(data: &str, filename: &str) {
+    if let Some(window) = web_sys::window() {
+        let document = window.document().unwrap();
+        let array = js_sys::Array::new();
+        array.push(&wasm_bindgen::JsValue::from_str(data));
+        if let Ok(blob) = Blob::new_with_str_sequence(&array) {
+            if let Ok(url) = Url::create_object_url_with_blob(&blob) {
+                if let Ok(anchor) = document.create_element("a") {
+                    let anchor: HtmlAnchorElement = anchor.dyn_into().unwrap();
+                    anchor.set_href(&url);
+                    anchor.set_download(filename);
+                    anchor.click();
+                    let _ = Url::revoke_object_url(&url);
+                }
+            }
+        }
+    }
+}
+
 #[function_component(RecipeList)]
 pub fn recipe_list(props: &Props) -> Html {
     let lang_ctx = use_context::<LanguageState>();
@@ -29,6 +56,9 @@ pub fn recipe_list(props: &Props) -> Html {
     let is_logged_in = api::is_logged_in();
     let current_user_id = api::get_current_user_id();
     let search = props.search.clone();
+    let import_state = use_state(|| ImportState::Idle);
+    let import_loading = use_state(|| false);
+    let file_input_ref = use_node_ref();
 
     let on_add = props.on_add.clone();
 
@@ -143,6 +173,320 @@ pub fn recipe_list(props: &Props) -> Html {
                     </div>
                 </div>
             </div>
+
+            {
+                if is_logged_in {
+                    html!{
+                        <div class="import-export-bar page-enter">
+                            <button
+                                class="btn btn-secondary btn-sm"
+                                onclick={
+                                    let import_state = import_state.clone();
+                                    Callback::from(move |_e: yew::MouseEvent| {
+                                        let import_state = import_state.clone();
+                                        import_state.set(ImportState::Idle);
+                                        spawn_local(async move {
+                                            match api::export_recipes().await {
+                                                Ok(export_data) => {
+                                                    let json = serde_json::to_string_pretty(&export_data).unwrap_or_default();
+                                                    download_json(&json, "kitchenbox-recipes.json");
+                                                }
+                                                Err(e) => {
+                                                    import_state.set(ImportState::Error(e));
+                                                }
+                                            }
+                                        });
+                                    })
+                                }
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                {t("export_recipes", lang)}
+                            </button>
+
+                            <button
+                                class="btn btn-secondary btn-sm"
+                                onclick={
+                                    let file_input_ref = file_input_ref.clone();
+                                    Callback::from(move |_e: yew::MouseEvent| {
+                                        if let Some(input) = file_input_ref.cast::<HtmlInputElement>() {
+                                            input.click();
+                                        }
+                                    })
+                                }
+                            >
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                                {t("import_recipes", lang)}
+                            </button>
+
+                            <input
+                                ref={file_input_ref}
+                                type="file"
+                                accept=".json"
+                                style="display: none;"
+                                onchange={
+                                    let import_state = import_state.clone();
+                                    Callback::from(move |e: Event| {
+                                        let target = e.target().unwrap();
+                                        let input: HtmlInputElement = target.dyn_into().unwrap();
+                                        let files = input.files();
+                                        let import_state = import_state.clone();
+                                        if let Some(file_list) = files {
+                                            if let Some(file) = file_list.get(0) {
+                                                let file_name = file.name();
+                                                let reader = web_sys::FileReader::new().unwrap();
+                                                let import_state_clone = import_state.clone();
+                                                let onload = wasm_bindgen::closure::Closure::once(Box::new(move |event: web_sys::Event| {
+                                                    let target = event.target().unwrap();
+                                                    let reader = target.dyn_into::<web_sys::FileReader>().unwrap();
+                                                    let result = reader.result().unwrap();
+                                                    let text = result.as_string().unwrap_or_default();
+                                                match serde_json::from_str::<RecipesExport>(&text) {
+                                                    Ok(data) => {
+                                                        let count = data.recipes.len();
+                                                        import_state_clone.set(ImportState::Previewing {
+                                                            selected: vec![true; count],
+                                                            data,
+                                                            file_name,
+                                                        });
+                                                    }
+                                                        Err(e) => {
+                                                            import_state_clone.set(ImportState::Error(format!("Invalid file: {}", e)));
+                                                        }
+                                                    }
+                                                }));
+                                                reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+                                                onload.forget();
+                                                reader.read_as_text(&file).unwrap();
+                                            }
+                                        }
+                                        input.set_value("");
+                                    })
+                                }
+                            />
+                        </div>
+                    }
+                } else {
+                    html!{}
+                }
+            }
+
+            {
+                match &*import_state {
+                    ImportState::Previewing { data, file_name, selected } => {
+                        let recipe_count = data.recipes.len();
+                        let selected_count = selected.iter().filter(|&&s| s).count();
+                        let all_selected = selected.iter().all(|&s| s);
+                        let all_cats: Vec<String> = data.recipes.iter()
+                            .flat_map(|r| r.categories.clone())
+                            .collect::<std::collections::HashSet<_>>()
+                            .into_iter()
+                            .collect();
+                        let import_data = data.clone();
+                        html!{
+                            <div class="import-preview page-enter">
+                                <h3>{t("import_preview_title", lang)}</h3>
+                                <p>{ format!("{}: {}", t("file", lang), file_name) }</p>
+                                <p>{ format!("{} {} {}", recipe_count, t("recipes_count", lang), t("found", lang)) }</p>
+                                <div class="import-preview-select-all">
+                                    <label class="checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={all_selected}
+                                            onchange={
+                                                let import_state = import_state.clone();
+                                                let data = data.clone();
+                                                let file_name = file_name.clone();
+                                                Callback::from(move |e: Event| {
+                                                    let checked = e.target().unwrap().dyn_into::<HtmlInputElement>().unwrap().checked();
+                                                    let count = data.recipes.len();
+                                                    import_state.set(ImportState::Previewing {
+                                                        data: data.clone(),
+                                                        file_name: file_name.clone(),
+                                                        selected: vec![checked; count],
+                                                    });
+                                                })
+                                            }
+                                        />
+                                        <span>{if all_selected { t("deselect_all", lang) } else { t("select_all", lang) }}</span>
+                                    </label>
+                                    <span class="text-sm text-muted">{ format!("{}/{} {} {}", selected_count, recipe_count, t("recipes_count", lang).to_lowercase(), t("selected", lang)) }</span>
+                                </div>
+                                { if !all_cats.is_empty() {
+                                    html!{
+                                        <div class="import-preview-cats">
+                                            <strong>{format!("{}:", t("categories", lang))}</strong>
+                                            { for all_cats.iter().map(|c| html!{ <span class="tag tag-new">{c}</span> }) }
+                                        </div>
+                                    }
+                                } else { html!{} } }
+                                <div class="import-preview-recipes">
+                                    { for data.recipes.iter().enumerate().map(|(i, r)| {
+                                        let cats = r.categories.join(", ");
+                                        let checked = selected.get(i).copied().unwrap_or(true);
+                                        html!{
+                                            <div class="import-preview-recipe">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    class="import-checkbox"
+                                                    onchange={
+                                                        let import_state = import_state.clone();
+                                                        let data = data.clone();
+                                                        let file_name = file_name.clone();
+                                                        let selected_snapshot = selected.clone();
+                                                        Callback::from(move |_e: Event| {
+                                                            let mut updated = selected_snapshot.clone();
+                                                            updated[i] = !updated[i];
+                                                            import_state.set(ImportState::Previewing {
+                                                                data: data.clone(),
+                                                                file_name: file_name.clone(),
+                                                                selected: updated,
+                                                            });
+                                                        })
+                                                    }
+                                                />
+                                                <div class="import-preview-recipe-info">
+                                                    <strong>{&r.title}</strong>
+                                                    { if !r.categories.is_empty() {
+                                                        html!{ <span class="text-sm text-muted">{ format!("({})", cats) }</span> }
+                                                    } else { html!{} } }
+                                                </div>
+                                            </div>
+                                        }
+                                    }) }
+                                </div>
+                                <div class="import-preview-actions">
+                                    <button
+                                        class="btn btn-primary btn-sm"
+                                        disabled={*import_loading || selected_count == 0}
+                                        onclick={
+                                            let import_state = import_state.clone();
+                                            let import_loading = import_loading.clone();
+                                            let recipes = recipes.clone();
+                                            let selected = selected.clone();
+                                            Callback::from(move |_e: yew::MouseEvent| {
+                                                let import_state = import_state.clone();
+                                                let import_loading = import_loading.clone();
+                                                let recipes = recipes.clone();
+                                                let selected = selected.clone();
+                                                let mut payload = import_data.clone();
+                                                payload.recipes = payload.recipes.iter().enumerate()
+                                                    .filter(|(i, _)| selected.get(*i).copied().unwrap_or(false))
+                                                    .map(|(_, r)| r.clone())
+                                                    .collect();
+                                                import_loading.set(true);
+                                                spawn_local(async move {
+                                                    match api::import_recipes(&payload).await {
+                                                        Ok(result) => {
+                                                            import_state.set(ImportState::Done(result));
+                                                            import_loading.set(false);
+                                                            spawn_local(async move {
+                                                                if let Ok(list) = api::get_recipes().await {
+                                                                    recipes.set(list);
+                                                                }
+                                                            });
+                                                        }
+                                                        Err(e) => {
+                                                            import_state.set(ImportState::Error(e));
+                                                            import_loading.set(false);
+                                                        }
+                                                    }
+                                                });
+                                            })
+                                        }
+                                    >
+                                        {
+                                            if *import_loading {
+                                                t("importing", lang)
+                                            } else {
+                                                if selected_count == 1 {
+                                                    t("import_confirm_one", lang)
+                                                } else {
+                                                    format!("{} {} {}", t("import_confirm", lang), selected_count, t("recipes_count", lang).to_lowercase())
+                                                }
+                                            }
+                                        }
+                                    </button>
+                                    <button
+                                        class="btn btn-secondary btn-sm"
+                                        disabled={*import_loading}
+                                        onclick={
+                                            let import_state = import_state.clone();
+                                            Callback::from(move |_e: yew::MouseEvent| {
+                                                import_state.set(ImportState::Idle);
+                                            })
+                                        }
+                                    >
+                                        {t("cancel", lang)}
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    ImportState::Done(result) => {
+                        html!{
+                            <div class="import-result page-enter">
+                                <div class={if result.errors.is_empty() { "alert alert-success" } else { "alert alert-warning" }}>
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        { if result.errors.is_empty() {
+                                            html!{ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path> }
+                                        } else {
+                                            html!{ <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path> }
+                                        } }
+                                    </svg>
+                                    <div class="alert-content">
+                                        <div class="alert-title">{t("import_complete", lang)}</div>
+                                        <div>{ format!("{}: {}, {}: {}", t("imported", lang), result.created, t("skipped", lang), result.skipped) }</div>
+                                        { for result.errors.iter().map(|e| html!{ <div class="text-sm text-muted">{e}</div> }) }
+                                    </div>
+                                </div>
+                                <button
+                                    class="btn btn-secondary btn-sm"
+                                    onclick={
+                                        let import_state = import_state.clone();
+                                        Callback::from(move |_e: yew::MouseEvent| {
+                                            import_state.set(ImportState::Idle);
+                                        })
+                                    }
+                                >
+                                    {t("close", lang)}
+                                </button>
+                            </div>
+                        }
+                    }
+                    ImportState::Error(e) => {
+                        html!{
+                            <div class="import-result page-enter">
+                                <div class="alert alert-error">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <div class="alert-content">
+                                        <div class="alert-title">{t("error_loading", lang)}</div>
+                                        <div>{e}</div>
+                                    </div>
+                                </div>
+                                <button
+                                    class="btn btn-secondary btn-sm"
+                                    onclick={
+                                        let import_state = import_state.clone();
+                                        Callback::from(move |_e: yew::MouseEvent| {
+                                            import_state.set(ImportState::Idle);
+                                        })
+                                    }
+                                >
+                                    {t("close", lang)}
+                                </button>
+                            </div>
+                        }
+                    }
+                    ImportState::Idle => html!{},
+                }
+            }
 
             {
                 if let Some(e) = &*error {

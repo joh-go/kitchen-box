@@ -98,6 +98,8 @@ fn rocket() -> _ {
             handlers::recipes::delete_recipe,
             handlers::recipes::assign_category,
             handlers::recipes::clear_categories,
+            handlers::recipes::export_recipes,
+            handlers::recipes::import_recipes,
             handlers::images::upload_image,
             handlers::images::get_recipe_images,
             handlers::images::set_primary_image,

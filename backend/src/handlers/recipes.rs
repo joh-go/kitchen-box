@@ -378,3 +378,208 @@ pub fn clear_categories(
 
     Ok(Status::NoContent)
 }
+
+#[get("/recipes/export")]
+pub fn export_recipes(mut db: DbConn) -> Result<Json<shared_types::RecipesExport>, Custom<String>> {
+    let all_recipes = crate::schema::recipes::table
+        .order(crate::schema::recipes::created_at.desc())
+        .load::<Recipe>(&mut *db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    let ids: Vec<i32> = all_recipes.iter().map(|r| r.id).collect();
+    let cat_map = categories_for_recipe(&mut *db, &ids)?;
+
+    let recipe_items: Vec<shared_types::RecipeExportItem> = all_recipes
+        .iter()
+        .map(|r| {
+            let cats = cat_map
+                .get(&r.id)
+                .cloned()
+                .unwrap_or_default()
+                .iter()
+                .map(|c| c.name.clone())
+                .collect();
+
+            shared_types::RecipeExportItem {
+                title: r.title.clone(),
+                short_description: r.short_description.clone(),
+                ingredients: ingredients_from_json(&r.ingredients),
+                steps: r.steps.clone(),
+                prep_minutes: r.prep_minutes,
+                cook_minutes: r.cook_minutes,
+                servings: r.servings,
+                notes: r.notes.clone(),
+                is_public: r.is_public,
+                categories: cats,
+                images: Vec::new(),
+            }
+        })
+        .collect();
+
+    let exported_at = chrono::Utc::now().to_rfc3339();
+
+    Ok(Json(shared_types::RecipesExport {
+        version: "1.0".to_string(),
+        exported_at,
+        source: "kitchen-box".to_string(),
+        recipes: recipe_items,
+    }))
+}
+
+fn generate_slug(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'a'..='z' | '0'..='9' => c,
+            ' ' => '-',
+            '-' => '-',
+            _ => '-',
+        })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<&str>>()
+        .join("-")
+}
+
+fn ensure_unique_slug(
+    db: &mut diesel::PgConnection,
+    base_slug: &str,
+) -> Result<String, Custom<String>> {
+    use crate::schema::recipes::dsl;
+    let slug_base = if base_slug.is_empty() { "recipe" } else { base_slug };
+
+    let existing_count: i64 = dsl::recipes
+        .filter(dsl::slug.eq(slug_base))
+        .count()
+        .get_result(db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+    if existing_count == 0 {
+        return Ok(slug_base.to_string());
+    }
+
+    for i in 2..1000 {
+        let candidate = format!("{}-{}", slug_base, i);
+        let count: i64 = dsl::recipes
+            .filter(dsl::slug.eq(&candidate))
+            .count()
+            .get_result(db)
+            .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+        if count == 0 {
+            return Ok(candidate);
+        }
+    }
+
+    Err(Custom(
+        Status::InternalServerError,
+        "Could not generate unique slug".to_string(),
+    ))
+}
+
+fn find_or_create_category(
+    db: &mut diesel::PgConnection,
+    cat_name: &str,
+) -> Result<i32, Custom<String>> {
+    use crate::schema::categories::dsl::*;
+
+    let existing = categories
+        .filter(name.eq(cat_name))
+        .select(crate::schema::categories::id)
+        .first::<i32>(db)
+        .ok();
+
+    if let Some(cid) = existing {
+        return Ok(cid);
+    }
+
+    let slug_val = generate_slug(cat_name);
+    let new_cat = crate::models::NewCategory {
+        name: cat_name.to_string(),
+        slug: slug_val.clone(),
+        description: None,
+        parent_id: None,
+        position: 0,
+    };
+
+    diesel::insert_into(categories)
+        .values(&new_cat)
+        .returning(crate::schema::categories::id)
+        .get_result::<i32>(db)
+        .map_err(|e| Custom(Status::InternalServerError, e.to_string()))
+}
+
+#[post("/recipes/import", format = "json", data = "<payload>")]
+pub fn import_recipes(
+    mut db: DbConn,
+    auth_user: AuthenticatedUser,
+    payload: Json<shared_types::RecipesExport>,
+) -> Result<Json<shared_types::ImportResult>, Custom<String>> {
+    let mut created = 0;
+    let mut skipped = 0;
+    let mut errors: Vec<String> = Vec::new();
+
+    for item in &payload.recipes {
+        let result = {
+            let slug_base = generate_slug(&item.title);
+            let recipe_slug = ensure_unique_slug(&mut *db, &slug_base)?;
+
+            let ingredients_json =
+                serde_json::to_value(&item.ingredients).unwrap_or(JsonValue::Null);
+
+            let new_recipe = NewRecipe {
+                title: item.title.clone(),
+                slug: recipe_slug.clone(),
+                short_description: item.short_description.clone(),
+                ingredients: ingredients_json,
+                steps: item.steps.clone(),
+                prep_minutes: item.prep_minutes,
+                cook_minutes: item.cook_minutes,
+                servings: item.servings,
+                notes: item.notes.clone(),
+                author_id: auth_user.user_id,
+                is_public: item.is_public,
+            };
+
+            let inserted: Recipe = diesel::insert_into(crate::schema::recipes::table)
+                .values(&new_recipe)
+                .get_result::<Recipe>(&mut *db)
+                .map_err(|e| Custom(Status::InternalServerError, e.to_string()))?;
+
+            Ok::<(i32, Recipe), Custom<String>>((inserted.id, inserted))
+        };
+
+        match result {
+            Ok((new_id, _recipe)) => {
+                for cat_name in &item.categories {
+                    match find_or_create_category(&mut *db, cat_name) {
+                        Ok(cat_id) => {
+                            use crate::schema::recipe_categories::dsl as rc_dsl;
+                            let _ = diesel::insert_into(rc_dsl::recipe_categories)
+                                .values((
+                                    rc_dsl::recipe_id.eq(new_id),
+                                    rc_dsl::category_id.eq(cat_id),
+                                ))
+                                .execute(&mut *db);
+                        }
+                        Err(e) => {
+                            errors
+                                .push(format!("{}: category '{}': {}", item.title, cat_name, e.0));
+                        }
+                    }
+                }
+                created += 1;
+            }
+            Err(e) => {
+                skipped += 1;
+                errors.push(format!("{}: {}", item.title, e.0));
+            }
+        }
+    }
+
+    Ok(Json(shared_types::ImportResult {
+        created,
+        skipped,
+        errors,
+    }))
+}
