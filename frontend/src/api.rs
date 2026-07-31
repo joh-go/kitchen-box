@@ -14,34 +14,34 @@ fn get_base_url() -> String {
 
 // Helper function to get auth token from localStorage
 fn get_auth_header() -> Option<String> {
-    let auth = home_hub_shared::Auth::restore();
+    let auth = home_hub_shared::restore_or_from_url();
     auth.token.map(|t| format!("Bearer {}", t))
 }
 
 // Helper function to check if user is logged in
 pub fn is_logged_in() -> bool {
-    home_hub_shared::Auth::restore().is_authenticated()
+    home_hub_shared::restore_or_from_url().is_authenticated()
 }
 
 // Helper function to get current user's ID from localStorage
 pub fn get_current_user_id() -> Option<i32> {
-    let auth = home_hub_shared::Auth::restore();
+    let auth = home_hub_shared::restore_or_from_url();
     auth.user_id.and_then(|id| id.parse::<i32>().ok())
 }
 
 // Helper function to get current user's admin status
 pub fn is_current_user_admin() -> bool {
-    home_hub_shared::Auth::restore().is_admin
+    home_hub_shared::restore_or_from_url().is_admin
 }
 
 // Helper function to get current user's name
 pub fn get_current_user_name() -> Option<String> {
-    home_hub_shared::Auth::restore().username
+    home_hub_shared::restore_or_from_url().username
 }
 
 // Logout function
 pub fn logout() {
-    let mut auth = home_hub_shared::Auth::restore();
+    let mut auth = home_hub_shared::restore_or_from_url();
     auth.logout();
     if let Some(window) = window() {
         let _ = window.location().set_href("/");

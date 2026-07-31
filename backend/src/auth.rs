@@ -16,6 +16,8 @@ static JWT_SECRET: Lazy<String> = Lazy::new(|| {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
+    pub username: Option<String>,
+    pub is_admin: Option<bool>,
     pub exp: usize,
     pub iat: usize,
 }
@@ -72,7 +74,38 @@ impl<'r> FromRequest<'r> for AuthenticatedUser {
                                     is_admin: uadmin,
                                 })
                             }
-                            None => Outcome::Forward(Status::Unauthorized),
+                            None => {
+                                let claims_username = claims.username.unwrap_or_default();
+                                let claims_admin = claims.is_admin.unwrap_or(false);
+                                if claims_username.is_empty() {
+                                    return Outcome::Forward(Status::Unauthorized);
+                                }
+                                let user_email = format!("{}@home-hub.local", claims_username);
+                                let placeholder_pw = uuid::Uuid::new_v4().to_string();
+                                let hashed = match bcrypt::hash(&placeholder_pw, bcrypt::DEFAULT_COST) {
+                                    Ok(h) => h,
+                                    Err(_) => return Outcome::Forward(Status::InternalServerError),
+                                };
+                                let result = diesel::sql_query(
+                                    "INSERT INTO users (id, name, email, password, is_admin) VALUES ($1, $2, $3, $4, $5)",
+                                )
+                                .bind::<diesel::sql_types::Integer, _>(user_id_val)
+                                .bind::<diesel::sql_types::Text, _>(&claims_username)
+                                .bind::<diesel::sql_types::Text, _>(&user_email)
+                                .bind::<diesel::sql_types::Text, _>(&hashed)
+                                .bind::<diesel::sql_types::Bool, _>(claims_admin)
+                                .execute(&mut *db);
+                                match result {
+                                    Ok(_) => {
+                                        Outcome::Success(AuthenticatedUser {
+                                            user_id: user_id_val,
+                                            user_email,
+                                            is_admin: claims_admin,
+                                        })
+                                    }
+                                    Err(_) => Outcome::Forward(Status::InternalServerError),
+                                }
+                            }
                         }
                     }
                     Err(_) => Outcome::Forward(Status::Unauthorized),
@@ -96,6 +129,8 @@ pub fn generate_token(user_id: i32) -> Result<String, String> {
 
     let claims = Claims {
         sub: user_id.to_string(),
+        username: None,
+        is_admin: None,
         exp,
         iat: now,
     };
