@@ -178,7 +178,6 @@ fn admin_setup_with_guard(props: &AdminSetupGuardProps) -> Html {
 #[function_component(App)]
 fn app() -> Html {
     let page = use_state(|| Page::Home);
-    let sidebar_open = use_state(|| false);
     let search = use_state(|| String::new());
     let admin_check_done = use_state(|| false);
     let theme_revision = use_state(|| 0u32);
@@ -279,20 +278,6 @@ fn app() -> Html {
         })
     };
 
-    let toggle_sidebar = {
-        let sidebar_open = sidebar_open.clone();
-        Callback::from(move |_| {
-            sidebar_open.set(!*sidebar_open);
-        })
-    };
-
-    let close_sidebar = {
-        let sidebar_open = sidebar_open.clone();
-        Callback::from(move |_: yew::MouseEvent| {
-            sidebar_open.set(false);
-        })
-    };
-
     let current = (*page).clone();
     let search_value = (*search).clone();
 
@@ -316,41 +301,27 @@ fn app() -> Html {
 
     let search_navigate = navigate.clone();
     let search_callback_input = on_search_input.clone();
-    let mobile_nav_home = navigate.reform(|_: yew::MouseEvent| Page::Home);
-    let mobile_nav_add = navigate.reform(|_: yew::MouseEvent| Page::Add);
-    let mobile_nav_settings = navigate.reform(|_: yew::MouseEvent| Page::Settings);
-    let mobile_sidebar_toggle = toggle_sidebar.clone();
-
-    let sidebar_class = if *sidebar_open { "sidebar open" } else { "sidebar" };
-    let backdrop_class = if *sidebar_open { "sidebar-backdrop open" } else { "sidebar-backdrop" };
 
     html! {
         <>
-            // Sidebar backdrop (mobile only)
-            <div class={backdrop_class} onclick={close_sidebar.clone()}></div>
+            <Sidebar on_navigate={navigate.clone()}
+                theme_revision={*theme_revision}
+                on_theme_toggle={Some({
+                    let inc = inc_revision.clone();
+                    Callback::from(move |theme: String| {
+                        let mut prefs = home_hub_shared::prefs::UserPrefs::load();
+                        prefs.theme = theme.clone();
+                        prefs.save_to_local();
+                        inc.emit(());
+                        let pj = serde_json::json!({"theme": theme, "primary_color": prefs.primary_color});
+                        let pj_str = serde_json::to_string(&pj).unwrap_or_default();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let _ = api::save_prefs(&pj_str).await;
+                        });
+                    })
+                })}
+            />
 
-            // Sidebar (fixed, dark gradient — slides on mobile)
-            <aside class={sidebar_class}>
-                <Sidebar on_navigate={navigate.clone()} on_mobile_close={close_sidebar.clone()}
-                    theme_revision={*theme_revision}
-                    on_theme_toggle={Some({
-                        let inc = inc_revision.clone();
-                        Callback::from(move |theme: String| {
-                            let mut prefs = home_hub_shared::prefs::UserPrefs::load();
-                            prefs.theme = theme.clone();
-                            prefs.save_to_local();
-                            inc.emit(());
-                            let pj = serde_json::json!({"theme": theme, "primary_color": prefs.primary_color});
-                            let pj_str = serde_json::to_string(&pj).unwrap_or_default();
-                            wasm_bindgen_futures::spawn_local(async move {
-                                let _ = api::save_prefs(&pj_str).await;
-                            });
-                        })
-                    })}
-                />
-            </aside>
-
-            // Main content area
             <main class="app-main">
                 <div class="app-content">
                     // Search bar (visible only on Home page)
@@ -384,61 +355,6 @@ fn app() -> Html {
                     </div>
                 </div>
             </main>
-
-            // Mobile sidebar toggle button
-            <button onclick={mobile_sidebar_toggle} class="sidebar-toggle">
-                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-
-            // Mobile Bottom Navigation
-            <nav class="mobile-bottom-nav">
-                <div class="mobile-bottom-nav-inner">
-                    <button onclick={mobile_nav_home} class="mobile-nav-btn">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                        <span>{t("nav_home", lang)}</span>
-                    </button>
-
-                    {if api::is_logged_in() {
-                        html! {
-                            <button onclick={mobile_nav_add} class="mobile-nav-btn">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                </svg>
-                                <span>{t("nav_add", lang)}</span>
-                            </button>
-                        }
-                    } else {
-                        html! { <div></div> }
-                    }}
-
-                    {if api::is_logged_in() {
-                        html! {
-                            <button onclick={mobile_nav_settings} class="mobile-nav-btn mobile-nav-btn-inactive">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                                <span>{t("nav_settings", lang)}</span>
-                            </button>
-                        }
-                    } else {
-                        html! { <div></div> }
-                    }}
-
-                    <button onclick={toggle_sidebar} class="mobile-nav-btn mobile-nav-btn-inactive">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                        </svg>
-                        <span>{t("menu", lang)}</span>
-                    </button>
-                </div>
-            </nav>
-
-            <div class="mobile-nav-spacer"></div>
         </>
     }
 }
