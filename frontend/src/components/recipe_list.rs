@@ -3,6 +3,7 @@ use yew::{platform::spawn_local, Callback, Properties};
 use web_sys::{Event, HtmlSelectElement, HtmlInputElement, Blob, Url, HtmlAnchorElement};
 use wasm_bindgen::JsCast;
 use shared_types::{ImportResult, Recipe, RecipesExport};
+use home_hub_shared::components::Modal;
 use crate::api;
 use crate::i18n::{Language, t};
 use crate::language_provider::LanguageState;
@@ -61,6 +62,7 @@ pub fn recipe_list(props: &Props) -> Html {
     let file_input_ref = use_node_ref();
 
     let on_add = props.on_add.clone();
+    let delete_confirm = use_state(|| None::<(i32, String)>);
 
     {
         let recipes = recipes.clone();
@@ -94,8 +96,10 @@ pub fn recipe_list(props: &Props) -> Html {
 
     let on_delete = {
         let recipes = recipes.clone();
+        let delete_confirm = delete_confirm.clone();
         Callback::from(move |id: i32| {
             let recipes = recipes.clone();
+            let delete_confirm = delete_confirm.clone();
             spawn_local(async move {
                 if api::delete_recipe(id).await.is_ok() {
                     recipes.set(
@@ -106,11 +110,13 @@ pub fn recipe_list(props: &Props) -> Html {
                             .collect(),
                     );
                 }
+                delete_confirm.set(None);
             });
         })
     };
 
     html! {
+        <>
         <div class="flex flex-col gap-6">
             <div class="page-enter">
                 <div class="section-header">
@@ -558,7 +564,24 @@ pub fn recipe_list(props: &Props) -> Html {
                                 }
                             } else {
                                 html! {
-                                    <div class="recipe-card-image-placeholder"></div>
+                                    <svg class="recipe-card-image-placeholder" viewBox="0 0 400 192" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="400" height="192" fill="none"/>
+                                        <g transform="translate(200, 100)" fill="none" stroke="#d4c5b9" stroke-linecap="round" stroke-linejoin="round" opacity="0.55">
+                                            <ellipse cx="0" cy="14" rx="48" ry="12" fill="#ebe3da" stroke-width="1.5"/>
+                                            <ellipse cx="0" cy="10" rx="42" ry="10" fill="#f2ece3" stroke-width="1.5"/>
+                                            <ellipse cx="0" cy="-24" rx="46" ry="18" fill="#ebe3da" stroke-width="1.2"/>
+                                            <path d="M-46-24v-8a46 18 0 0192 0v8" fill="#e0d5c6" stroke-width="1.2"/>
+                                            <path d="M-18-32c-2-8-8-18-16-22 8-2 16 2 18 8" stroke-width="1.4"/>
+                                            <path d="M18-32c2-8 8-18 16-22-8-2-16 2-18 8" stroke-width="1.4"/>
+                                            <circle cx="-28" cy="-8" r="2.5" fill="#d4c5b9"/>
+                                            <circle cx="28" cy="-8" r="2.5" fill="#d4c5b9"/>
+                                            <circle cx="0" cy="-14" r="2" fill="#d4c5b9"/>
+                                            <circle cx="-10" cy="-16" r="1.8" fill="#d4c5b9"/>
+                                            <circle cx="10" cy="-18" r="1.8" fill="#d4c5b9"/>
+                                            <circle cx="-6" cy="-4" r="1.5" fill="#d4c5b9"/>
+                                            <circle cx="6" cy="-6" r="1.5" fill="#d4c5b9"/>
+                                        </g>
+                                    </svg>
                                 }
                             }}
 
@@ -643,7 +666,13 @@ pub fn recipe_list(props: &Props) -> Html {
                                             </button>
                                             <button
                                                 class="btn btn-danger btn-sm"
-                                                onclick={on_delete.reform(move |_| id)}
+                                                onclick={
+                                                    let delete_confirm = delete_confirm.clone();
+                                                    let title = r.title.clone();
+                                                    Callback::from(move |_| {
+                                                        delete_confirm.set(Some((id, title.clone())));
+                                                    })
+                                                }
                                             >
                                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -679,5 +708,45 @@ pub fn recipe_list(props: &Props) -> Html {
                 }
             } else { html!{} } }
         </div>
+
+        {
+            if let Some((confirm_id, confirm_title)) = delete_confirm.as_ref() {
+                let id = *confirm_id;
+                let title = confirm_title.clone();
+                html!{
+                    <Modal
+                        title={t("delete_recipe_confirm", lang)}
+                        show={true}
+                        sm={true}
+                        on_close={Callback::from({
+                            let delete_confirm = delete_confirm.clone();
+                            move |_| delete_confirm.set(None)
+                        })}
+                    >
+                        <p>{ format!("{} \"{}\"?", t("delete_recipe_message", lang), title) }</p>
+                        <div style="display: flex; gap: var(--space-3); margin-top: var(--space-4); justify-content: flex-end;">
+                            <button
+                                class="btn btn-secondary btn-sm"
+                                onclick={
+                                    let delete_confirm = delete_confirm.clone();
+                                    Callback::from(move |_| delete_confirm.set(None))
+                                }
+                            >
+                                {t("cancel", lang)}
+                            </button>
+                            <button
+                                class="btn btn-danger btn-sm"
+                                onclick={on_delete.reform(move |_| id)}
+                            >
+                                {t("delete", lang)}
+                            </button>
+                        </div>
+                    </Modal>
+                }
+            } else {
+                html!{}
+            }
+        }
+        </>
     }
 }
