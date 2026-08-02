@@ -453,6 +453,20 @@ lazy_static! {
             h
         });
 
+        m.insert("delete_recipe_confirm", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Delete Recipe");
+            h.insert(Language::German, "Rezept löschen");
+            h
+        });
+
+        m.insert("delete_recipe_message", {
+            let mut h = HashMap::new();
+            h.insert(Language::English, "Are you sure you want to delete");
+            h.insert(Language::German, "Möchten Sie wirklich löschen");
+            h
+        });
+
         m.insert("categories", {
             let mut h = HashMap::new();
             h.insert(Language::English, "Categories");

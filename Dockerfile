@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG TARGETARCH=aarch64
-ARG TARGETOS=linux
+ARG TARGETARCH
+ARG TARGETOS
 
 # ============================================================
 # Stage 1: Frontend builder (Yew WASM via Trunk)
